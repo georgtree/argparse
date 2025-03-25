@@ -1,15 +1,48 @@
-This is a fork of argparse project initially developed by Andy Goth <andrew.m.goth@gmail.com>, 
-[original repository](https://core.tcl-lang.org/tcllib/timeline?r=amg-argparse), and 
+This is a fork of argparse project initially developed by Andy Goth <andrew.m.goth@gmail.com>.
+
+See [original repository](https://core.tcl-lang.org/tcllib/timeline?r=amg-argparse), and 
 [wiki page](https://wiki.tcl-lang.org/page/argparse).
 
-# Synopsys
+## Table of content
+
+  - [Synopsys](#synopsys)
+  - [Description](#description)
+  - [Quick Start](#quick-start)
+  - [Concepts](#concepts)
+    - [Definition](#definition)
+    - [Element](#element)
+    - [Name](#name)
+    - [Key](#key)
+    - [Alias](#alias)
+    - [Flag](#flag)
+    - [Global Switch](#global-switch)
+    - [Element Switch](#element-switch)
+    - [Switch](#switch)
+    - [Parameter](#parameter)
+    - [Comment](#comment)
+    - [Argument](#argument)
+    - [Required](#required)
+    - [Optional](#optional)
+  - [Global Switches](#global-switches)
+  - [Element Switches](#element-switches)
+  - [Shorthand](#shorthand)
+    - [Aliases](#aliases)
+    - [Flags](#flags)
+  - [Validation](#validation)
+  - [Passthrough](#passthrough)
+  - [Upvar Elements](#upvar-elements)
+  - [Argument Processing Sequence](#argument-processing-sequence)
+  - [Return Value](#return-value)
+  - [Author(s)](#author(s))
+
+## Synopsys
 
 ``` text
 package require Tcl 8.6
 argparse ?-globalSwitch ...? ?--? definition ?arguments?
 ```
 
-# Description
+## Description
 
 The `argparse` package provides a powerful argument parser command named `argparse` capable of flexibly processing
 and validating many varieties of switches and parameters.
@@ -25,7 +58,7 @@ can parse custom variadic data structures formatted as lists of switches and/or 
 Another example: by calling `argparse` multiple times, it is possible to parse nested or multi-part argument lists in 
 which arguments to subsystems are embedded in passthrough switches or parameters.
 
-# Quick Start
+## Quick Start
 
 The `argparse` command may have many complex features, but it is not necessary to understand it in depth before using
 it for the most common tasks. Its syntax is reasonably intuitive, so the best thing to do is see it in action before 
@@ -122,13 +155,13 @@ The fourth time `greet` is called, it is given one argument. Because the final a
 parameter, `subject` is set to `-title` even though there happens to be a switch with the same name. There are no 
 remaining arguments, so the switches are all handled according to defaults, just like in the first call to `greet`.
 
-# Concepts
+## Concepts
 
 This section lists and explains the concepts and terminology employed by the `argparse` package. The concepts are 
 numerous and interrelated, so it may be necessary to read this section multiple times and to refer back to it while 
 reading the remainder of this document.
 
-## Definition
+### Definition
 
 The *definition* determines how the `argparse` command parses its arguments. Definitions are Tcl lists of any length, 
 each word of which is an [element](#element).
@@ -146,7 +179,7 @@ The following example definition may conceivably be used by a command that store
 }
 ```
 
-## Element
+### Element
 
 A [definition](#definition) contains any number of *elements*. For the most part, each element defines either a 
 [switch](#switch) or a [parameter](#parameter). Elements may also be [comments](#comment) or 
@@ -168,7 +201,7 @@ One element from the above example is repeated here so it may be examined more c
 The name of this element is from. It uses the `-` and `=` flags, as well as the `-default` element switch with argument 
 `1`. The specific meaning of flags and element switches are described elsewhere in this document.
 
-## Name
+### Name
 
 Aside from [aliases](#alias) and [flags](#flag), the first word of each [switch](#switch) or [parameter](#parameter) 
 [element](#element) in the [definition](#definition) is the *name*.
@@ -178,7 +211,7 @@ Switch and parameter element names may not be used more than once within a defin
 If the name is `#`, the element is a [comment](#comment) and is ignored. If the name is empty string, the element is 
 neither a switch nor a parameter and is instead a list of [global switches](#global-switches).
 
-## Key
+### Key
 
 In addition to having a [name](#name), every [switch](#switch) and [parameter](#parameter) [definition](#definition) 
 [element](#element) has a key. Unlike names, multiple elements may share the same key, subject to restrictions.
@@ -188,17 +221,17 @@ explicitly declare an element's key.
 
 Keys determine the variable names or dict keys `argparse` uses to return the argument value of the switch or parameter.
 
-## Alias
+### Alias
 
-## Flag
+### Flag
 
-## Global Switch
+### Global Switch
 
 A *global switch* configures the overall operation of the `argparse` command. Global switches are optional initial 
 arguments to `argparse` and may only appear before the [definition](#definition) argument. Global switches may also be 
 embedded within special definition [elements](#element) whose [name](#name) is empty string.
 
-## Element Switch
+### Element Switch
 
 An *element switch* configures a single [element](#element) in the [definition](#definition). Element switches are 
 listed following the the [name](#name) word of the definition element.
@@ -207,22 +240,22 @@ In the above example definition, each [switch](#switch) element explicitly uses 
 use of the `-` and `=` shorthand [flags](#flag), each switch element also implicitly uses the `-switch` and `-argument`
 element switches.
 
-## Switch
+### Switch
 
-## Parameter
+### Parameter
 
-## Comment
+### Comment
 
-## Argument
+### Argument
 
 The actual values passed to the `argparse` command to be parsed are known as arguments.
 
-## Required
+### Required
 
-## Optional
+### Optional
 
 
-# Global Switches
+## Global Switches
 
 | Switch                     | Description                                                      |
 |:---------------------------|:-----------------------------------------------------------------|
@@ -242,7 +275,7 @@ The actual values passed to the `argparse` command to be parsed are known as arg
 | `-enum enumDef`            | Define named enumeration lists to be used by elements            |
 | `-`                        | Force next argument to be interpreted as the definition list     |
 
-# Element Switches
+## Element Switches
 
 | Switch                     | Description                                                          |
 |:---------------------------|:---------------------------------------------------------------------|
@@ -271,23 +304,24 @@ The actual values passed to the `argparse` command to be parsed are known as arg
 | `-enum enumNameOrDef`      | Name of enumeration list, or inline enumeration definition           |
 
 
-# Shorthand
+## Shorthand
 
-## Aliases
+### Aliases
 
-## Flags
+### Flags
 
-# Validation
+## Validation
 
-# Passthrough
+## Passthrough
 
-# Upvar Elements
+## Upvar Elements
 
-# Argument Processing Sequence
+## Argument Processing Sequence
 
-# Return Value
+## Return Value
 
-# Author(s)
+## Author(s)
 
 Andy Goth <andrew.m.goth@gmail.com> - all code and most part of documentation
+
 George Yashin <georgtree@gmail.com> - some documentation and test suite
