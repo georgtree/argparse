@@ -95,11 +95,11 @@ hello -title
 
 This example demonstrates many of the argparse core concepts and features. The greet command is defined to accept args. 
 When not explicitly given an argument list to parse, argparse parses the value of the args variable and stores the 
-results into local variables having the same [names](#names) as the various [elements](#elements) of the 
+results into local variables having the same [names](#name) as the various [elements](#element) of the 
 [definition](#definition).
 
 Here, the definition is a list of four elements, named `salutation`, `modifier`, `title`, and `subject`. Because their 
-names are prefixed with `-`, `salutation`, `modifier`, and `title` are [switches](#switches), whereas `subject`, lacking
+names are prefixed with `-`, `salutation`, `modifier`, and `title` are [switches](#switch), whereas `subject`, lacking
 a `-` prefix, is a [parameter](#parameter). Two of the switches are given a `=` suffix, which means they each take an 
 [argument](#argument), whereas `title` does not. In addition to these [flag](#flag) characters, the `salutation` element 
 is surrounded with braces because it contains more list words used to further customize how it is handled. Namely, it 
