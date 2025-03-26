@@ -69,7 +69,7 @@ reading the precise details on how it works.
 
 Consider the following:
 
-```tcl
+```{.tcl}
 package require argparse
 proc greet {args} {
     argparse {
@@ -88,29 +88,17 @@ proc greet {args} {
     append msg " " $subject
 }
 ```
-```tcl
+```{.tcl}
 greet world
 ```
-```text
-==> hello world
-```
-```tcl
+```{.tcl}
 greet -salutation howdy world
 ```
-```text
-==> howdy world
-```
-```tcl
+```{.tcl}
 greet -title -mod "my dear" world
 ```
-```text
-==> Hello, my dear world
-```
-```tcl
+```{.tcl}
 greet -title
-```
-```text
-==> hello -title
 ```
 
 This example demonstrates many of the argparse core concepts and features. The greet command is defined to accept args. 
@@ -133,11 +121,8 @@ guaranteed. On the contrary, because `modifier` and `title` are optional and hav
 use `info exists` to confirm their variables' existence before attempting to read them. Because `title` does not accept 
 an argument, its variable's value (if the variable exists at all) is predefined to be empty string.
 
-```tcl
+```{.tcl}
 greet world
-```
-```text
-==> hello world
 ```
 
 The first time `greet` is called, it is given only one argument, which is bound to the `subject` parameter. Normally, 
@@ -147,11 +132,8 @@ therefore stored in the `subject` variable. Because their associated switches do
 `salutation` variable is set to its default value (`hello`), and the `modifier` and `title` variables are unset due to 
 lacking a default.
 
-```tcl
+```{.tcl}
 greet -salutation howdy world
-```
-```text
-==> howdy world
 ```
 
 The second time `greet` is called, it is given three arguments. As discussed above, the final argument (`world`) is 
@@ -159,11 +141,8 @@ immediately stored into the `subject` variable before any switch processing occu
 are examined and determined to be the name and value of the `salutation` switch. Thus, the second argument (`howdy`) is 
 stored in the `salutation` variable. The `modifier` and `title` variables are unset.
 
-```tcl
+```{.tcl}
 greet -title -mod "my dear" world
-```
-```text
-==> Hello, my dear world
 ```
 
 The third time `greet` is called, it is given four arguments. The first is `-title`, causing the title variable to be 
@@ -172,11 +151,8 @@ thereof, i.e. an abbreviation. This causes the third argument (`my dear`) to be 
 the final argument (`world`) is stored in the `subject` variable. As for the `salutation` variable, it is set to its 
 default (`hello`).
 
-```tcl
+```{.tcl}
 greet -title
-```
-```text
-==> hello -title
 ```
 
 The fourth time `greet` is called, it is given one argument. Because the final argument is always bound to the `subject` 
