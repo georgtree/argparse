@@ -1,0 +1,655 @@
+package require tcltest
+namespace import ::tcltest::*
+set currentDir [file normalize [file dirname [info script]]]
+source [file join $currentDir argparse.tcl]
+
+const templateProcStr {proc templateProc {args} {
+    set arguments [argparse @additionalArgs@ {
+        @definitions@
+    }]
+    set resultDict {}
+    if {$arguments ne {}} {
+        set exclude {args resultDict exclude}
+    } else {
+        set exclude {args resultDict arguments exclude}
+    }
+    foreach locVar [info locals] {
+        if {$locVar in $exclude} {
+            continue
+        } else {
+            dict append resultDict $locVar [subst $[subst $locVar]]
+        }
+    }
+    return $resultDict
+}}
+
+proc testTemplate {testName descr arguments definitionsStr inputStr refStr} {
+    variable templateProcStr
+    test $testName $descr -body {
+        eval [string map [list @definitions@ $definitionsStr @additionalArgs@ $arguments] $templateProcStr]
+        if {[catch {set result [templateProc {*}$inputStr]} errorStr]} {
+            return $errorStr
+        } else {
+            return $result
+        }
+    } -result $refStr -cleanup {
+        rename templateProc {}
+    }
+}
+
+### Only switches test without arguments
+testTemplate onlySwitchNoArgsTest-1 {} {} {
+-a
+-b
+-c} {-a -c} {a {} c {}}
+
+testTemplate onlySwitchNoArgsTest-2 {} {} {
+-a
+-b
+-c} {-a} {a {}}
+
+testTemplate onlySwitchNoArgsTest-3 {} {} {
+-a
+-b
+-c} {-a -c -b} {a {} b {} c {}}
+
+testTemplate onlySwitchNoArgsTest-4 {} {} {
+-a
+-b
+-c} {-a -c -b -k} {bad switch "-k": must be -a, -b, or -c}
+
+testTemplate onlySwitchNoArgsTest-5 {} {} {
+-a
+-b
+-c} {-a -c 1 -b} {too many arguments}
+
+testTemplate onlySwitchNoArgsTest-6 {} {} {
+{a -switch}
+-b
+-c} {-a -c} {a {} c {}}
+
+testTemplate onlySwitchNoArgsTest-7 {} {} {
+-a
+-b
+{-c -catchall}} {-a -c 1 2 3} {a {} c {1 2 3}}
+
+testTemplate onlySwitchNoArgsTest-8 {} {} {
+-a
+{-b -require c}
+{-c}} {-a -b} {-b requires -c}
+
+testTemplate onlySwitchNoArgsTest-9 {} {} {
+-a
+{-b -require c}
+{-c}} {-c -a -b} {a {} b {} c {}}
+
+testTemplate onlySwitchNoArgsTest-10 {} {} {
+-a
+{-b -require {k c}}
+-h
+-c
+-k} {-a -b} {-b requires -k}
+
+testTemplate onlySwitchNoArgsTest-11 {} {} {
+-a
+{-b -require {k c}}
+-h
+-c
+-k} {-a -b -k} {-b requires -c}
+
+testTemplate onlySwitchNoArgsTest-12 {} {} {
+-a
+{-b -require {k c} -reciprocal}
+-h
+-c
+-k} {-c} {-c requires -b}
+
+testTemplate onlySwitchNoArgsTest-13 {} {} {
+-a
+{-b -require {k c} -reciprocal}
+{-h -standalone}
+-c
+-k} {-c -h} {h {} c {}}
+
+testTemplate onlySwitchNoArgsTest-14 {} {} {
+-a
+{-b -forbid {k c}}
+-h
+-c
+-k} {-b -h -k} {-b conflicts with -k}
+
+testTemplate onlySwitchNoArgsTest-14 {} {} {
+-a
+{-b -forbid {k c}}
+-h
+-c
+-k} {-b -h} {h {} b {}}
+
+testTemplate onlySwitchNoArgsTest-15 {} {} {
+-a
+-b
+{-c -catchall}} {-c 1 2 3 -a} {c {1 2 3 -a}}
+
+testTemplate onlySwitchNoArgsTest-16 {} {} {
+{-a -key k}
+-b
+-c} {-a -c -b} {b {} c {} k {}}
+
+# Bug?
+testTemplate onlySwitchNoArgsTest-17 {} {} {
+{-a -key k}
+{-b -key k}
+-c} {-a -c} {c {} k a}
+
+testTemplate onlySwitchNoArgsTest-18 {} {} {
+{-a -key k}
+{-b -key k}
+-c} {-a -c -b} {-a conflicts with -b}
+
+testTemplate onlySwitchWArgsTest-19 {} {} {
+-a
+{-b -ignore}
+-h
+-c
+-k} {-a -b -k -c} {a {} c {} k {}}
+
+testTemplate onlySwitchWArgsTest-20 {} {} {
+-a
+{-be|b}
+-h
+-c
+-k} {-a -be -k -c} {a {} b {} c {} k {}}
+
+testTemplate onlySwitchWArgsTest-21 {} {} {
+-a
+{-b -alias be}
+-h
+-c
+-k} {-a -be -k -c} {a {} b {} c {} k {}}
+
+### Only switches tests with arguments
+testTemplate onlySwitchWArgsTest-1 {} {} {
+-a=
+-b=
+-c=} {-a 1 -b 2 -c 3} {a 1 b 2 c 3}
+
+testTemplate onlySwitchWArgsTest-2 {} {} {
+-a=
+-b=
+-c=} {-a 1 -c 3} {a 1 c 3}
+
+testTemplate onlySwitchWArgsTest-3 {} {} {
+-a=
+-b=
+-c=} {-a 1 -c 3 -d 8} {bad switch "-d": must be -a, -b, or -c}
+
+testTemplate onlySwitchWArgsTest-4 {} {} {
+-a=
+{-b= -required}
+-c=} {-a 1 -c 3} {missing required switch: -b}
+
+testTemplate onlySwitchWArgsTest-5 {} {} {
+-a=
+{-b= -required}
+-c=} {-a 1 -c 3 -b} {-b requires an argument}
+
+testTemplate onlySwitchWArgsTest-6 {} {} {
+{a -switch -argument}
+-b=
+-c=} {-a 1 -b 2 -c 3} {a 1 b 2 c 3}
+
+testTemplate onlySwitchWArgsTest-7 {} {} {
+-a=
+-b=
+{-c= -catchall}} {-a 2 -b 3 -c 1 2 3} {a 2 b 3 c {1 2 3}}
+
+testTemplate onlySwitchWArgsTest-8 {} {} {
+-a=
+-b=
+{-c= -catchall}} {-a 2 -c 1 2 3 -b 3} {a 2 c {1 2 3 -b 3}}
+
+testTemplate onlySwitchWArgsTest-9 {} {} {
+-a=
+{-b= -require {k c}}
+-h=
+-c=
+-k=} {-a 1 -b 2 -k 3} {-b requires -c}
+
+testTemplate onlySwitchWArgsTest-10 {} {} {
+-a=
+{-b= -require {k c}}
+-h=
+-c=
+-k=} {-a 1 -b 2 -k 3 -c 2} {a 1 b 2 c 2 k 3}
+
+testTemplate onlySwitchWArgsTest-11 {} {} {
+-a=
+{-b= -require {k c} -reciprocal}
+-h=
+-c=
+-k=} {-c 2} {-c requires -b}
+
+testTemplate onlySwitchWArgsTest-12 {} {} {
+-a=
+{-b= -require {k c} -reciprocal}
+{-h= -standalone}
+-c=
+-k=} {-c 5 -h 10} {h 10 c 5}
+
+testTemplate onlySwitchWArgsTest-13 {} {} {
+-a=
+{-b= -forbid {k c}}
+-h=
+-c=
+-k=} {-b 1 -h 2 -k 3} {-b conflicts with -k}
+
+testTemplate onlySwitchWArgsTest-14 {} {} {
+-a=
+{-b= -ignore}
+-h=
+-c=
+-k=} {-a 1 -b 2 -k 3 -c 2} {a 1 c 2 k 3}
+
+testTemplate onlySwitchWArgsTest-15 {} {} {
+{-a= -default 10}
+-b=
+-h=
+{-c= -default 20}
+-k=} {-a 1 -b 2 -k 3} {a 1 b 2 c 20 k 3}
+
+testTemplate onlySwitchWArgsTest-16 {} {} {
+{-a -boolean}
+-b=
+-h=
+{-c= -default 20}
+-k=} {-b 2 -k 3} {a 0 b 2 c 20 k 3}
+
+testTemplate onlySwitchWArgsTest-17 {} {} {
+{-a -boolean}
+-b=
+-h=
+{-c= -default 20}
+-k=} {-a -b 2 -k 3} {a 1 b 2 c 20 k 3}
+
+# Bug? -keep doesn't work as intended
+testTemplate onlySwitchWArgsTest-18 {} {} {
+-a=
+-b=
+-h=
+{-c -keep}
+-k=} {-a 5 -b 2 -k 3} {a 5 b 2 k 3}
+
+testTemplate onlySwitchWArgsTest-19 {} {} {
+{-a -key letter -value 1a}
+{-b -key letter -value 1b}
+{-h -key letter -value 1h}
+{-c -key letter -value 1c}
+-k=} {-a -k 3} {letter 1a k 3}
+
+testTemplate onlySwitchWArgsTest-20 {} {} {
+{-a -key letter -value 1a}
+{-b -key letter -value 1b}
+{-h -key letter -value 1h}
+{-c -key letter -value 1c}
+-k=} {-a -k 3 -c} {-a conflicts with -c}
+
+testTemplate onlySwitchWArgsTest-21 {} {} {
+{-a -key letter -value 1a}
+{-b -key letter -value 1b}
+{-h -key letter -value 1h}
+{-c -key letter -value 1c -default 1c}
+-k=} {-k 3} {letter 1c k 3}
+
+testTemplate onlySwitchWArgsTest-22 {} {} {
+-a=
+{-b= -imply {-c} -required}
+-c=} {-b 1 2} {b 1 c 2}
+
+### Only parameters tests 
+testTemplate onlyParametersTest-1 {} {} {
+a
+b
+c} {1 2 3} {a 1 b 2 c 3}
+
+testTemplate onlyParametersTest-2 {} {} {
+a
+b?
+c} {1 2} {a 1 c 2}
+
+testTemplate onlyParametersTest-3 {} {} {
+a
+b?
+c} {1 2 3} {a 1 b 2 c 3}
+
+testTemplate onlyParametersTest-4 {} {} {
+a
+b
+c?} {1 2} {a 1 b 2}
+
+testTemplate onlyParametersTest-5 {} {} {
+a
+b
+c?} {1 2 3} {a 1 b 2 c 3}
+
+testTemplate onlyParametersTest-6 {} {} {
+a?
+b
+c?
+d
+f?} {1 2} {d 2 b 1}
+
+testTemplate onlyParametersTest-7 {} {} {
+a?
+b
+c?
+d
+f?} {1 2 3} {d 3 a 1 b 2}
+
+testTemplate onlyParametersTest-8 {} {} {
+a?
+b
+c?
+d
+f?} {1 2 3 4} {d 4 a 1 b 2 c 3}
+
+testTemplate onlyParametersTest-9 {} {} {
+{a -optional}
+b
+c?
+d
+f?} {1 2 3 4 5} {d 4 a 1 f 5 b 2 c 3}
+
+testTemplate onlyParametersTest-10 {} {} {
+a?
+b
+c?
+d
+f?} {1 2 3 4 5 6} {too many arguments}
+
+testTemplate onlyParametersTest-11 {} {} {
+a
+{b -forbid a}
+c} {1 2 3} {a 1 b 2 c 3}
+
+testTemplate onlyParametersTest-12 {} {} {
+{a? -default 10}
+b?
+c} {1} {a 10 c 1}
+
+testTemplate onlyParametersTest-13 {} {} {
+{a? -default 10}
+b
+c} {1 2} {a 10 b 1 c 2}
+
+testTemplate onlyParametersTest-14 {} {} {
+{a? -default 10}
+b?
+c} {1 2} {a 1 c 2}
+
+testTemplate onlyParametersTest-15 {} {} {
+{a? -default 10}
+b?
+c} {1 2 3} {a 1 b 2 c 3}
+
+# catch this situation?
+testTemplate onlyParametersTest-16 {} {} {
+{a? -require f}
+b
+c?
+d
+f?} {1 2 3} {d 3 a 1 b 2}
+
+testTemplate onlyParametersTest-17 {} {} {
+{a? -ignore}
+b
+c?
+d
+f?} {1 2 3} {d 3 b 2}
+
+testTemplate onlyParametersTest-18 {} {} {
+{a? -ignore}
+{b -ignore}
+c?
+d
+f?} {1 2 3} {d 3}
+
+# doesnt work, same as with -switch element
+testTemplate onlyParametersTest-19 {} {} {
+{a? -keep}
+b
+c?
+d
+f?} {1 2} {d 2 b 1}
+
+### Combination of switches and parameters tests 
+testTemplate switchesParametersCombsTest-1 {} {} {
+{-a= -required}
+{-b= -default 10}
+-c
+d
+e} {-a 1 -c 5 6} {d 5 e 6 a 1 b 10 c {}}
+
+testTemplate switchesParametersCombsTest-2 {} {} {
+{-a= -required}
+{-b= -default 10}
+-c
+d
+e} {-a 1 -b 9 -c 5 6} {d 5 e 6 a 1 b 9 c {}}
+
+testTemplate switchesParametersCombsTest-3 {} {} {
+{-a= -required}
+{-b= -default 10}
+-c
+d
+e} {-a 1 -b 9 -c 5 6} {d 5 e 6 a 1 b 9 c {}}
+
+testTemplate switchesParametersCombsTest-4 {} {} {
+-c
+d
+{-a= -required}
+{-b= -default 10}
+e} {-a 1 -b 9 -c 5 6} {d 5 e 6 a 1 b 9 c {}}
+
+### Wrong elements definitions tests
+testTemplate wrongDefsTest-1 {} {} {
+{-a -switch -argument}
+-b=
+-c=} {-a 1 -b 2 -c 3} {bad element name: -a}
+
+### Check -exact option and prefixes of switches
+testTemplate exactAndPrefixesTest-1 {} {} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=} {-ce 1 -be 9 -dt 5 -a 6 -e 1} {e 1 dta 5 cer 1 art 6 bet 9}
+
+testTemplate exactAndPrefixesTest-2 {} {} {
+-cer=
+-cer1=
+-art=
+-bet=
+-e=} {-ce 1 -be 9 -dt 5 -a 6 -e 1} {bad switch "-ce": must be -art, -bet, -cer, -cer1, or -e}
+
+testTemplate exactAndPrefixesTest-3 {} {} {
+-cer2=
+-cer1=
+-art=
+-bet=
+-e=} {-cer1 1 -be 9 -a 6 -e 1} {e 1 art 6 bet 9 cer1 1}
+
+testTemplate exactAndPrefixesTest-4 {} {-exact} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=} {-ce 1 -be 9 -dt 5 -a 6 -e 1} {bad switch "-ce": must be -art, -bet, -cer, -dta, or -e}
+
+testTemplate exactAndPrefixesTest-5 {} {-exact} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=} {-cer 1 -bet 9 -dta 5 -art 6 -e 1} {e 1 dta 5 cer 1 art 6 bet 9}
+
+### Check -long option for switches
+# add checking with mixed arguments and -- switch
+testTemplate longTest-1 {} {-long} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=} {-cer 1 -bet 9 --dta 5 -art 6 --e 1} {e 1 dta 5 cer 1 art 6 bet 9}
+
+testTemplate longTest-2 {} {} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=} {-cer 1 -bet 9 --dta 5 -art 6 --e 1} {too many arguments}
+
+### Check -equalarg option for switches
+testTemplate equalargTest-1 {} {-equalarg} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=} {-cer 1 -bet=9 -dta 5 -art 6 -e=1} {e 1 dta 5 cer 1 art 6 bet 9}
+
+testTemplate equalargTest-2 {} {} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=} {-cer 1 -bet=9 -dta 5 -art 6 -e=1} {too many arguments}
+
+### Check -inline option for switches
+testTemplate inlineTest-1 {} {-inline} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=
+lab
+had} {-cer 1 -bet 9 -dta 5 -art 6 -e 1 4 5} {arguments {cer 1 bet 9 dta 5 art 6 e 1 lab 4 had 5}}
+
+### Check -mixed option
+testTemplate mixedTest-1 {} {-mixed} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=
+lab
+had} {-cer 1 -bet 9 4 5 -dta 5 -art 6 -e 1} {had 5 e 1 dta 5 cer 1 lab 4 art 6 bet 9}
+
+testTemplate mixedTest-2 {} {-mixed} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=
+lab
+had} {-cer 1 -bet 9 4 -dta 5 -art 6 5 -e 1} {had 5 e 1 dta 5 cer 1 lab 4 art 6 bet 9}
+
+testTemplate mixedTest-3 {} {-mixed} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=
+lab
+had} {4 -cer 1 -bet 9 -dta 5 -art 6 5 -e 1} {had 5 e 1 dta 5 cer 1 lab 4 art 6 bet 9}
+
+testTemplate mixedTest-4 {} {-mixed} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=
+lab
+had} {4 -cer 1 -bet 9 -dta 5 -art 6 5 -e 1} {had 5 e 1 dta 5 cer 1 lab 4 art 6 bet 9}
+
+testTemplate mixedTest-5 {} {-mixed} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=
+lab
+had} {-cer 1 -bet 9 -dta 5 -art 6 -e 1 -- 5 -likeaswitch} {had -likeaswitch e 1 dta 5 cer 1 lab 5 art 6 bet 9}
+
+testTemplate mixedTest-6 {} {-mixed} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=
+lab
+had} {-cer 1 -bet 9 -dta 5 -art 6 -e 1 5 -likeaswitch} {bad switch "-likeaswitch": must be -art, -bet, -cer, -dta, or -e}
+
+testTemplate mixedTest-7 {} {-mixed} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=
+lab
+had} {5 -likeaswitch -cer 1 -bet 9 -dta 5 -art 6 -e 1} {bad switch "-likeaswitch": must be -art, -bet, -cer, -dta, or -e}
+
+testTemplate mixedTest-8 {} {} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=
+lab
+had} {-cer 1 -bet 9 -dta 5 -art 6 -e 1 5 -likeaswitch} {had -likeaswitch e 1 dta 5 cer 1 lab 5 art 6 bet 9}
+
+### Check -reciprocal option
+testTemplate reciprocalTest-1 {} {-reciprocal} {
+{-cer= -require {bet e}}
+-dta=
+-art=
+-bet=
+-e=
+lab
+had} {-bet 9 -dta 5 -art 6 -e 1 4 5} {-bet requires -cer}
+
+### Check -pass option
+testTemplate passTest-1 {} {-pass rest} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=
+lab
+had} {-bet 9 -dta 5 -art 6 -e 1 -k -l 786 4 5} {had 4 e 1 dta 5 rest {-k -l 5} lab 786 art 6 bet 9}
+
+testTemplate passTest-2 {} {-pass rest} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=
+lab
+had} {-bet 9 -dta 5 -art 6 -e 1 -k 90 -l 786 4 5} {had -l e 1 dta 5 rest {-k 786 4 5} lab 90 art 6 bet 9}
+
+testTemplate passTest-3 {} {-pass rest} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=} {-bet 9 -dta 5 -art 6 -e 1 -k 90 -l 786 4 5} {e 1 dta 5 rest {-k 90 -l 786 4 5} art 6 bet 9}
+
+testTemplate passTest-4 {} {-pass rest} {
+-cer=
+-dta=
+-art=
+-bet=
+{-e= -catchall}} {-bet 9 -dta 5 -art 6 -e 1 -k 90 -l 786 4 5} {e {1 -k 90 -l 786 4 5} dta 5 rest {} art 6 bet 9}
+
+### Conflicting definitions tests
+
+
+cleanupTests

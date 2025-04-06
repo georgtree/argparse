@@ -1,3 +1,5 @@
+TODO list by Andy Goth
+
 - Add switch to put parameters before switches
   - Some Tcl commands work this way
   - Examples: [chan copy], [zlib gunzip], [clock], [registry broadcast]
@@ -43,4 +45,12 @@
 - Test suite
   - Possibly the most daunting part of the project
 
-<!-- vim: set sts=4 sw=4 tw=80 et ft=markdown: -->
+TODO list by George Yashin:
+
+- More than one alias for switch 
+- Specify switches that could be allowed, not forbidden, e.g. whitelists
+- Add -required option when use the same key with multiple names of switches, so particular must be presented.
+- If only one switch presented, and the rest is pass to -pass key, if this switchh is provided not as the first element,
+it can't find it
+- Disable parameters processing, in that case we can provide only switches, the rest of elements goes to pass throug key 
+if specified

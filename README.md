@@ -88,30 +88,6 @@ proc greet {args} {
     append msg " " $subject
 }
 ```
-```tcl
-greet world
-```
-```text
-==> hello world
-```
-```tcl
-greet -salutation howdy world
-```
-```text
-==> howdy world
-```
-```tcl
-greet -title -mod "my dear" world
-```
-```text
-==> Hello, my dear world
-```
-```tcl
-greet -title
-```
-```text
-==> hello -title
-```
 
 This example demonstrates many of the argparse core concepts and features. The greet command is defined to accept args. 
 When not explicitly given an argument list to parse, argparse parses the value of the args variable and stores the 
@@ -213,6 +189,38 @@ The following example definition may conceivably be used by a command that store
 }
 ```
 
+The example of such procedure is [source](https://stackoverflow.com/a/38436286/21306711):
+```tcl
+proc genNums {args} {
+    argparse {
+        # {Optional sequence control switches}
+        {-from= -default 1}
+        {-to=   -default 10}
+        {-step= -default 1}
+        {-prec= -default 1}
+        # {Required output list variable}
+        listVar^
+    }
+    if {$step < 0} {
+        set op ::tcl::mathop::>
+    } else {
+        set op ::tcl::mathop::<
+    }
+    for {set n $from} {[$op $n $to]} {set n [expr {$n + $step}]} {
+        lappend listVar [format %.*f $prec $n]
+    }
+}
+genNums -from 0 -to 10 -step 2 sequenceVar
+puts $sequenceVar
+```
+```text
+0.0 2.0 4.0 6.0 8.0
+```
+
+In this example procedure definition `{-prec= -default 1}` is added  and defines precision of resulted sequence of 
+numbers. Instead of returning value via `[return]` command we save resulted list directly in variable of caller scope
+`sequenceVar`.
+
 ### Global Switch
 
 A *global switch* configures the overall operation of the `argparse` command. Global switches are optional initial 
@@ -285,14 +293,17 @@ normally begin with a single `-` but can also begin with `--` if the `-long` swi
 normally appear as the list element following the switch, but if `-equalarg` is used, they may be supplied within the 
 switch element itself, delimited with an `=` character, e.g. `-switch=arg`.
 
+When `-switch` and `-optional` are both used, `-catchall`, `-default`, and `-upvar` are disallowed.
+
 ### Parameter
 
 Parameter is the mandatory [element](#element) that is provided without any preceding flags before name, and it's 
 position in the list of [definitions](#definition) is the same as it must be passed to `argparse` procedure. 
 
-In definition list it is also could be explicitly statet with -parameter element switch. Parameters can be made optional 
-with `-optional`. `-catchall` also makes parameters optional, unless `-required` is used, in which case at least one 
-argument must be assigned to the parameter. Otherwise, using `-required` with `-parameter` has no effect.
+In definition list it is also could be explicitly stated with `-parameter` [element switch](#element-switch). Parameters 
+can be made optional with `-optional`. `-catchall` also makes parameters optional, unless `-required` is used, in which 
+case at least one argument must be assigned to the parameter. Otherwise, using `-required` with `-parameter` has no 
+effect.
 
 ### Value
 
@@ -350,7 +361,7 @@ The element name may be followed by any number of flag characters:
 
 ### Comment
 
-Comment is the element started with # at the start of definition in the definition list.
+Comment is the element started with `#` at the start of definition in the definition list.
 
 
 ## Global Switches
@@ -403,6 +414,34 @@ Comment is the element started with # at the start of definition in the definiti
 
 ## Collecting unassigned arguments
 
+With `-catchall` element switch, we can collects the rest of otherwise unassigned arguments to list and save to 
+switch's key. Let's consider next example:
+
+```tcl
+proc applyOperator {args} {
+    argparse {
+        {-op= -enum {+ *}}
+        {-elements= -catchall}
+    }
+    set result [lindex $elements 0]
+    foreach element [lrange $elements 1 end] {
+        set result [::tcl::mathop::$op $result $element]
+    }
+    return $result
+}
+
+puts [applyOperator -op * -elements 1 2 3 4 5]
+```
+```text
+120
+```
+
+This procedure make summation or product of all elements passed after `-elements` switch with `-catchall` element
+switch. There is also an example of using `-enum` switch to [validate](#validation) possible values of argument to `-op`
+switch.
+
+At most one parameter may use `-catchall`.
+
 ## Default values
 
 ## Forbid
@@ -413,15 +452,44 @@ Comment is the element started with # at the start of definition in the definiti
 
 ## Validation
 
-`-validate` and `-enum` provide element value validation.  The overall `-validate` and `-enum` switches declare named 
-validation expressions and enumeration lists, and the per-element `-validate` and `-enum` switches select which 
-validation expressions and enumeration lists are used on which elements.  The argument to the overall `-validate` and 
-`-enum` switches is a dict mapping from validation or enumeration name to validation expressions or enumeration lists. 
-The argument to a per-element `-validate` switch is a validation name or expression, and the argument to a per-element 
-`-enum` switch is an enumeration name or list.  An element may not use both `-validate` and `-enum`.
+`-validate` and `-enum` provide [element](#element) [value](#value) validation.  The overall `-validate` and `-enum` 
+switches declare named validation expressions and enumeration lists, and the per-element `-validate` and `-enum` 
+switches select which validation expressions and enumeration lists are used on which elements.  The argument to the 
+overall `-validate` and `-enum` switches is a dict mapping from validation or enumeration name to validation expressions
+or enumeration lists. The argument to a per-element `-validate` switch is a validation name or expression, and the 
+argument to a per-element `-enum` switch is an enumeration name or list.  An element may not use both `-validate` and 
+`-enum`.
 
 A validation expression is an `[expr]` expression parameterized on a variable named arg which is replaced with the 
-argument.  If the expression evaluates to `true`, the argument is accepted.
+argument.  If the expression evaluates to `true`, the argument is accepted. Let's consider the example:
+
+```tcl
+proc exponentiation {args} {
+    argparse {
+        {-b!= -validate {[string is double $arg]}}
+        {-n!= -validate {[string is double $arg]}}
+    }
+    return [expr {$b**$n}]
+}
+
+puts [exponentiation -b 2 -n 4]
+```
+```text
+16
+```
+
+This simple function return exponentiation of number `b` in `n`. Our simple tests verify that the arguments are strings
+that could be considered as floating numbers, and only after that set the corresponding variables.
+
+If wrong string is provided, a error message appears:
+
+```tcl
+puts [exponentiation -b a -n 4]
+```
+```{tclerr}
+-b value "a" fails validation: [string is double $arg]
+```
+
 
 An enumeration list is a list of possible argument values.  If the argument appears in the enumeration list, the 
 argument is accepted.  Unless `-exact` is used, if the argument is a prefix of exactly one element of the enumeration 
