@@ -37,6 +37,7 @@ proc testTemplate {testName descr arguments definitionsStr inputStr refStr} {
     }
 }
 
+
 ### Only switches test without arguments
 testTemplate onlySwitchNoArgsTest-1 {} {} {
 -a
@@ -63,7 +64,7 @@ testTemplate onlySwitchNoArgsTest-5 {} {} {
 -b
 -c} {-a -c 1 -b} {too many arguments}
 
-testTemplate onlySwitchNoArgsTest-6 {} {} {
+testTemplate onlySwitchNoArgsTest-6 {explicit -switch in element definition} {} {
 {a -switch}
 -b
 -c} {-a -c} {a {} c {}}
@@ -305,6 +306,11 @@ testTemplate onlySwitchWArgsTest-22 {} {} {
 {-b= -imply {-c} -required}
 -c=} {-b 1 2} {b 1 c 2}
 
+testTemplate onlySwitchWArgsTest-23 {} {} {
+{-a= -argument}
+-b=
+-c=} {-a 1 -b 2 -c 3} {a 1 b 2 c 3}
+
 ### Only parameters tests 
 testTemplate onlyParametersTest-1 {} {} {
 a
@@ -508,6 +514,13 @@ testTemplate longTest-2 {} {} {
 -bet=
 -e=} {-cer 1 -bet 9 --dta 5 -art 6 --e 1} {too many arguments}
 
+testTemplate longTest-3 {} {-long} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=} {-cer 1 -bet 9 --dta 5 -art 6 ---e 1} {too many arguments}
+
 ### Check -equalarg option for switches
 testTemplate equalargTest-1 {} {-equalarg} {
 -cer=
@@ -649,7 +662,323 @@ testTemplate passTest-4 {} {-pass rest} {
 -bet=
 {-e= -catchall}} {-bet 9 -dta 5 -art 6 -e 1 -k 90 -l 786 4 5} {e {1 -k 90 -l 786 4 5} dta 5 rest {} art 6 bet 9}
 
-### Conflicting definitions tests
+### Check -keep option
+# doesn't work as it should? or if work as it should, what is the point if the option?
+testTemplate keepTest-1 {} {-keep} {
+-a=
+-b=
+-c
+d
+e} {1 2} {d 1 e 2}
 
+### Check -normalize option
+testTemplate normalizeTest-1 {} {-normalize -equalarg} {
+-a=
+-b=
+{-c= -pass rest}
+d
+e} {-c=5 -a=4 1 2} {d 1 e 2 a 4 rest {-c 5}}
+
+testTemplate normalizeTest-2 {} {-equalarg} {
+-a=
+-b=
+{-c= -pass rest}
+d
+e} {-c=5 -a=4 1 2} {d 1 e 2 a 4 rest -c=5}
+
+testTemplate normalizeTest-3 {} {-normalize -equalarg -long} {
+{-a= -pass rest}
+{-b= -pass rest}
+{-c= -pass rest}
+d
+e} {-c=5 -a=4 --b 8 1 2} {d 1 e 2 rest {-c 5 -a 4 -b 8}}
+
+testTemplate normalizeTest-4 {} {-normalize -equalarg -long} {
+{-a= -pass rest -default 5}
+{-b= -pass rest}
+{-c= -pass rest}
+d
+e} {-b=4 1 2} {d 1 e 2 rest {-b 4 -a 5}}
+
+testTemplate normalizeTest-5 {} {-equalarg -long} {
+{-a= -pass rest -default 5}
+{-b= -pass rest}
+{-c= -pass rest}
+d
+e} {-b=4 1 2} {d 1 e 2 rest -b=4}
+
+testTemplate normalizeTest-6 {} {-normalize -equalarg -long} {
+{-a= -pass rest -default 5}
+{-b= -pass rest}
+{-c= -pass rest}
+{d -optional -pass rest -default 10}
+e} {-b=4 1} {e 1 rest {-b 4 -a 5 10}}
+
+testTemplate normalizeTest-7 {} {-equalarg -long} {
+{-a= -pass rest -default 5}
+{-b= -pass rest}
+{-c= -pass rest}
+{d -optional -pass rest -default 10}
+e} {-b=4 1} {e 1 rest -b=4}
+
+testTemplate normalizeTest-8 {} {-normalize -equalarg -long -mixed} {
+{-a= -pass rest -default 5}
+{-b= -pass rest -default 6}
+{-c= -pass rest -default 7}
+{d -optional -pass rest -default 10}
+{e -optional -pass rest -default 11}
+{k -optional -pass rest -default 12}} {-b=4 1} {rest {-b 4 -a 5 -c 7 1 11 12}}
+
+testTemplate normalizeTest-9 {} {-equalarg -long -mixed} {
+{-a= -pass rest -default 5}
+{-b= -pass rest -default 6}
+{-c= -pass rest -default 7}
+{d -optional -pass rest -default 10}
+{e -optional -pass rest -default 11}
+{k -optional -pass rest -default 12}} {-b=4 1} {rest {-b=4 1}}
+
+testTemplate normalizeTest-10 {} {-normalize -mixed} {
+{d -optional -pass rest -default 10}
+{e -optional -pass rest -default 11}
+{k -optional -pass rest -default 12}} {-1 2} {rest {-- -1 2 12}}
+
+testTemplate normalizeTest-11 {} {-normalize -equalarg} {
+-a=
+-b=
+{-cabn= -pass rest}
+d
+e} {-c=5 -a=4 1 2} {d 1 e 2 a 4 rest {-cabn 5}}
+
+testTemplate normalizeTest-12 {} {} {
+-a=
+-b=
+{-cabn= -pass rest}
+d
+e} {-c 5 -a 4 1 2} {d 1 e 2 a 4 rest {-c 5}}
+
+testTemplate normalizeTest-13 {} {-normalize -mixed} {
+{d -optional -pass rest }
+{e -optional -pass rest -default 11}
+{k -optional -pass rest -default 12}} {} {rest {11 12}}
+
+testTemplate normalizeTest-14 {} {-normalize} {
+{-a|ban= -pass rest -default 10}
+-b=
+{-cabn= -pass rest}
+d
+e} {-c 5 -a 15 1 2} {d 1 e 2 rest {-cabn 5 -ban 15}}
+
+testTemplate normalizeTest-15 {} {-normalize} {
+{-a|ban= -pass rest -default 10}
+-b=
+{-cabn= -pass rest}
+d
+e} {-c 5 -a 15 1 2} {d 1 e 2 rest {-cabn 5 -ban 15}}
+
+testTemplate normalizeTest-16 {} {-normalize} {
+{-a|ban= -pass rest -default 10}
+-b=
+{-cabn= -pass rest}
+d
+e} {-c 5 -a 15 1 2} {d 1 e 2 rest {-cabn 5 -ban 15}}
+
+### Check -boolean option
+testTemplate booleanTest-1 {} {-boolean} {
+-a
+-b
+-c} {-a} {a 1 b 0 c 0}
+
+### Check global -validate option
+testTemplate validateTest-1 {} {-validate [dict create check1 {[string is double $arg]} check2 {[string is integer $arg]}]} {
+{-a= -validate check1}
+-b=
+{-c= -validate check2}} {-a 1 -b 2 -c 4} {a 1 b 2 c 4}
+
+testTemplate validateTest-2 {} {-validate [dict create check1 {[string is double $arg]} check2 {[string is integer $arg]}]} {
+{-a= -validate check1}
+-b=
+{-c= -validate check2}} {-a n -b 2 -c 4} {-a value "n" fails check1 validation}
+
+testTemplate validateTest-3 {} {-validate [dict create check1 {[string is double $arg]} check2 {[string is integer $arg]}]} {
+{-a= -validate check1}
+-b=
+{-c= -validate check2}} {-a 1 -b 2 -c 4.5} {-c value "4.5" fails check2 validation}
+
+testTemplate validateTest-4 {} {-validate [dict create check1 {[string is double $arg]} check2 {[string is integer $arg]}]} {
+{a -validate check1}
+-b=
+{c -validate check2}} {-b 1 2 4} {a 2 b 1 c 4}
+
+testTemplate validateTest-5 {} {-validate [dict create check1 {[string is double $arg]} check2 {[string is integer $arg]}]} {
+{a -validate check1}
+-b=
+{c -validate check2}} {-b 1 n 4} {a value "n" fails check1 validation}
+
+testTemplate validateTest-6 {} {-validate [dict create check1 {[string is double $arg]} check2 {[string is integer $arg]}]} {
+{a -validate check1}
+-b=
+{c -validate check2}} {-b 1 1 4.5} {c value "4.5" fails check2 validation}
+
+### Check inline -validate option
+testTemplate validateInlineTest-1 {} {} {
+{-a= -validate {[string is double $arg]}}
+-b=
+{-c= -validate {[string is integer $arg]}}} {-a 1 -b 2 -c 4} {a 1 b 2 c 4}
+
+testTemplate validateInlineTest-2 {} {} {
+{-a= -validate {[string is double $arg]}}
+-b=
+{-c= -validate {[string is integer $arg]}}} {-a n -b 2 -c 4} {-a value "n" fails validation: [string is double $arg]}
+
+testTemplate validateInlineTest-3 {} {} {
+{-a= -validate {[string is double $arg]}}
+-b=
+{-c= -validate {[string is integer $arg]}}} {-a 1 -b 2 -c 4.5} {-c value "4.5" fails validation: [string is integer $arg]}
+
+testTemplate validateInlineTest-4 {} {} {
+{a -validate {[string is double $arg]}}
+-b=
+{c -validate {[string is integer $arg]}}} {-b 1 2 4} {a 2 b 1 c 4}
+
+testTemplate validateInlineTest-5 {} {} {
+{a -validate {[string is double $arg]}}
+-b=
+{c -validate {[string is integer $arg]}}} {-b 1 n 4} {a value "n" fails validation: [string is double $arg]}
+
+testTemplate validateInlineTest-6 {} {} {
+{a -validate {[string is double $arg]}}
+-b=
+{c -validate {[string is integer $arg]}}} {-b 1 1 4.5} {c value "4.5" fails validation: [string is integer $arg]}
+
+### Check global -enum option
+testTemplate enumTest-1 {} {-enum [dict create check1 {i o p} check2 {k m o}]} {
+{-a= -enum check1}
+-b=
+{-c= -enum check2}} {-a o -b 2 -c m} {a o b 2 c m}
+
+testTemplate enumTest-2 {} {-enum [dict create check1 {i o p} check2 {k m o}]} {
+{-a= -enum check1}
+-b=
+{-c= -enum check2}} {-a y -b 2 -c m} {bad -a value "y": must be i, o, or p}
+
+testTemplate enumTest-3 {} {-enum [dict create check1 {i o p} check2 {k m o}]} {
+{-a= -enum check1}
+-b=
+{-c= -enum check2}} {-a o -b 2 -c p} {bad -c value "p": must be k, m, or o}
+
+testTemplate enumTest-4 {} {-enum [dict create check1 {i o p} check2 {k m o}]} {
+{a -enum check1}
+-b=
+{c -enum check2}} {-b 1 o m} {a o b 1 c m}
+
+testTemplate enumTest-5 {} {-enum [dict create check1 {i o p} check2 {k m o}]} {
+{a -enum check1}
+-b=
+{c -enum check2}} {-b 1 y m} {bad a value "y": must be i, o, or p}
+
+testTemplate enumTest-6 {} {-enum [dict create check1 {i o p} check2 {k m o}]} {
+{a -enum check1}
+-b=
+{c -enum check2}} {-b 1 o p} {bad c value "p": must be k, m, or o}
+
+### Check inline -enum option
+testTemplate enumInlineTest-1 {} {} {
+{-a= -enum {i o p}}
+-b=
+{-c= -enum {k m o}}} {-a o -b 2 -c m} {a o b 2 c m}
+
+testTemplate enumInlineTest-2 {} {} {
+{-a= -enum {i o p}}
+-b=
+{-c= -enum {k m o}}} {-a y -b 2 -c m} {bad -a value "y": must be i, o, or p}
+
+testTemplate enumInlineTest-3 {} {} {
+{-a= -enum {i o p}}
+-b=
+{-c= -enum {k m o}}} {-a o -b 2 -c p} {bad -c value "p": must be k, m, or o}
+
+testTemplate enumInlineTest-4 {} {} {
+{a -enum {i o p}}
+-b=
+{c -enum {k m o}}} {-b 1 o m} {a o b 1 c m}
+
+testTemplate enumInlineTest-5 {} {} {
+{a -enum {i o p}}
+-b=
+{c -enum {k m o}}} {-b 1 y m} {bad a value "y": must be i, o, or p}
+
+testTemplate enumInlineTest-6 {} {} {
+{a -enum {i o p}}
+-b=
+{c -enum {k m o}}} {-b 1 o p} {bad c value "p": must be k, m, or o}
+
+### Check -upvar option
+test upvarTest-1 {} -body {
+    proc upvarProc {args} {
+        argparse {
+            {a -upvar}
+            b
+            c
+        }
+        set a "$b+$c"
+    }
+    upvarProc p 1 2
+    return $p
+} -result 1+2 -cleanup {
+    rename upvarProc {}
+    unset p
+}
+
+test upvarTest-2 {} -body {
+    proc upvarProc {args} {
+        argparse {
+            {-a= -upvar}
+            b
+            c
+        }
+        set a "$b+$c"
+    }
+    upvarProc -a p 1 2
+    return $p
+} -result 1+2 -cleanup {
+    rename upvarProc {}
+    unset p
+}
+
+### Conflicting and wrong definitions tests
+testTemplate conflictsInDefsTest-1 {} {} {
+{-a -parameter}} {} {bad element name: -a}
+
+testTemplate conflictsInDefsTest-2 {} {} {
+{a -parameter -switch}} {} {-switch and -parameter conflict}
+
+testTemplate conflictsInDefsTest-3 {} {} {
+{-a -switch}} {} {bad element name: -a}
+
+testTemplate conflictsInDefsTest-4 {} {} {
+{-a -ignore -key A}} {} {-ignore and -key conflict}
+
+testTemplate conflictsInDefsTest-5 {} {} {
+{-a -ignore -pass A}} {} {-ignore and -pass conflict}
+
+testTemplate conflictsInDefsTest-6 {} {} {
+{-a -ignore -pass A}} {} {-ignore and -pass conflict}
+
+testTemplate conflictsInDefsTest-7 {} {} {
+{-a -default 1 -required}} {} {-required and -default conflict}
+# issue with keep?
+testTemplate conflictsInDefsTest-8 {} {} {
+{-a -default 1 -keep}} {} {a 1}
+
+testTemplate conflictsInDefsTest-9 {} {-inline} {
+{-a -keep }} {} {-inline and -keep conflict}
+
+testTemplate conflictsInDefsTest-10 {} {} {
+{-a= -value A}} {} {-argument and -value conflict}
+
+testTemplate conflictsInDefsTest-11 {} {} {
+{a -value A}} {} {-parameter and -value conflict}
+
+# add upvar conflicts!
 
 cleanupTests

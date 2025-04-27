@@ -1005,6 +1005,7 @@ proc ::argparse {args} {
         return $result
     } else {
         # Unless -keep was used, unset caller variables for omitted elements.
+
         if {![info exists keep]} {
             dict for {name val} $omitted {
                 set opt [dict get $def $name]
@@ -1014,7 +1015,6 @@ proc ::argparse {args} {
                 }
             }
         }
-
         # Process results.
         dict for {key val} $result {
             if {[dict exists $upvars $key]} {
