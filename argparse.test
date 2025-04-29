@@ -168,6 +168,14 @@ testTemplate onlySwitchWArgsTest-21 {} {} {
 -c
 -k} {-a -be -k -c} {a {} b {} c {} k {}}
 
+testTemplate onlySwitchNoArgsTest-22 {} {} {
+-a
+-b
+-c} {-a -d} {bad switch "-d": must be -a, -b, or -c}
+
+testTemplate onlySwitchNoArgsTest-23 {} {} {
+-a} {-d} {bad switch "-d": must be -a}
+
 ### Only switches tests with arguments
 testTemplate onlySwitchWArgsTest-1 {} {} {
 -a=
@@ -311,6 +319,21 @@ testTemplate onlySwitchWArgsTest-23 {} {} {
 -b=
 -c=} {-a 1 -b 2 -c 3} {a 1 b 2 c 3}
 
+testTemplate onlySwitchWArgsTest-24 {} {} {
+-a=
+{-b|ba= -required}
+-c=} {-a 1 -c 3} {missing required switch: -b|ba}
+
+testTemplate onlySwitchWArgsTest-25 {} {} {
+{-a= -required}
+{-b= -required}
+-c=} {-c 3} {missing required switches: -a and -b}
+
+testTemplate onlySwitchWArgsTest-26 {} {} {
+{-a= -required}
+{-b= -required}
+{-c= -required}} {} {missing required switches: -a, -b, and -c}
+
 ### Only parameters tests 
 testTemplate onlyParametersTest-1 {} {} {
 a
@@ -427,6 +450,21 @@ c?
 d
 f?} {1 2} {d 2 b 1}
 
+testTemplate onlyParametersTest-20 {} {} {
+a
+b
+c} {1 2} {missing required parameter: c}
+
+testTemplate onlyParametersTest-21 {} {} {
+a
+b
+c} {1} {missing required parameters: b and c}
+
+testTemplate onlyParametersTest-22 {} {} {
+a
+b
+c} {} {missing required parameters: a, b, and c}
+
 ### Combination of switches and parameters tests 
 testTemplate switchesParametersCombsTest-1 {} {} {
 {-a= -required}
@@ -455,6 +493,13 @@ d
 {-a= -required}
 {-b= -default 10}
 e} {-a 1 -b 9 -c 5 6} {d 5 e 6 a 1 b 9 c {}}
+
+testTemplate switchesParametersCombsTest-5 {} {} {
+-a=
+{-b= -require {c k} -reciprocal}
+{-h= -standalone}
+-c=
+{k -optional}} {-b 5 -h 10} {h 10 b 5}
 
 ### Wrong elements definitions tests
 testTemplate wrongDefsTest-1 {} {} {
@@ -619,6 +664,15 @@ testTemplate mixedTest-8 {} {} {
 lab
 had} {-cer 1 -bet 9 -dta 5 -art 6 -e 1 5 -likeaswitch} {had -likeaswitch e 1 dta 5 cer 1 lab 5 art 6 bet 9}
 
+testTemplate mixedTest-9 {} {-mixed} {
+-cer=
+-dta=
+-art=
+-bet=
+-e=
+lab
+had} {-cer 1 -bet 9 -dta 5 -art 6 -e 1 -- 1 5} {had 5 e 1 dta 5 cer 1 lab 1 art 6 bet 9}
+
 ### Check -reciprocal option
 testTemplate reciprocalTest-1 {} {-reciprocal} {
 {-cer= -require {bet e}}
@@ -661,6 +715,33 @@ testTemplate passTest-4 {} {-pass rest} {
 -art=
 -bet=
 {-e= -catchall}} {-bet 9 -dta 5 -art 6 -e 1 -k 90 -l 786 4 5} {e {1 -k 90 -l 786 4 5} dta 5 rest {} art 6 bet 9}
+
+testTemplate passTest-5 {} {-pass rest} {
+-cer=
+-dta=
+-art=
+-bet=
+{e -catchall}
+lab
+had} {4 5 -e 1 2 3} {had 3 e {4 5 -e 1} rest {} lab 2}
+ 
+testTemplate passTest-6 {} {-pass rest} {
+-cer=
+-dta=
+-art=
+-bet=
+{e -catchall -pass rest1}
+lab
+had} {- 5 -e 1 2 3} {had 3 rest {} lab 2 rest1 {-- - 5 -e 1}}
+
+testTemplate passTest-7 {} {-pass rest} {
+-cer=
+-dta=
+-art=
+-bet=
+{e -catchall}
+lab
+had} {- 5 -e 1 2 3} {had 3 e {- 5 -e 1} rest {} lab 2}
 
 ### Check -keep option
 # doesn't work as it should? or if work as it should, what is the point if the option?
@@ -781,6 +862,18 @@ testTemplate normalizeTest-16 {} {-normalize} {
 {-cabn= -pass rest}
 d
 e} {-c 5 -a 15 1 2} {d 1 e 2 rest {-cabn 5 -ban 15}}
+
+testTemplate normalizeTest-17 {} {-normalize -pass rest1} {
+{-a|ban= -pass rest -default 10}
+-b=
+{-cabn= -pass rest}
+d
+e} {-c 5 -a 15 1 2} {d 1 e 2 rest {-cabn 5 -ban 15} rest1 {}}
+
+testTemplate normalizeTest-18 {} {-normalize -mixed} {
+{d -optional -pass rest1 -default -}
+{e -optional -pass rest -default -}
+{k -optional -pass rest -default -}} {-} {rest {-- - -} rest1 {-- -}}
 
 ### Check -boolean option
 testTemplate booleanTest-1 {} {-boolean} {
@@ -945,6 +1038,151 @@ test upvarTest-2 {} -body {
     unset p
 }
 
+test upvarTest-3 {} -body {
+    proc upvarProc {args} {
+        argparse {
+            {-a= -key j -upvar}
+            {-b= -key j -upvar}
+            c
+        }
+        set a $c
+        set b $c
+    }
+    catch {upvarProc -a p -b p 1} errorStr
+    return $errorStr
+} -result {multiple upvars to the same variable: a b} -cleanup {
+    rename upvarProc {}
+    unset errorStr
+}
+
+### Check -- option
+testTemplate --Test-6 {} {-normalize -equalarg -long --} {
+{-a= -pass rest -default 5}
+{-b= -pass rest}
+{-c= -pass rest}
+{d -optional -pass rest -default 10}
+e} {-b=4 1} {e 1 rest {-b 4 -a 5 10}}
+
+### Check -template option
+test templateTest-1 {} -body {
+    proc templateOptProc {args} {
+        argparse -template apopts(%) {
+            a
+            b
+            c
+        }
+        foreach {name value} [array get apopts] {
+            dict append result $name $value
+        }
+        return $result
+    }
+    templateOptProc p 1 2
+} -result {a p b 1 c 2} -cleanup {
+    rename templateOptProc {}
+}
+
+test templateTest-2 {} -body {
+    proc templateOptProc {args} {
+        argparse -template apopts(%) {
+            a
+            b
+            -c=
+        }
+        foreach {name value} [array get apopts] {
+            dict append result $name $value
+        }
+        return $result
+    }
+    templateOptProc -c 2 p 1 
+} -result {a p b 1 c 2} -cleanup {
+    rename templateOptProc {}
+}
+
+test templateTest-3 {} -body {
+    proc templateOptProc {args} {
+        argparse {
+            {a -key apopts(a)}
+            {b -key apopts(b)}
+            {-c= -key apopts(-c)}
+        }
+        foreach {name value} [array get apopts] {
+            dict append result $name $value
+        }
+        return $result
+    }
+    templateOptProc -c 2 p 1 
+} -result {-c 2 a p b 1} -cleanup {
+    rename templateOptProc {}
+}
+### Check specific options variants
+test specOptsTest-1 {} -body {
+    proc specOptsProc {args} {
+        argparse {} {} {}
+        return
+    }
+    catch {specOptsProc p 1 2} errorStr
+    return $errorStr
+} -result {too many arguments} -cleanup {
+    rename specOptsProc {}
+}
+
+test specOptsTest-2 {} -body {
+    proc specOptsProc {args} {
+        argparse
+        return
+    }
+    catch {specOptsProc p 1 2} errorStr
+    return $errorStr
+} -result {missing required parameter: definition} -cleanup {
+    rename specOptsProc {}
+}
+
+test specOptsTest-3 {} -body {
+    proc specOptsProc {} {
+        argparse {} {}
+        return
+    }
+    catch {specOptsProc} errorStr
+    return $errorStr
+} -result {} -cleanup {
+    rename specOptsProc {}
+}
+
+test specOptsTest-4 {} -body {
+    proc specOptsProc {args} {
+        argparse {
+            b
+            c
+        } $args
+        return [list $b $c]
+    }
+    specOptsProc 2 3
+} -result {2 3} -cleanup {
+    rename specOptsProc {}
+}
+
+### Check comments in definition
+testTemplate commentTest-1 {} {} {
+-a
+# comment1
+-b
+{# comment2}
+-c} {-a -c} {a {} c {}}
+
+testTemplate commentTest-2 {} {} {
+-a
+# comment1
+-b
+{#comment2}
+-c} {-a -c} {bad element shorthand: #comment2}
+
+testTemplate commentTest-3 {} {} {
+-a
+#
+-b
+{# comment2}
+-c} {-a -c} {a {} c {}}
+
 ### Conflicting and wrong definitions tests
 testTemplate conflictsInDefsTest-1 {} {} {
 {-a -parameter}} {} {bad element name: -a}
@@ -979,6 +1217,179 @@ testTemplate conflictsInDefsTest-10 {} {} {
 testTemplate conflictsInDefsTest-11 {} {} {
 {a -value A}} {} {-parameter and -value conflict}
 
+testTemplate conflictsInDefsTest-12 {} {-inline -keep} {
+{-a}} {} {-inline and -keep conflict}
+
+testTemplate conflictsInDefsTest-13 {} {-inline} {
+{-a= -upvar}} {} {-upvar and -inline conflict}
 # add upvar conflicts!
+
+testTemplate conflictsInDefsTest-14 {} {} {
+{a -switch -optional -catchall}} {} {-switch -optional -catchall is a disallowed combination}
+
+testTemplate conflictsInDefsTest-15 {} {} {
+{a -switch -optional -upvar}} {} {-switch -optional -upvar is a disallowed combination}
+
+testTemplate conflictsInDefsTest-16 {} {} {
+{a -switch -optional -default 1}} {} {-switch -optional -default is a disallowed combination}
+
+# bug?? should be '-switch -optional -boolean is a disallowed combination'
+testTemplate conflictsInDefsTest-17 {} {} {
+{a -switch -boolean -optional}} {} {-argument and -boolean conflict}
+
+testTemplate conflictsInDefsTest-18 {} {} {
+{a -parameter -optional -required}} {} {-parameter -optional -required is a disallowed combination}
+
+testTemplate conflictsInDefsTest-19 {} {} {
+{a -catchall}
+{b -catchall}} {1 1} {multiple catchall parameters: a and b}
+
+### Requirements tests
+testTemplate requirementsTest-1 {} {} {
+{-a= -reciprocal}
+-b
+-a} {-a -b} {-reciprocal requires -require}
+
+testTemplate requirementsTest-2 {} {} {
+{-a= -level}
+-b
+-a} {-a -b} {-level requires -upvar}
+
+### Misc tests
+testTemplate miscTest-1 {} {} {
+-a
+{}
+-b
+{# comment2}
+-c} {-a -c} {a {} c {}}
+
+testTemplate miscTest-2 {} {} {
+{-a= -enum}
+-b
+-c} {-a -c} {-enum requires an argument}
+
+testTemplate miscTest-3 {} {} {
+-a= 
+-b
+-a} {-a -b} {element name collision: a}
+
+testTemplate miscTest-4 {} {} {
+{-a= -alias $a} 
+-b
+-a} {-a -b} {bad alias: $a}
+
+testTemplate miscTest-5 {} {} {
+{-a= -alias n} 
+{-b= -alias n} 
+-a} {-a -b} {element alias collision: n}
+
+testTemplate miscTest-6 {} {} {
+{-a= -require t} 
+{-b= -alias n} 
+-g} {-a -b} {a -require references undefined element: t}
+
+testTemplate miscTest-7 {} {} {
+{-a= -key t} 
+{-b= -alias n} 
+{g -key t}} {-a -b} {a cannot use -argument because it shares a key with g}
+
+testTemplate miscTest-8 {} {} {
+{-a -key t} 
+{-b= -alias n} 
+{g -key t}} {-a -b} {g cannot be a parameter because it shares a key with a}
+
+testTemplate miscTest-9 {} {} {
+{-a -key t -default 1} 
+{-g -key t -default 2}} {-a -g} {a and g cannot both use -default because they share a key}
+
+testTemplate miscTest-10 {} {} {
+{-a -key t -value 1} 
+{-g -key t -value 2}} {-a -g} {-a conflicts with -g}
+
+testTemplate miscTest-11 {} {} {
+{-a -key t -value 1} 
+{-g -key t -value 2}
+{-k -key t -value 3}} {-a} {t 1}
+
+testTemplate miscTest-12 {} {-normalize} {
+-cer=
+-dta=
+-art=
+-bet=
+{-e= -catchall -pass rest}
+lab
+had} {-cer 1 -e 2 io p 4 5} {had 5 rest {-e 2 io p} cer 1 lab 4}
+
+testTemplate miscTest-13 {} {} {
+-cer=
+-dta=
+-art=
+-bet=
+{-e= -catchall -pass rest}
+lab
+had} {-cer 1 -e 2 io p 4 5} {had 5 rest {-e 2 io p} cer 1 lab 4}
+
+testTemplate miscTest-14 {} {-normalize -equalarg} {
+-cer=
+-dta=
+-art=
+-bet=
+-e
+lab
+had} {-e=1 -cer 1 4 5} {-e doesn't allow an argument}
+
+testTemplate miscTest-15 {} {-normalize -equalarg} {
+-cer=
+-dta=
+-art=
+-bet=
+{-e -pass rest}
+lab
+had} {-e -cer 1 4 5} {had 5 cer 1 rest -e lab 4}
+
+testTemplate miscTest-16 {} {-normalize -equalarg} {
+{-cer= -key j -optional}
+-dta=
+-art=
+-bet=
+{-e -key y}
+lab
+had} {-e -cer 1 4 5} {had 5 y {} j {{} 1} lab 4}
+
+testTemplate miscTest-17 {} {-normalize -equalarg} {
+{-cer= -optional -pass a}
+-dta=
+-art=
+-bet=
+{-e -key y}
+{lab -optional}
+had} {-e -cer 5} {had 5 a -cer y {}}
+
+testTemplate miscTest-18 {} {-equalarg} {
+{-cer= -optional -pass a}
+-dta=
+-art=
+-bet=
+{-e -key y}
+{lab -optional}
+had} {-e -cer 5} {had 5 a -cer y {}}
+
+testTemplate miscTest-19 {} {-normalize -equalarg} {
+{-cer= -optional}
+-dta=
+-art=
+-bet=
+{-e -key y}
+{lab -optional}
+had} {-e -cer 5} {had 5 y {} cer {}}
+
+testTemplate miscTest-20 {} {-normalize -equalarg} {
+{-cer= -key j -catchall}
+-dta=
+-art=
+-bet=
+{-e -key y}
+lab
+had} {-e 4 5} {had 5 y {} j {} lab 4}
 
 cleanupTests
