@@ -7,3 +7,4 @@ configure~
 *.pdf
 *.tpj
 *.html
+\#README.md#

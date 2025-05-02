@@ -113,16 +113,9 @@ dist-clean:
 
 dist: dist-clean
 	mkdir -p $(DIST_DIR)
-	cp -p $(srcdir)/README* $(DIST_DIR)/
-	cp -p $(srcdir)/LICENSE* $(DIST_DIR)/
-	cp -p $(srcdir)/pkgIndex.tcl.in $(DIST_DIR)/
-	mv $(DIST_DIR)/pkgIndex.tcl.in $(DIST_DIR)/pkgIndex.tcl
-	rm -f $(DIST_DIR)/pkgIndex.tcl.in
-	for i in $(srcdir)/*.tcl; do \
-	    if [ -f $$i ]; then \
-		cp -p $$i $(DIST_DIR)/ ; \
-	    fi; \
-	done;
+	cp -p $(srcdir)/README.md $(DIST_DIR)/
+	cp -p $(srcdir)/LICENSE $(DIST_DIR)/
+	cp -p $(srcdir)/pkgIndex.tcl $(DIST_DIR)/
 	cp -p $(srcdir)/argparse.tcl $(DIST_DIR)
 	cp -p $(srcdir)/argparse.test $(DIST_DIR)
 
