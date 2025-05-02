@@ -67,6 +67,7 @@ interp alias {} = {} expr
 # -reciprocal    This element's -require is reciprocal; requires -require
 # -validate DEF  Name of validation expression, or inline validation definition
 # -enum DEF      Name of enumeration list, or inline enumeration definition
+# -type DEF      Validate value according to type defined in [string is] command, requires -argument 
 #
 # If the first (possibly only) word of a definition list element is the single
 # character "#", the element is ignored.  If the definition list element is only
@@ -238,13 +239,23 @@ proc ::argparse {args} {
     set validateHelper {apply {{name opt args} {
         if {[dict exists $opt enum]} {
             set command [list tcl::prefix match -message "$name value"\
-                    {*}[if {[uplevel 1 {info exists exact}]} {list -exact}]\
-                    [dict get $opt enum]]
+                                 {*}[if {[uplevel 1 {info exists exact}]} {list -exact}] [dict get $opt enum]]
             set args [lmap arg $args {{*}$command $arg}]
         } elseif {[dict exists $opt validate]} {
             foreach arg $args [list if [dict get $opt validate] {} else {
                 return -code error -level 2 "$name value \"$arg\" fails [dict get $opt validateMsg]"
             }]
+        }
+        return $args
+    }}}
+### Type checking routine
+    set typeChecker {apply {{name opt args} {
+        if {[dict exists $opt type]} {
+            foreach arg $args {
+                if {![string is [dict get $opt type] -strict $arg]} {
+                    return -code error -level 2 "$name value \"$arg\" is not of the type [dict get $opt type]"
+                }
+            }
         }
         return $args
     }}}
@@ -328,8 +339,8 @@ proc ::argparse {args} {
         set opt {}
         set defsSwitches {-alias -argument -boolean -catchall -default -enum -forbid -ignore -imply -keep -key -level\
                                   -optional -parameter -pass -reciprocal -require -required -standalone -switch -upvar\
-                                  -validate -value}
-        set defsSwitchesWArgs {alias default enum forbid imply key pass require validate value}
+                                  -validate -value -type}
+        set defsSwitchesWArgs {alias default enum forbid imply key pass require validate value type}
         for {set i 1} {$i<[llength $elem]} {incr i} {
             if {[set switch [regsub {^-} [tcl::prefix match $defsSwitches [@ $elem $i]] {}]] ni $defsSwitchesWArgs} {
 #####   Process switches without arguments.
@@ -385,7 +396,7 @@ proc ::argparse {args} {
 ####  Add -argument switch if particular switches are presented
             # -optional, -required, -catchall, and -upvar imply -argument when
             # used with switches.
-            foreach switch {optional required catchall upvar} {
+            foreach switch {optional required catchall upvar type} {
                 if {[dict exists $opt $switch]} {
                     dict set opt argument {}
                 }
@@ -413,6 +424,7 @@ proc ::argparse {args} {
             upvar     {boolean inline catchall}
             boolean   {default value}
             enum      validate
+            type      {upvar boolean enum}
         } {
             if {[dict exists $opt $switch]} {
                 foreach other $others {
@@ -431,6 +443,7 @@ proc ::argparse {args} {
             {switch optional upvar}
             {switch optional default}
             {switch optional boolean}
+            {switch optional type}
             {parameter optional required}
         } {
             foreach switch [list {*}$combination {}] {
@@ -501,6 +514,15 @@ proc ::argparse {args} {
                 dict set opt validate [dict get $validate [dict get $opt validate]]
             } else {
                 dict set opt validateMsg "validation: [dict get $opt validate]"
+            }
+        }
+####  Check for allowed arguments to -type
+        if {[dict exists $opt type]} {
+            set allowedTypes {alnum alpha ascii boolean control dict digit double graph integer list lower print punct\
+                                      space upper wideinteger wordchar xdigit}
+            if {[dict get $opt type] ni $allowedTypes} {
+                return -code error "type [dict get $opt type] is not in the list of allowed types, must be\
+                        [join [lrange $allowedTypes 0 end-1] {, }] or [@ $allowedTypes end]"
             }
         }
 ####  Save element definition.
@@ -675,6 +697,7 @@ proc ::argparse {args} {
             if {[dict exists $def $name catchall]} {
                 # The switch is catchall, so store all remaining arguments.
                 set argv [{*}$validateHelper $normal [dict get $def $name] {*}$argv]
+                set argv [{*}$typeChecker $normal [dict get $def $name] {*}$argv]
                 if {[info exists key]} {
                     dict set result $key $argv
                 }
@@ -708,6 +731,7 @@ proc ::argparse {args} {
             } elseif {$argv ne {}} {
                 # The switch was given the expected argument.
                 set argv0 [@ [{*}$validateHelper $normal [dict get $def $name] [@ $argv 0]] 0]
+                set argv0 [@ [{*}$typeChecker $normal [dict get $def $name] [@ $argv 0]] 0]
                 if {[info exists key]} {
                     if {[dict exists $def $name optional]} {
                         dict set result $key [list {} $argv0]
@@ -862,6 +886,7 @@ proc ::argparse {args} {
         if {[dict exists $alloc $name]} {
             if {![dict exists $opt catchall] && $name ne {}} {
                 set val [@ [{*}$validateHelper $name $opt [@ $params $i]] 0]
+                set val [@ [{*}$typeChecker $name $opt [@ $params $i]] 0]
                 if {[dict exists $opt pass]} {
                     if {([string index $val 0] eq {-}) && ![dict exists $result [dict get $opt pass]]} {
                         dict lappend result [dict get $opt pass] --
@@ -874,6 +899,7 @@ proc ::argparse {args} {
                 set val [lrange $params $i [= {$i+$step-1}]]
                 if {$name ne {}} {
                     set val [{*}$validateHelper $name $opt {*}$val]
+                    set val [{*}$typeChecker $name $opt {*}$val]
                 }
                 if {[dict exists $opt pass]} {
                     if {([string index [@ $val 0] 0] eq {-}) && ![dict exists $result [dict get $opt pass]]} {

@@ -371,31 +371,32 @@ Comment is the element started with `#` at the start of definition in the defini
 
 ## Element Switches
 
-| Switch                     | Description                                                          |
-|:---------------------------|:---------------------------------------------------------------------|
-| `-switch`                  | Element is a switch; conflicts with `-parameter`                     |
-| `-parameter`               | Element is a parameter; conflicts with `-switch`                     |
-| `-alias aliasName`         | Alias name; requires `-switch`                                       |
-| `-ignore`                  | Element is omitted from result; conflicts with `-key` and `-pass`    |
-| `-key keyName`             | Override key name; not affected by `-template`                       |
-| `-pass keyName`            | Pass through to result key; not affected by `-template`              |
-| `-default value`           | Value if omitted; conflicts with `-required` and `-keep`             |
-| `-keep`                    | Do not unset if omitted; requires `-optional`; conflicts `-inline`   |
-| `-value value`             | Value if present; requires `-switch`; conflicts with `-argument`     |
-| `-boolean`                 | Equivalent to `-default 0 -value 1`                                  |
-| `-argument`                | Value is next argument following switch; requires `-switch`          |
-| `-optional`                | Switch value is optional, or parameter is optional                   |
-| `-required`                | Switch is required, or stop `-catchall` from implying `-optional`    |
-| `-catchall`                | Value is list of all otherwise unassigned arguments                  |
-| `-upvar`                   | Links caller variable; conflicts with `-inline` and `-catchall`      |
-| `-level levelSpec`         | This element's `[upvar]` level; requires `-upvar`                    |
-| `-standalone`              | If element is present, ignore `-required`, `-require`, and `-forbid` |
-| `-require nameList`        | If element is present, other elements that must be present           |
-| `-forbid nameList`         | If element is present, other elements that must not be present       |
-| `-imply argList`           | If element is present, extra switch arguments; requires `-switch`    |
-| `-reciprocal`              | This element's `-require` is reciprocal; requires `-require`         |
-| `-validate validNameOrDef` | Name of validation expression, or inline validation definition       |
-| `-enum enumNameOrDef`      | Name of enumeration list, or inline enumeration definition           |
+| Switch                     | Description                                                                           |
+|:---------------------------|:--------------------------------------------------------------------------------------|
+| `-switch`                  | Element is a switch; conflicts with `-parameter`                                      |
+| `-parameter`               | Element is a parameter; conflicts with `-switch`                                      |
+| `-alias aliasName`         | Alias name; requires `-switch`                                                        |
+| `-ignore`                  | Element is omitted from result; conflicts with `-key` and `-pass`                     |
+| `-key keyName`             | Override key name; not affected by `-template`                                        |
+| `-pass keyName`            | Pass through to result key; not affected by `-template`                               |
+| `-default value`           | Value if omitted; conflicts with `-required` and `-keep`                              |
+| `-keep`                    | Do not unset if omitted; requires `-optional`; conflicts `-inline`                    |
+| `-value value`             | Value if present; requires `-switch`; conflicts with `-argument`                      |
+| `-boolean`                 | Equivalent to `-default 0 -value 1`                                                   |
+| `-argument`                | Value is next argument following switch; requires `-switch`                           |
+| `-optional`                | Switch value is optional, or parameter is optional                                    |
+| `-required`                | Switch is required, or stop `-catchall` from implying `-optional`                     |
+| `-catchall`                | Value is list of all otherwise unassigned arguments                                   |
+| `-upvar`                   | Links caller variable; conflicts with `-inline` and `-catchall`                       |
+| `-level levelSpec`         | This element's `[upvar]` level; requires `-upvar`                                     |
+| `-standalone`              | If element is present, ignore `-required`, `-require`, and `-forbid`                  |
+| `-require nameList`        | If element is present, other elements that must be present                            |
+| `-forbid nameList`         | If element is present, other elements that must not be present                        |
+| `-imply argList`           | If element is present, extra switch arguments; requires `-switch`                     |
+| `-reciprocal`              | This element's `-require` is reciprocal; requires `-require`                          |
+| `-validate validNameOrDef` | Name of validation expression, or inline validation definition                        |
+| `-enum enumNameOrDef`      | Name of enumeration list, or inline enumeration definition                            |
+| `-type typeName`           | Validate value according to type defined in [string is] command, requires `-argument` |
 
 ## Collecting unassigned arguments
 
@@ -469,6 +470,42 @@ puts [exponentiation -b a -n 4]
 An enumeration list is a list of possible argument values.  If the argument appears in the enumeration list, the 
 argument is accepted.  Unless `-exact` is used, if the argument is a prefix of exactly one element of the enumeration 
 list, the argument is replaced with the enumeration list element.
+
+Additional built-in validation of argument is done with help of [string is] command. All types (classes) are supported
+except `true` and `false` class. To declare type of argument, the switch `-type` should be provided to definition
+of switch or parameter with one of the argument: `alnum alpha ascii boolean control dict digit double graph integer list
+lower print punct space upper wideinteger wordchar xdigit`. If you specify type for switch, the switch should be defined
+with `-argument` (or `=` shorthand). Conflicts with `-upvar`, `-boolean` and `-enum`, combination of `-switch`, 
+`-optional` and `type` is forbidden.
+
+As an example, we can use previously proposed procedure:
+```{.tcl}
+proc genNums {args} {
+    argparse {
+        # {Optional sequence control switches}
+        {-from= -default 1 -type double}
+        {-to=   -default 10 -type double}
+        {-step= -default 1 -type double}
+        {-prec= -default 1 -type double}
+        # {Required output list variable}
+        listVar^
+    }
+    if {$step < 0} {
+        set op ::tcl::mathop::>
+    } else {
+        set op ::tcl::mathop::<
+    }
+    for {set n $from} {[$op $n $to]} {set n [expr {$n + $step}]} {
+        lappend listVar [format %.*f $prec $n]
+    }
+}
+```
+
+If we provide the wrong argument type to `genNums` procedure, the error occurs:
+
+```{.tcl}
+genNums -from 0 -to 10.. -step 2 sequenceVar
+```
 
 ## Passthrough and normalization
 

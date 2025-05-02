@@ -41,9 +41,9 @@ proc upvarProc {args} {
     argparse {
         -c
         d
-        {-a= -required}
-        {-b= -default 10}
-        e
+        {-a= -required -type double}
+        {-b= -default 10 -type integer}
+        {e -type bool}
     }
     return
 }

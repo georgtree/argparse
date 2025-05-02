@@ -1244,6 +1244,10 @@ testTemplate conflictsInDefsTest-19 {} {} {
 {a -catchall}
 {b -catchall}} {1 1} {multiple catchall parameters: a and b}
 
+testTemplate conflictsInDefsTest-20 {} {} {
+{-a= -upvar -type double}
+{b -catchall}} {1 1} {-type and -upvar conflict}
+
 ### Requirements tests
 testTemplate requirementsTest-1 {} {} {
 {-a= -reciprocal}
@@ -1391,5 +1395,43 @@ testTemplate miscTest-20 {} {-normalize -equalarg} {
 {-e -key y}
 lab
 had} {-e 4 5} {had 5 y {} j {} lab 4}
+
+### Check -type in definitions 
+testTemplate typeTest-1 {} {} {
+{-a= -type alpha}
+{-b= -type boolean}
+{c -type integer}} {-a y -b False 10} {a y b False c 10}
+
+testTemplate typeTest-2 {} {} {
+{-a= -type alpha1}
+{-b= -type boolean}
+{c -type integer}} {-a y -b False 10} {type alpha1 is not in the list of allowed types, must be alnum, alpha, ascii, boolean, control, dict, digit, double, graph, integer, list, lower, print, punct, space, upper, wideinteger, wordchar or xdigit}
+
+testTemplate typeTest-3 {} {} {
+{-a= -type alpha}
+{-b= -type boolean}
+{c -type integer}} {-a y -b False 10.1} {c value "10.1" is not of the type integer}
+
+testTemplate typeTest-4 {} {} {
+{-a= -type alpha}
+{-b= -type boolean}
+{c -type integer}} {-a y -b False -1} {a y b False c -1}
+
+testTemplate typeTest-5 {} {} {
+{-a= -type alpha}
+{-b= -type boolean}
+{c -type integer}} {-a y! -b False -1} {-a value "y!" is not of the type alpha}
+
+testTemplate typeTest-6 {} {-mixed} {
+{-a= -type alpha -catchall}
+{-b= -type boolean}
+{c -type integer}} {-b False 1 -a y ty qwq} {a {y ty qwq} b False c 1}
+
+testTemplate typeTest-7 {} {-mixed} {
+{-a= -type alpha -catchall}
+{-b= -type boolean}
+{c -type integer}} {-b False 1 -a y ty 1} {-a value "1" is not of the type alpha}
+
+
 
 cleanupTests
