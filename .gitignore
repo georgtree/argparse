@@ -1,0 +1,9 @@
+code_coverage_pdfs
+Makefile
+config.status
+config.log
+pkgIndex.tcl
+configure~
+*.pdf
+*.tpj
+*.html
