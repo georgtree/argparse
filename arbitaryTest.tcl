@@ -37,14 +37,14 @@ proc testTemplate {testName descr arguments definitionsStr inputStr refStr} {
 }
 
 
-
-
-
-testTemplate passTest-5 {} {-pass rest} {
--cer=
--dta=
--art=
--bet=
-{e -catchall -pass rest1}
-lab
-had} {- 5 -e 1 2 3} {had 3 e {4 5 -e 1} rest {} lab 2}
+proc upvarProc {args} {
+    argparse {
+        -c
+        d
+        {-a= -required}
+        {-b= -default 10}
+        e
+    }
+    return
+}
+upvarProc -a 1 -b 9 -c 5 6
