@@ -694,6 +694,8 @@ not present and when its value is the name of a nonexistent variable. To tell th
 returns an empty list; if so, the element is not present. Note that the argument to `[info vars]` is a `[string match]`
 pattern, so it may be necessary to precede `*?[]\` characters with backslashes.
 
+## Template
+
 ## Argument Processing Sequence
 
 [Argument](#argument) processing is performed in three stages: [switch](#switch) processing, [parameter](#parameter)
@@ -705,7 +707,7 @@ switch `--` can be used to force switch termination if the first parameter happe
 defined, the first argument is known to be a parameter even if it starts with `-`.
 
 When the `-mixed` switch is used, switch processing continues after encountering arguments that do not start with `-` or
-`--`. This is convenient but may be ambiguous in cases where parameters look like switches.  To resolve ambiguity, the
+`--`. This is convenient but may be ambiguous in cases where parameters look like switches. To resolve ambiguity, the
 special `--` switch terminates switch processing and forces all remaining arguments to be parameters.
 
 When `-mixed` is not used, the required parameters are counted, then that number of arguments at the end of the argument

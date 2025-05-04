@@ -95,7 +95,7 @@ install-libraries:
 	$(INSTALL_DATA) pkgIndex.tcl $(DESTDIR)$(pkglibdir); \
 
 test: libraries
-	$(TCLSH) `@CYGPATH@ $(srcdir)/argparse.test` $(TESTFLAGS)
+	$(TCLSH) `@CYGPATH@ $(srcdir)/test/all.tcl` $(TESTFLAGS)
 
 shell: binaries libraries
 	@$(TCLSH) $(SCRIPT)
@@ -116,8 +116,10 @@ dist: dist-clean
 	cp -p $(srcdir)/README.md $(DIST_DIR)/
 	cp -p $(srcdir)/LICENSE $(DIST_DIR)/
 	cp -p $(srcdir)/pkgIndex.tcl $(DIST_DIR)/
-	cp -p $(srcdir)/argparse.tcl $(DIST_DIR)
-	cp -p $(srcdir)/argparse.test $(DIST_DIR)
+	cp -p $(srcdir)/argparse.tcl $(DIST_DIR)/
+	mkdir -p $(DIST_DIR)/test
+	cp -p $(srcdir)/test/argparse.test $(DIST_DIR)/test
+	cp -p $(srcdir)/test/all.tcl $(DIST_DIR)/test
 
 	(cd $(DIST_ROOT); $(COMPRESS); $(COMPRESS_ZIP))
 
