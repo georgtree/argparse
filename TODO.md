@@ -49,6 +49,7 @@ TODO list by George Yashin:
 
 - More than one alias for switch, and global option to allow use alias name as a key
 - Specify only allowed switches/parameters, not forbidden, e.g. whitelists
+- Ability for validation expression to use others keys arguments
 - Add -required option when use the same key with multiple names of switches, so particular must be presented.
 - If only one switch presented, and the rest is pass to -pass key, if this switchh is provided not as the first element,
 it can't find it
@@ -57,5 +58,3 @@ if specified
 - Add logic in -require section: different combinations of elements could provide valid requirement. For example,
 {-a= -require {(a && b) || (a && c)}}, so to fulfill the requirement, we can provide a and b together, or a and c together.
 It could allow to demand one of many, for example {a||b||c}
-- Add -type switch, it will enable type checking according to [string is] command for switches and parameters (and decide
-what to do with elements that share the same type, forbid different types probably)

@@ -431,10 +431,10 @@ proc applyOperator {args} {
     return $result
 }
 
-puts [applyOperator -op * -elements 1 2 3 4 5]
+applyOperator -op * -elements 1 2 3 4 5
 ```
 ```text
-120
+==> 120
 ```
 
 This procedure make summation or product of all elements passed after `-elements` switch with `-catchall` element
@@ -445,11 +445,9 @@ At most one parameter may use `-catchall`.
 
 ## Default values
 
-## Forbid
-
-## Reciprocal
-
-## Imply
+Element switch `-default` specifies the value to assign to element keys when the element is omitted. If `-default` is not
+used, keys for omitted switches and parameters are omitted from the result, unless `-catchall` is used, in which case the
+default value for -default is empty string.
 
 ## Validation
 
@@ -473,10 +471,10 @@ proc exponentiation {args} {
     return [expr {$b**$n}]
 }
 
-puts [exponentiation -b 2 -n 4]
+exponentiation -b 2 -n 4
 ```
 ```text
-16
+==> 16
 ```
 
 This simple function return exponentiation of number `b` in `n`. Our simple tests verify that the arguments are strings
@@ -485,7 +483,7 @@ that could be considered as floating numbers, and only after that set the corres
 If wrong string is provided, a error message appears:
 
 ```tcl
-puts [exponentiation -b a -n 4]
+exponentiation -b a -n 4
 ```
 ```{tclerr}
 -b value "a" fails validation: [string is double $arg]
@@ -535,6 +533,124 @@ genNums -from 0 -to 10.. -step 2 sequenceVar
 -to value "10.." is not of the type double
 ```
 
+
+## Forbid
+
+If the presence of an element should be forbidden in combination with certain other elements, use the `-forbid` switch
+followed by a list of element names. In next example, we can forbid using arguments that logically incompatible:
+```tcl
+proc sheduleEvent {args} {
+    set arguments [argparse -inline\
+            -validate [dict create date {[regexp {^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$} $arg]}\
+                time {[regexp {^([01][0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?$} $arg]}] {
+        {date -validate date}
+        {time -validate time}
+        {-allday -forbid {duration endtime}}
+        {-duration= -forbid {allday endtime} -validate time}
+        {-endtime= -forbid {allday duration} -validate time}
+    }]
+    if {![dict exists $arguments allday] && ![dict exists $arguments duration] && ![dict exists $arguments endtime]} {
+        return -code error "One of the switch must be presented: -allday, -duration or -endtime"
+    }
+    return $arguments
+}
+```
+
+This procedure provides template for sheduling event. As input, date in format DD-MM-YYYY and time in format HH:MM of 
+the event provides as parameters, and the duration of the event could be provided in different mutually exclusively ways:
+
+| switch name | description                                        |
+|-------------|----------------------------------------------------|
+| -allday     | select the duration of event to the end of the day |
+| -duration   | set duration of the event in format HH:MM          |
+| -endtime    | set end time of the event in format HH:MM          |
+
+Additionaly, the validation expressions for the date format and time format regular expression is used. These expression
+are supplied as  named expressions in dictionary argument to global switch `-validate`.
+
+One of the switches `-allday`, `-duration` or `-endtime` must be presented, so additional checking is done after 
+argument processing.
+
+Normal operation:
+```tcl
+sheduleEvent -duration 01:30 20-12-2024 13:30
+```
+```text
+==> duration 01:30 date 20-12-2024 time 13:30
+```
+Error issuing in case of providing conflicting switches:
+```tcl
+sheduleEvent -allday -duration 01:30 20-12-2024 13:30
+```
+```{tclerr}
+-allday conflicts with -duration
+```
+
+
+## Reciprocal
+
+Swtich with name `-reciprocal` is presented both as global switch and element switch. In global case all elements
+with `-require` switch are reciprocal to names in argument to `-require` switch. Let's consider this definition:
+```tcl
+argparse -reciprocal {
+    {-a= -require {b c}}
+    -b
+    -c=
+}
+```
+
+With `-reciprocal` global switch, the `-b` and `-c` switches also require `-a` switch, because `-a` switch requires
+them, so, it is equivalent to:
+```tcl
+argparse {
+    {-a= -require {b c}}
+    {-b -require a}
+    {-c= -require a}
+}
+```
+
+Element switch `-reciprocal` do the same thing but only for that particular element.
+
+## Imply
+
+`-imply` element switch allows to specify additional argument to this switch. Extra argument will be assigned
+to different element specified in argument to `-imply` switch. For example:
+
+```tcl
+proc implyTest {args} {
+    set arguments [argparse -inline {
+        -a=
+        {-b= -imply -c}
+        -c=
+    }]
+    return $arguments
+}
+```
+
+If we provide an additional argument to `-b`, it will be assigned to `-c` key:
+```tcl
+implyTest -a 1 -b 2 3
+```
+```text
+==> a 1 b 2 c 3
+```
+
+If additional argument is not provided, the error is raised:
+```tcl
+implyTest -a 1 -b 2
+```
+```{tclerr}
+-c requires an argument
+```
+
+
+And if `-b` switch with argument is not provided at all, `-c` is also considered omitted:
+```tcl
+implyTest -a 1
+```
+```text
+==> a 1
+```
 
 ## Passthrough and normalization
 
