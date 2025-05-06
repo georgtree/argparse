@@ -32,7 +32,7 @@ foreach file $srcList {
 }
 
 foreach file $srcList {
-    exec eskil -noparse [file join $currentDir .. [lindex $file 0]] [file join $currentDir [lindex $file 0]_m]
+    exec eskil -noparse [file join $currentDir .. [lindex $file 0]] [file join $currentDir .. [lindex $file 0]_m]
 }
 puts [join $results "\n"]
 puts "Covered $coveredSum of $totalSum branches, percentage is [expr {double($coveredSum)/double($totalSum)*100}]%"

@@ -1115,6 +1115,30 @@ test templateTest-3 {} -body {
 } -result {-c 2 a p b 1} -cleanup {
     rename templateOptProc {}
 }
+
+test templateTest-4 {} -body {
+    proc templateOptProc {args} {
+        argparse -template apopts(%) {
+            a
+            b^
+            -c=
+        }
+        foreach {name value} [array get apopts] {
+            dict append result $name $value
+        }
+        return $result
+    }
+    catch {templateOptProc -c 2 p 1} errorStr
+    return $errorStr
+} -result {bad variable name "apopts(b)": can't create a scalar variable that looks like an array element} -cleanup {
+    rename templateOptProc {}
+    unset errorStr
+}
+
+testTemplate templateTest-5 {} {-template %_%_%} {
+a
+b
+-c=} {-c 2 p 1 } {b_b_b 1 a_a_a p c_c_c 2}
 ### Check specific options variants
 test specOptsTest-1 {} -body {
     proc specOptsProc {args} {

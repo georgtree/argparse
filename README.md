@@ -41,7 +41,7 @@ See [original repository](https://core.tcl-lang.org/tcllib/timeline?r=amg-argpar
 ## Synopsys
 
 ``` text
-package require Tcl 8.6
+package require Tcl 8.6-
 argparse ?-globalSwitch ...? ?--? definition ?arguments?
 ```
 
@@ -695,6 +695,42 @@ returns an empty list; if so, the element is not present. Note that the argument
 pattern, so it may be necessary to precede `*?[]\` characters with backslashes.
 
 ## Template
+
+Swtich with name `-template` is presented both as [global switch](#global-switch) and [element switch](#element-switch).
+In global case all [elements](#element) names go through substitution before setting the caller variables or creating
+key of the dictionary if `-inline` is provided. As an element switch individual substitution templates could be provided.
+The most important usage is to use template to create array where names of elements become keys of array. As a
+substitution mark `%` symbol is used.
+
+As an example let's use our previous procedure:
+```tcl
+proc genNums {args} {
+    argparse -template vars(%) {
+        # {Optional sequence control switches}
+        {-from= -default 1 -type double}
+        {-to=   -default 10 -type double}
+        {-step= -default 1 -type double}
+        {-prec= -default 1 -type double}
+    }
+    if {$vars(step) < 0} {
+        set op ::tcl::mathop::>
+    } else {
+        set op ::tcl::mathop::<
+    }
+    for {set n $vars(from)} {[$op $n $vars(to)]} {set n [expr {$n + $vars(step)}]} {
+        lappend result [format %.*f $vars(prec) $n]
+    }
+    return $result
+}
+genNums -from 0 -to 10 -step 2
+```
+```text
+==> 0.0 2.0 4.0 6.0 8.0
+```
+
+Here all switches are accesible as an array element.
+
+-template applies to elements using neither -key nor -pass. To protect "%" or "\" from replacement, precede it with "\".
 
 ## Argument Processing Sequence
 
