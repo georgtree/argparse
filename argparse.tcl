@@ -3,250 +3,19 @@
 # Feature-heavy argument parsing package
 #
 # Copyright (C) 2019 Andy Goth <andrew.m.goth@gmail.com>
-# See the file "license.terms" for information on usage and redistribution
+# Copyright (C) 2025 George Yashin <georgtree@gmail.com>
+# See the file "LICENSE" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 package require Tcl 8.6-
-package provide argparse 0.51
+package provide argparse 0.52
 interp alias {} @ {} lindex
 interp alias {} = {} expr
 # argparse --
 # Parses an argument list according to a definition list.  The result may be
 # stored into caller variables or returned as a dict.
 #
-# Zero or more initial arguments are overall options:
-#
-# -inline        Only return the result dict, but do not set caller variables
-# -keep          Do not unset omitted element variables; conflicts with -inline
-# -exact         Require exact option name matches, and do not accept prefixes
-# -mixed         Allow options to appear after parameters
-# -long          Recognize "--option" long option alternative syntax
-# -equal         Recognize "-option=arg" inline argument alternative syntax
-# -normalize     Normalize option syntax in passthrough result keys
-# -pass KEY      Pass unrecognized elements through to a result key
-# -ignore        Ignore unrecognized elements; conflicts with -pass
-# -argument      Unrecognized options require arguments; requires -pass/-ignore
-# -optional      Unrecognized option arguments are optional; requires -argument
-# -level LEVEL   Default value for element -level; defaults to 1
-#
-# The first non-option argument is the definition list.  The second argument is
-# the argument list to be parsed, typically $args.
-#
-# Each definition list element is a list whose first word is a unique, non-empty
-# name word consisting of alphanumerics, underscores, and minus (may not be the
-# first character), followed by zero or more option words:
-#
-# -option        Element is an option; conflicts with -parameter
-# -parameter     Element is a parameter; conflicts with -option
-# -alias ALIAS   Alias name; requires -option
-# -ignore        Element is omitted from result; conflicts with -key and -pass
-# -key KEY       Override key name; not affected by -template
-# -pass KEY      Pass through to result key; not affected by -template
-# -default VAL   Value if omitted; conflicts with -required and -keep
-# -keep          Do not unset if omitted; requires -optional; conflicts -inline
-# -value VAL     Value if present; requires -option; conflicts with -argument
-# -argument      Value is next argument following option; requires -option
-# -optional      Option value is optional, or parameter is optional
-# -required      Option is required, or stop -catchall from implying -optional
-# -catchall      Value is list of all otherwise unassigned arguments
-# -upvar         Links caller variable; conflicts with -inline and -catchall
-# -level LEVEL   This element's [upvar] level; requires -upvar
-# -standalone    If element is present, ignore -required, -require, and -forbid
-# -require LIST  If element is present, other elements that must be present
-# -forbid LIST   If element is present, other elements that must not be present
-# -imply LIST    If element is present, extra option arguments; requires -option
-# -reciprocal    This element's -require is reciprocal; requires -require
-# -validate DEF  Name of validation command, or inline validation definition
-# -enum DEF      Name of enumeration list, or inline enumeration definition
-#
-# If the definition list element's first word is empty, its subsequent words are
-# overall options (-inline, -keep, -exact, -mixed, -long, -equal, -normalize,
-# -pass, -ignore, -argument, -optional, -level) and/or the following options:
-#
-# -reciprocal    Every element's -require constraints are reciprocal
-# -template TMP  Compute default element keys using a substitution template
-# -validate DEF  Define named validation commands to be used by elements
-# -enum DEF      Define named enumeration lists to be used by elements
-#
-# If the definition list element's first word is "#", the element is ignored as
-# a comment.  Subsequent words in the element may contain any text at all.
-#
-# If neither -option nor -parameter are used, a shorthand form is permitted.  If
-# the name is preceded by "-", it is an option; otherwise, it is a parameter.
-# An alias may be written after "-", then followed by "|" and the option name.
-# The element name may be followed by any number of flag characters:
-#
-# "="            Same as -argument; only valid for options
-# "?"            Same as -optional
-# "!"            Same as -required
-# "*"            Same as -catchall
-# "^"            Same as -upvar
-#
-# -value specifies the value to assign to keys when the element is present.  It
-# cannot be used with -parameter, -argument, -optional, -required, or -catchall.
-# -value defaults to 1, unless multiple options share the same -key, in which
-# case the element name is the default -value.
-#
-# -default specifies the value to assign to keys when the element is omitted.
-# If multiple options share the same -key, at most one of them may use -default,
-# which specifies the value to assign when all of them are omitted.  The rest of
-# this paragraph describes the case where -default is not used.  If -argument,
-# -parameter, or -value is given, or if multiple options share the same -key,
-# keys for omitted elements are not in the result.  If -catchall is used on a
-# parameter, the default is empty.  Otherwise, the default is 0.
-#
-# At most one parameter may use -catchall.
-#
-# Multiple elements may share the same -key value if they are options, do not
-# use -argument or -catchall, and do not use -default for more than one element.
-# Such elements are automatically are given -forbid constraints to prevent them
-# from being used simultaneously.  If such an element does not use -value, the
-# element name is used as its default -value.
-#
-# -optional, -required, -catchall, and -upvar imply -argument when used with
-# -option.  Consequently, options require an argument when any of the shorthand
-# flag characters defined above are used, and it is not necessary to explicitly
-# specify "=" if any of the other flag characters are used.
-#
-# If -argument is used, the value assigned to the option's key is normally the
-# next argument following the option.  With -catchall, the value assigned to the
-# option's key is instead the list of all remaining arguments.  With -optional,
-# the following processing is applied:
-#
-# - If the option is not present, the option's key is omitted from the result.
-# - If the option is not the final argument, its value is a list whose sole word
-#   is the argument following the option.
-# - If the option is the final argument, its value is empty.
-#
-# By default, options are optional and parameters are required.  Options can
-# be made required with -required, and parameters can be made optional with
-# -optional.  -catchall also makes parameters optional, unless -required is
-# used, in which case at least one argument must be assigned to the parameter.
-# Otherwise, using -required with -parameter has no effect.  -option -optional
-# -required means the option must be present but may be the final argument.
-#
-# When -option and -optional are both used, -catchall, -default, and -upvar are
-# disallowed.  -parameter -optional -required is also a disallowed combination.
-#
-# -validate and -enum provide element value validation.  The overall -validate
-# and -enum options declare named validation commands and enumeration lists, and
-# the per-element -validate and -enum options select which validation commands
-# and enumeration lists are used on which elements.  The argument to the overall
-# -validate and -enum options is a dict mapping from validation or enumeration
-# names to validation command prefixes or enumeration lists.  The argument to a
-# per-element -validate option is a validation name or command prefix, and the
-# argument to a per-element -enum option is an enumeration name or list.  An
-# element may not use both -validate and -enum.
-#
-# A validation command prefix is a list to which the argument is appended before
-# being invoked.  In the case of -catchall, the option or parameter's whole list
-# of arguments is appended as a single argument word.  The validation command's
-# result is used in place of the argument, unless it throws an error.  Thus, a
-# simple validator will return its argument if valid or throw if invalid, and a
-# complex validator can transform its argument if need be.  The validator must
-# return its argument verbatim if the argument is a possible return value, and a
-# catchall element's validator must return a list.  The validation command may
-# not [yield], except inside coroutines it started.
-#
-# An enumeration list is a list of possible argument values.  If the argument
-# appears in the enumeration list, the argument is accepted.  Unless -exact is
-# used, if the argument is a prefix of exactly one element of the enumeration
-# list, the argument is replaced with the enumeration list element.
-#
-# Unless -exact is used, unambiguous prefixes of option names (not aliases) are
-# acceptable.  Options in the argument list normally begin with a single "-" but
-# can also begin with "--" if -long is used.  Arguments to options normally
-# appear as the list word following the option, but if -equal is used, they may
-# be supplied within the option element itself, delimited with an "=" character,
-# e.g., "-option=arg".
-#
-# The per-element -pass option causes the element argument or arguments to be
-# appended to the value of the indicated passthrough result key.  Elements may
-# share a passthrough key.  -normalize causes option arguments to be normalized
-# to not use aliases, abbreviations, the "--" prefix, or the "=" argument
-# delimiter; otherwise, options will be expressed the same as they appear in the
-# original input.  Furthermore, -normalize causes omitted options that accept
-# arguments and have default values, as well as omitted parameters that have
-# default values, to be explicitly included in the passthrough key.  If -mixed
-# is used, passthrough keys will list all options first before listing any
-# parameters.  If the first parameter value for a passthrough key starts with
-# "-", its value will be preceded by "--" so it will not appear to be an option.
-# If no arguments are assigned to a passthrough key, its value will be empty.
-# The value of a passthrough key can be reparsed to get the original data, and
-# if -normalize is used, it will not be necessary to use -mixed, -long, -equal,
-# -alias, or -default to get the correct result.  Pathological use of -default
-# can conflict with this goal.  For example, if the first optional parameter has
-# no -default but the second one does, then parsing the result of -normalize can
-# assign the default value to the first parameter rather than the second.
-#
-# The overall -pass option may be used to collect unrecognized arguments into a
-# passthrough key, rather than failing with an error.  Arguments starting with
-# "-", when not following "--", are assumed to be options that do not expect an
-# argument, unless -argument is used.  For fine control, explicitly list all
-# options that expect arguments, but configure them to have the same passthrough
-# key as the overall passthrough.  If -equal is used, unknown options that are
-# given arguments via the "-option=arg" syntax are assumed to expect arguments.
-# Many uses of overall -pass should also use -exact, or else some options that
-# may be expected to pass through instead may be allocated to a defined option
-# whose name begins with that of the intended passthrough option.
-#
-# Overall -ignore is similar to overall -pass except it ignores the arguments
-# that would otherwise have been put into a passthrough key.
-#
-# When using -imply, be careful to avoid creating an infinite loop.  Never allow
-# an option to imply itself, neither directly nor indirectly.
-#
-# [args::parse] returns a dict.  By default, the element names are the keys,
-# unless overridden by -key, -pass, or -template.  If both -key and -pass are
-# used, two keys are defined: one having the element value, the other having the
-# passthrough elements.  Unline -inline is used, the values are also stored into
-# caller variables named the same as the keys.  Unless -keep or -inline are
-# used, the caller variables for omitted options and parameters are unset.
-#
-# -template applies to elements using neither -key nor -pass.  Its value is a
-# substitution template applied to element names to determine key names.  "%" in
-# the template is replaced with the element name.  To protect "%" or "\" from
-# replacement, precede it with "\".  One use for -template is to put the result
-# in an array, e.g., with "-template arrayName(%)".
-#
-# Elements with -upvar are special.  Rather than having normal values, they are
-# bound to caller variables using the [upvar] command.  -upvar conflicts with
-# -inline because it is not possible to map a dict value to a variable.  Due to
-# limitations of arrays and [upvar], -upvar cannot be used with keys whose names
-# resemble array elements.  -upvar conflicts with -catchall because the value
-# must be a variable name, not a list.  The combination -option -optional -upvar
-# is disallowed for the same reason.  If -upvar is used with options or with
-# optional parameters, [info exists KEY] returns 1 both when the element is not
-# present and when its value is the name of a nonexistent variable.  To tell the
-# difference, check if [info vars KEY] returns empty; if so, the element is not
-# present.  Note that the argument to [info vars] is a [string match] pattern,
-# so it is necessary to precede *?[]\ characters with backslashes.
-#
-# Argument processing is performed in three stages: option processing, parameter
-# allocation, and parameter assignment.  Each argument processing stage and pass
-# is performed left-to-right.
-#
-# All options must normally appear in the argument list before any parameters.
-# Option processing terminates with the first argument (besides arguments to
-# options) that does not start with "-" (or "--", if -long is used).  The
-# special option "--" forces option termination, which is useful if the first
-# parameter happens to start with "-".  If no options are defined, the first
-# argument is known to be a parameter even if it starts with "-".
-#
-# When the -mixed option is used, option processing continues after encountering
-# arguments that do not start with "-" or "--".  This is convenient but may be
-# ambiguous in cases where parameters look like options.  To resolve ambiguity,
-# the special "--" option terminates option processing and forces all remaining
-# arguments to be parameters.
-#
-# When -mixed is not used, the required parameters are counted, then that number
-# of arguments at the end of the argument list are treated as parameters even if
-# they begin with "-".  This avoids the need for "--" in many cases.
-#
-# After option processing, parameter allocation determines how many arguments to
-# assign to each parameter.  Arguments assigned to options are not used in
-# parameter processing.  First, arguments are allocated to required parameters;
-# second, to optional, non-catchall parameters; and last to catchall parameters.
-# Finally, each parameter is assigned the allocated number of arguments.
+# For documentation please see README.md file
+
 proc ::argparse {args} {
 ### Common validation helper routine.
     set validateHelper {apply {{name opt args} {
@@ -276,8 +45,8 @@ proc ::argparse {args} {
     set level 1
     set enum {}
     set validate {}
-    set globalSwitches {-boolean -enum -equalarg -exact -inline -keep -level -long -mixed -normalize -pass\
-                                -reciprocal -template -validate}
+    set globalSwitches {-boolean -enum -equalarg -exact -inline -keep -level -long -mixed -normalize -pass -reciprocal\
+                                -template -validate}
     for {set i 0} {$i<[llength $args]} {incr i} {
         if {[catch {regsub {^-} [tcl::prefix match -message switch $globalSwitches [@ $args $i]] {} switch} errorMsg]} {
             # Do not allow "--" or definition lists nested within the special
@@ -352,8 +121,8 @@ proc ::argparse {args} {
         set opt {}
         set defsSwitches {-alias -argument -boolean -catchall -default -enum -forbid -ignore -imply -keep -key -level\
                                   -optional -parameter -pass -reciprocal -require -required -standalone -switch -upvar\
-                                  -validate -value -type}
-        set defsSwitchesWArgs {alias default enum forbid imply key pass require validate value type}
+                                  -validate -value -type -allow}
+        set defsSwitchesWArgs {alias default enum forbid imply key pass require validate value type allow}
         for {set i 1} {$i<[llength $elem]} {incr i} {
             if {[set switch [regsub {^-} [tcl::prefix match $defsSwitches [@ $elem $i]] {}]] ni $defsSwitchesWArgs} {
 #####   Process switches without arguments.
@@ -438,6 +207,7 @@ proc ::argparse {args} {
             boolean   {default value}
             enum      validate
             type      {upvar boolean enum}
+            allow     forbid
         } {
             if {[dict exists $opt $switch]} {
                 foreach other $others {
@@ -546,7 +316,7 @@ proc ::argparse {args} {
 ### Process constraints and shared key logic.
     dict for {name opt} $def {
 ####  Verify constraint references.
-        foreach constraint {require forbid} {
+        foreach constraint {require forbid allow} {
             if {[dict exists $opt $constraint]} {
                 foreach otherName [dict get $opt $constraint] {
                     if {![dict exists $def $otherName]} {
@@ -685,6 +455,7 @@ proc ::argparse {args} {
                     dict unset def $other required
                     dict unset def $other require
                     dict unset def $other forbid
+                    dict unset def $other allow
                     if {[dict exists $def $other parameter]} {
                         dict set def $other optional {}
                     }
@@ -820,6 +591,7 @@ proc ::argparse {args} {
             if {$count} {
                 dict set alloc $name 1
                 dict unset omitted $name
+                dict set def $name present {}
                 incr count -1
             } else {
                 lappend missing $name
@@ -841,6 +613,7 @@ proc ::argparse {args} {
             if {![dict exists $def $name required] && ![dict exists $def $name catchall]} {
                 dict set alloc $name 1
                 dict unset omitted $name
+                dict set def $name present {}
                 if {![incr count -1]} {
                     break
                 }
@@ -876,6 +649,26 @@ proc ::argparse {args} {
                             }
                             return -code error "$name $description $otherName"
                         }
+                    }
+                }
+            }
+        }
+    }
+    dict for {name opt} $def {
+        if {[dict exists $opt present]} {
+            lappend presentedNames $name
+        }
+    }
+    dict for {name opt} $def {
+        if {[dict exists $opt present]} {
+            if {[dict exists $opt allow]} {
+                set allowedNames [dict get $opt allow]
+                foreach presentedName $presentedNames {
+                    if {$presentedName eq $name} {
+                        continue
+                    }
+                    if {$presentedName ni $allowedNames} {
+                        return -code error "$name doesn't allow $presentedName"
                     }
                 }
             }

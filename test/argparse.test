@@ -399,7 +399,7 @@ f?} {1 2 3 4 5 6} {too many arguments}
 testTemplate onlyParametersTest-11 {} {} {
 a
 {b -forbid a}
-c} {1 2 3} {a 1 b 2 c 3}
+c} {1 2 3} {b conflicts with a}
 
 testTemplate onlyParametersTest-12 {} {} {
 {a? -default 10}
@@ -421,13 +421,12 @@ testTemplate onlyParametersTest-15 {} {} {
 b?
 c} {1 2 3} {a 1 b 2 c 3}
 
-# catch this situation?
 testTemplate onlyParametersTest-16 {} {} {
 {a? -require f}
 b
 c?
 d
-f?} {1 2 3} {d 3 a 1 b 2}
+f?} {1 2 3} {a requires f}
 
 testTemplate onlyParametersTest-17 {} {} {
 {a? -ignore}
@@ -501,6 +500,20 @@ testTemplate switchesParametersCombsTest-5 {} {} {
 {-h= -standalone}
 -c=
 {k -optional}} {-b 5 -h 10} {h 10 b 5}
+
+testTemplate switchesParametersCombsTest-6 {} {} {
+-a=
+{-b= -require {c k}}
+-h= 
+-c=
+{k -optional}} {-b 5 -c 10 1} {b 5 k 1 c 10}
+
+testTemplate switchesParametersCombsTest-7 {} {} {
+-a=
+{-b= -require {c k}}
+-h= 
+-c=
+{k -optional}} {-b 5 -c 10} {-b requires k}
 
 ### Wrong elements definitions tests
 testTemplate wrongDefsTest-1 {} {} {
@@ -1430,7 +1443,9 @@ testTemplate typeTest-1 {} {} {
 testTemplate typeTest-2 {} {} {
 {-a= -type alpha1}
 {-b= -type boolean}
-{c -type integer}} {-a y -b False 10} {type alpha1 is not in the list of allowed types, must be alnum, alpha, ascii, boolean, control, dict, digit, double, graph, integer, list, lower, print, punct, space, upper, wideinteger, wordchar or xdigit}
+{c -type integer}} {-a y -b False 10} {type alpha1 is not in the list of allowed types, must be alnum, alpha, ascii,\
+        boolean, control, dict, digit, double, graph, integer, list, lower, print, punct, space, upper, wideinteger,\
+        wordchar or xdigit}
 
 testTemplate typeTest-3 {} {} {
 {-a= -type alpha}
@@ -1457,6 +1472,86 @@ testTemplate typeTest-7 {} {-mixed} {
 {-b= -type boolean}
 {c -type integer}} {-b False 1 -a y ty 1} {-a value "1" is not of the type alpha}
 
+### Check -allow in definitions 
+testTemplate allowTest-1 {} {} {
+{-a= -allow {c}}
+-b=
+-c=
+-d=
+-e=
+{f -optional}
+g} {-a 1 -c 4 4 5} {a doesn't allow f}
 
+testTemplate allowTest-2 {} {} {
+{-a= -allow {c}}
+-b=
+-c=
+-d=
+-e=
+{f -optional}
+g} {-a 1 -c 4 5} {a doesn't allow g}
+
+testTemplate allowTest-3 {} {} {
+{-a= -allow {g}}
+-b=
+-c=
+-d=
+-e=
+{f -optional}
+g} {-a 1 5} {a 1 g 5}
+
+testTemplate allowTest-4 {} {} {
+{-a= -allow {g f c}}
+-b=
+-c=
+-d=
+-e=
+{f -optional}
+g} {-a 1 5} {a 1 g 5}
+
+testTemplate allowTest-5 {} {} {
+{-a= -allow {g f c}}
+-b=
+-c=
+-d=
+-e=
+{f -optional}
+g} {-c 2 -a 1 5} {a 1 g 5 c 2}
+
+testTemplate allowTest-6 {} {} {
+{-a= -allow {g f c}}
+-b=
+-c=
+-d=
+-e=
+{f -optional}
+g} {-c 2 -e 8 -a 1 5} {a doesn't allow e}
+
+testTemplate allowTest-7 {} {} {
+{-a= -allow {g f c u}}
+-b=
+-c=
+-d=
+-e=
+{f -optional}
+g} {-c 2 -a 1 5} {a -allow references undefined element: u}
+
+testTemplate allowTest-8 {} {} {
+{-a= -allow}
+-b=
+-c=
+-d=
+-e=
+{f -optional}
+g} {-c 2 -a 1 5} {-allow requires an argument}
+
+testTemplate allowTest-9 {} {} {
+{-a= -allow {g f c}}
+-b=
+-c=
+{-d= -standalone}
+-e=
+{f -optional}
+g} {-c 2 -e 8 -d 9 -a 1 5} {d 9 a 1 e 8 f 5 c 2}
 
 cleanupTests

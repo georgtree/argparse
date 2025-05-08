@@ -37,20 +37,29 @@ proc testTemplate {testName descr arguments definitionsStr inputStr refStr} {
 }
 
 
-# proc upvarProc {args} {
-#     argparse {
-#         -c
-#         d
-#         {-a= -required -type double}
-#         {-b= -default 10 -type integer}
-#         {e -type bool}
-#     }
-#     return
-# }
-# upvarProc -a 1 -b 9 -c 5 6
-
-testTemplate onlySwitchWArgsTest-22 {} {} {
--a=
-{-b= -imply {-c} -required}
+testTemplate allowTest-1 {} {} {
+{-a= -allow {c}}
+-b=
 -c=
--n=} {-b 1 1} {b 1 c 2}
+-d=
+-e=
+{f -optional}
+g} {-a 1 -c 4 4 5} {had 5 rest {-e 2 io p} cer 1 lab 4}
+
+testTemplate allowTest-1 {} {} {
+{-a= -allow {c}}
+-b=
+-c=
+-d=
+-e=
+{f -optional}
+g} {-a 1 -c 4 5} {had 5 rest {-e 2 io p} cer 1 lab 4}
+
+testTemplate allowTest-1 {} {} {
+{-a= -require {g}}
+-b=
+-c=
+-d=
+-e=
+{f -optional}
+g} {-a 1 5 5} {had 5 rest {-e 2 io p} cer 1 lab 4}
