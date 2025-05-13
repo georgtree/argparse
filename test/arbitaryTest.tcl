@@ -1,4 +1,4 @@
-source ./argparse.tcl
+package require argparse
 package require tcltest
 namespace import ::tcltest::*
 
@@ -37,29 +37,19 @@ proc testTemplate {testName descr arguments definitionsStr inputStr refStr} {
 }
 
 
-testTemplate allowTest-1 {} {} {
-{-a= -allow {c}}
--b=
--c=
--d=
--e=
-{f -optional}
-g} {-a 1 -c 4 4 5} {had 5 rest {-e 2 io p} cer 1 lab 4}
-
-testTemplate allowTest-1 {} {} {
-{-a= -allow {c}}
--b=
--c=
--d=
--e=
-{f -optional}
-g} {-a 1 -c 4 5} {had 5 rest {-e 2 io p} cer 1 lab 4}
-
-testTemplate allowTest-1 {} {} {
-{-a= -require {g}}
--b=
--c=
--d=
--e=
-{f -optional}
-g} {-a 1 5 5} {had 5 rest {-e 2 io p} cer 1 lab 4}
+proc sheduleEvent {args} {
+    set arguments [argparse -inline\
+            -validate [dict create date {[regexp {^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$} $arg]}\
+                time {[regexp {^([01][0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?$} $arg]}] {
+        {date -validate date}
+        {time -validate time}
+        {-allday -allow {date time}}
+        {-duration= -allow {date time} -validate time}
+        {-endtime= -allow {date time} -validate time}
+    }]
+    if {![dict exists $arguments allday] && ![dict exists $arguments duration] && ![dict exists $arguments endtime]} {
+        return -code error "One of the switch must be presented: -allday, -duration or -endtime"
+    }
+    return $arguments
+}
+sheduleEvent

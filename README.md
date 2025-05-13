@@ -388,7 +388,8 @@ Comment is the [element](#element) started with `#` at the start of definition i
 | `-boolean`                 | Treat switches as having `-boolean` wherever possible            |
 | `-validate validDef`       | Define named validation expressions to be used by elements       |
 | `-enum enumDef`            | Define named enumeration lists to be used by elements            |
-| `-`                        | Force next argument to be interpreted as the definition list     |
+| `-help description`        | Enable help message generating when -help argument is provided   |
+| `--`                       | Force next argument to be interpreted as the definition list     |
 
 ## Element Switches
 
@@ -419,6 +420,7 @@ Comment is the [element](#element) started with `#` at the start of definition i
 | `-validate validNameOrDef` | Name of validation expression, or inline validation definition                          |
 | `-enum enumNameOrDef`      | Name of enumeration list, or inline enumeration definition                              |
 | `-type typeName`           | Validate value according to type defined in [string is] command, requires `-argument`   |
+| `-help description`        | Provide description to element that is displayed when help message is generated         |
 
 ## Collecting unassigned arguments
 
@@ -777,6 +779,93 @@ genNums -from 0 -to 10 -step 2
 Here all switches are accesible as an array element.
 
 -template applies to elements using neither -key nor -pass. To protect "%" or "\" from replacement, precede it with "\".
+
+## Help
+
+Package allows to generate help description of command for the user when `-help` switch is provided as argument. In 
+that case, message with procedure and arguments description is put to stdout, and other arguments are ignored. So, we 
+can provide interactive help for the user of the command. To activate, [global switch](#global-switch) `-help` must be
+provided. Let's take previous procedure `genNums` and add help to it:
+
+```tcl
+proc genNums {args} {
+    argparse -template vars(%) -help {Procedure generates sequence of numbers.} {
+        # {Optional sequence control switches}
+        {-from= -default 1 -type double -help {Provides start of sequence}}
+        {-to= -default 10 -type double -help {Provides end of sequence}}
+        {-step= -default 1 -type double -help {Provides step between adjacent numbers of sequence}}
+        {-prec= -default 1 -type double -help {Provides precision of numbers in the sequence}}
+    }
+    if {$vars(step) < 0} {
+        set op ::tcl::mathop::>
+    } else {
+        set op ::tcl::mathop::<
+    }
+    for {set n $vars(from)} {[$op $n $vars(to)]} {set n [expr {$n + $vars(step)}]} {
+        lappend result [format %.*f $vars(prec) $n]
+    }
+    return $result
+}
+genNums -help
+```
+```text
+Procedure generates sequence of numbers.
+Can accepts unambiguous prefixes instead of switches names.
+Accepts switches only before parameters.
+    Switches:
+        -from - Expects argument. Provides start of sequence. Default value is 1. Type
+            double.
+        -to - Expects argument. Provides end of sequence. Default value is 10. Type
+            double.
+        -step - Expects argument. Provides step between adjacent numbers of sequence.
+            Default value is 1. Type double.
+        -prec - Expects argument. Provides precision of numbers in the sequence. Default
+            value is 1. Type double.
+```
+
+Generated message contains information important for the user of the command, not all information that is in definition
+of elements. Individual description for each parameter can be added as and argument to [element switch](#element-switch)
+`-help`.
+
+Let's use another procedure, this time with switches and parameters presented:
+```tcl
+proc sheduleEvent {args} {
+    set arguments [argparse -help {Procedure shedules event at cetain date. At least one of the switches must be\
+        provided" -allday, -duration or -endtime} -inline\
+            -validate [dict create date {[regexp {^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$} $arg]}\
+                time {[regexp {^([01][0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?$} $arg]}] {
+        {date -validate date -help {Provides date in format DD-MM-YY}}
+        {time -validate time -help {Provides time in format HH:MM}}
+        {-allday -allow {date time} -help {Set event duration for the rest of the day}}
+        {-duration= -allow {date time} -validate time -help {Set event duration in format HH:MM}}
+        {-endtime= -allow {date time} -validate time -help {Set end time of event in format HH:MM}}
+    }]
+    if {![dict exists $arguments allday] && ![dict exists $arguments duration] && ![dict exists $arguments endtime]} {
+        return -code error "One of the switch must be presented: -allday, -duration or -endtime"
+    }
+    return $arguments
+}
+sheduleEvent -help
+```
+```text
+Procedure shedules event at cetain date. At least one of the switches must be
+provided" -allday, -duration or -endtime
+Can accepts unambiguous prefixes instead of switches names.
+Accepts switches only before parameters.
+    Switches:
+        -allday - Set event duration for the rest of the day. Allows date or time.
+        -duration - Expects argument. Set event duration in format HH:MM. Allows date or
+            time. Validation expression: [regexp
+            {^([01][0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?$} $arg].
+        -endtime - Expects argument. Set end time of event in format HH:MM. Allows date
+            or time. Validation expression: [regexp
+            {^([01][0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?$} $arg].
+    Parameters:
+        date - Provides date in format DD-MM-YY. Validation expression: [regexp
+            {^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$} $arg].
+        time - Provides time in format HH:MM. Validation expression: [regexp
+            {^([01][0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?$} $arg].
+```
 
 ## Argument Processing Sequence
 

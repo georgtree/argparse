@@ -55,6 +55,3 @@ TODO list by George Yashin:
 it can't find it
 - Disable parameters processing, in that case we can provide only switches, the rest of elements goes to pass through key 
 if specified
-- Add logic in -require section: different combinations of elements could provide valid requirement. For example,
-{-a= -require {(a && b) || (a && c)}}, so to fulfill the requirement, we can provide a and b together, or a and c together.
-It could allow to demand one of many, for example {a||b||c}

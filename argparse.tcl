@@ -7,7 +7,7 @@
 # See the file "LICENSE" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 package require Tcl 8.6-
-package provide argparse 0.52
+package provide argparse 0.53
 interp alias {} @ {} lindex
 interp alias {} = {} expr
 # argparse --
@@ -46,7 +46,7 @@ proc ::argparse {args} {
     set enum {}
     set validate {}
     set globalSwitches {-boolean -enum -equalarg -exact -inline -keep -level -long -mixed -normalize -pass -reciprocal\
-                                -template -validate}
+                                -template -validate -help}
     for {set i 0} {$i<[llength $args]} {incr i} {
         if {[catch {regsub {^-} [tcl::prefix match -message switch $globalSwitches [@ $args $i]] {} switch} errorMsg]} {
             # Do not allow "--" or definition lists nested within the special
@@ -91,7 +91,7 @@ proc ::argparse {args} {
                     lappend definition $elem
                 }
             }
-        } elseif {$switch ni {enum level pass template validate}} {
+        } elseif {$switch ni {enum level pass template validate help}} {
             # Process switches with no arguments.
             set $switch {}
         } elseif {$i == [llength $args]-1} {
@@ -121,8 +121,8 @@ proc ::argparse {args} {
         set opt {}
         set defsSwitches {-alias -argument -boolean -catchall -default -enum -forbid -ignore -imply -keep -key -level\
                                   -optional -parameter -pass -reciprocal -require -required -standalone -switch -upvar\
-                                  -validate -value -type -allow}
-        set defsSwitchesWArgs {alias default enum forbid imply key pass require validate value type allow}
+                                  -validate -value -type -allow -help}
+        set defsSwitchesWArgs {alias default enum forbid imply key pass require validate value type allow help}
         for {set i 1} {$i<[llength $elem]} {incr i} {
             if {[set switch [regsub {^-} [tcl::prefix match $defsSwitches [@ $elem $i]] {}]] ni $defsSwitchesWArgs} {
 #####   Process switches without arguments.
@@ -360,6 +360,139 @@ proc ::argparse {args} {
                     }
                 }
             }
+        }
+    }
+####  Build help string
+    if {[info exists help]} {
+        package require textutil::adjust
+        namespace import textutil::adjust::*
+        if {({-help} in $argv) || ([info exists long] && ({--help} in $argv))} {
+            set enumStrBuild {apply {{name opt} {
+                if {[llength [dict get $opt $name]]>2} {
+                    set str "[join [lrange [dict get $opt $name] 0 end-1] {, }] or [@ [dict get $opt $name] end]"
+                } elseif {[llength [dict get $opt $name]]==2} {
+                    set str "[@ [dict get $opt $name] 0] or [@ [dict get $opt $name] end]"
+                } else {
+                    set str [@ [dict get $opt $name] 0]
+                }
+                return $str
+            }}}
+            if {$help ne {}} {
+                lappend description [adjust $help -length 80]
+            }
+            if {[info exists exact]} {
+                lappend description {Doesn't accept prefixes instead of switches names.}
+            } else {
+                lappend description {Can accepts unambiguous prefixes instead of switches names.}
+            }
+            if {[info exists mixed]} {
+                lappend description {Allows switches to appear after parameters.}
+            } else {
+                lappend description {Accepts switches only before parameters.}
+            }
+            if {[info exists long]} {
+                lappend description {Recognizes --switch long option alternative syntax.}
+            }
+            if {[info exists equalarg]} {
+                lappend description {Recognizes -switch=arg inline argument alternative syntax.}
+            }
+            dict for {name opt} $def {
+                # basic element string building
+                if {[dict exists $opt switch]} {
+                    if {[dict exists $opt required]} {
+                        lappend elementDescr required,
+                    } elseif {[dict exists $opt boolean]} {
+                        lappend elementDescr boolean,
+                    }
+                    if {[dict exists $opt argument]} {
+                        if {[dict exists $opt optional]} {
+                            lappend elementDescr expects optional argument
+                        } else {
+                            lappend elementDescr expects argument                          
+                        }
+                    }
+                    set type switch
+                } else {
+                    if {[dict exists $opt optional]} {
+                        lappend elementDescr optional
+                    }
+                    set type parameter
+                }
+                # element constraints string building
+                if {[dict exists $opt require]} {
+                    lappend constraints [join [list Requires [{*}$enumStrBuild require $opt]]].
+                } elseif {[dict exists $opt allow]} {
+                    lappend constraints [join [list Allows [{*}$enumStrBuild allow $opt]]].
+                }
+                if {[dict exists $opt forbid]} {
+                    lappend constraints [join [list Forbids [{*}$enumStrBuild forbid $opt]]].
+                }
+                # element description building
+                if {[info exists elementDescr]} {
+                    lappend combined [string totitle [join $elementDescr] 0 2].
+                }
+                if {[dict exists $opt help]} {
+                    lappend combined [dict get $opt help].
+                }
+                if {[info exists constraints]} {
+                    lappend combined {*}$constraints
+                }
+                if {[dict exists $opt default] && [dict exists $opt argument]} {
+                    lappend combined "Default value is [dict get $opt default]."
+                }
+                if {[dict exists $opt alias]} {
+                    lappend combined "Alias is [dict get $opt alias]."
+                }
+                if {[dict exists $opt catchall]} {
+                    lappend combined {Collects unassigned arguments.}
+                }
+                if {[dict exists $opt upvar]} {
+                    lappend combined {Links caller variable.}
+                }
+                if {[dict exists $opt type]} {
+                    lappend combined "Type [dict get $opt type]."
+                }
+                if {[dict exists $opt validate]} {
+                    lappend combined "Validation expression: [dict get $opt validate]."
+                }
+                if {[dict exists $opt enum]} {
+                    lappend combined "Value must be one of: [{*}$enumStrBuild enum $opt]."
+                }
+                if {[dict exists $opt imply]} {
+                    lappend combined {Expects two arguments.}
+                }
+                if {$type eq {switch}} {
+                    if {[info exists combined]} {
+                        set combined "-$name - [join $combined { }]"
+                    } else {
+                        set combined -$name
+                    }
+                    lappend descriptionSwitches [indent [indent [adjust $combined -length 80] {    } 1] {        }]
+                } else {
+                    if {[info exists combined]} {
+                        set combined "$name - [join $combined { }]"
+                    } else {
+                        set combined $name
+                    }
+                    lappend descriptionParameters [indent [indent [adjust $combined -length 80] {    } 1] {        }]
+                }
+                unset -nocomplain elementDescr constraints combined
+            }
+            if {[info exists descriptionSwitches] && [info exists descriptionParameters]} {
+                puts [string totitle [string map {{,;} {;} {,.} {.}}\
+                                              [join [list {*}$description [indent Switches: {    }]\
+                                                             {*}$descriptionSwitches [indent Parameters: {    }]\
+                                                             {*}$descriptionParameters] \n]] 0 1]
+            } elseif {[info exists descriptionSwitches]} {
+                puts [string totitle [string map {{,;} {;} {,.} {.}}\
+                                              [join [list {*}$description [indent Switches: {    }]\
+                                                             {*}$descriptionSwitches] \n]] 0 1]
+            } elseif {[info exists descriptionParameters]} {
+                puts [string totitle [string map {{,;} {;} {,.} {.}}\
+                                              [join [list {*}$description [indent Parameters: {    }]\
+                                                             {*}$descriptionParameters] \n]] 0 1]
+            }
+            return -level 2
         }
     }
 ### Handle default pass-through switch by creating a dummy element.

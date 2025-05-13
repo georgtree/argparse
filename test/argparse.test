@@ -38,6 +38,70 @@ proc testTemplate {testName descr arguments definitionsStr inputStr refStr} {
     }
 }
 
+proc stdout2var {var} { 
+    set level [info level]
+    # we may have called stdout2var before so this allows only one variable at a time
+    # and preserves tcls original puts in putsorig 
+    if {[string length [info commands putsorig]]==0} { 
+        rename ::puts ::putsorig
+    } 
+    eval [subst -nocommands {proc ::puts {args} { 
+        set fd stdout 
+        # args check 
+        switch -exact -- [llength \$args] {
+            1 { 
+                set fd stdout
+            } 
+            2 { 
+                if {![string equal \"-nonewline\" [lindex \$args 0]]} {
+                    set fd [lindex \$args 0]
+                }
+            }
+            3 {
+                set fd [lindex \$args 1]
+            }
+            default { 
+                error \"to many or too few args to puts must be at most 3 ( -nonewline fd message )\" 
+            }
+        }
+        # only put stdout to the var 
+        if {[string equal \"stdout\" \$fd ]} {
+            # just level and var are subst 
+            set message [lindex \$args end]
+            uplevel [expr {[info level]-$level+1}] set $var \\\"\$message\\\"
+        } else {
+            # otherwise evaluate with tcls puts 
+            eval ::putsorig \$args 
+        }
+    }}]
+} 
+
+proc restorestdout { } {
+    # only do rename if putsorig exists incase restorestdout is call before stdout2var or 
+    # if its called multiple times
+    if {[string length [info commands putsorig]]!=0} { 
+        rename ::puts {}
+        rename ::putsorig ::puts 
+    } 
+}
+
+proc testTemplateStdout {testName descr arguments definitionsStr inputStr refStr} {
+    variable templateProcStr
+    test $testName $descr -body {
+        eval [string map [list @definitions@ $definitionsStr @additionalArgs@ $arguments] $templateProcStr]
+        stdout2var output
+        if {[catch {set result [templateProc {*}$inputStr]} errorStr]} {
+            restorestdout
+            return $errorStr
+        } else {
+            restorestdout
+            return $output
+        }
+    } -result $refStr -cleanup {
+        rename templateProc {}
+    }
+}
+
 
 ### Only switches test without arguments
 testTemplate onlySwitchNoArgsTest-1 {} {} {
@@ -1553,5 +1617,150 @@ testTemplate allowTest-9 {} {} {
 -e=
 {f -optional}
 g} {-c 2 -e 8 -d 9 -a 1 5} {d 9 a 1 e 8 f 5 c 2}
+
+testTemplate allowTest-8 {} {} {
+{-a= -allow {}}
+-b=
+-c=
+-d=
+-e=
+{f -optional}
+g} {-c 2 -a 1 5} {a doesn't allow c}
+
+### Check -help global switch
+testTemplateStdout helpTest-1 {} {-help {Description of procedure.}} {
+{-a -required -help {Description 1} -type double -validate {\[string is double \$arg\]}}
+{-b -help {Description 2} -require h -forbid e}
+{-hjk|h= -help {Description 3} -require {a b} -imply y}
+{-c= -help {Description 4} -optional -require {a b c}}
+{-d -required -optional -help {Description 5}}
+{-ty= -help {Description 5} -upvar}
+{-e -boolean -help {Description 3}}
+-k=
+{-poy= -enum {a 2 t 6}}
+{p -allow {b h}}
+{y -optional -help {Description 9}}
+{-l -catchall}} {-help} {Description of procedure.
+Can accepts unambiguous prefixes instead of switches names.
+Accepts switches only before parameters.
+    Switches:
+        -a - Required, expects argument. Description 1. Type double. Validation
+            expression: [string is double $arg].
+        -b - Description 2. Requires h. Forbids e.
+        -h - Expects argument. Description 3. Requires a or b. Alias is hjk. Expects two
+            arguments.
+        -c - Expects optional argument. Description 4. Requires a, b or c.
+        -d - Required, expects optional argument. Description 5.
+        -ty - Expects argument. Description 5. Links caller variable.
+        -e - Boolean. Description 3.
+        -k - Expects argument.
+        -poy - Expects argument. Value must be one of: a, 2, t or 6.
+        -l - Expects argument. Collects unassigned arguments.
+    Parameters:
+        p - Allows b or h.
+        y - Optional. Description 9.}
+
+testTemplateStdout helpTest-2 {} {-help {Description of procedure.}} {
+{-exact      -key match}
+{-glob       -key match -default glob}
+{-regexp     -key match}
+{-sorted     -forbid {glob regexp}}
+-all
+-inline
+-not
+-start=
+{-ascii      -key format -value text -default text}
+{-dictionary -key format}
+{-integer    -key format}
+{-nocase     -key format}
+{-real       -key format}
+{-increasing -key order -require sorted -default increasing}
+{-decreasing -key order -require sorted}
+{-bisect     -imply -sorted -forbid {all not}}
+-index=
+{-subindices -require index}
+list
+pattern} {-help} {Description of procedure.
+Can accepts unambiguous prefixes instead of switches names.
+Accepts switches only before parameters.
+    Switches:
+        -exact - Forbids glob or regexp.
+        -glob - Forbids exact or regexp.
+        -regexp - Forbids exact or glob.
+        -sorted - Forbids glob or regexp.
+        -all
+        -inline
+        -not
+        -start - Expects argument.
+        -ascii - Forbids dictionary, integer, nocase or real.
+        -dictionary - Forbids ascii, integer, nocase or real.
+        -integer - Forbids ascii, dictionary, nocase or real.
+        -nocase - Forbids ascii, dictionary, integer or real.
+        -real - Forbids ascii, dictionary, integer or nocase.
+        -increasing - Requires sorted. Forbids decreasing.
+        -decreasing - Requires sorted. Forbids increasing.
+        -bisect - Forbids all or not. Expects two arguments.
+        -index - Expects argument.
+        -subindices - Requires index.
+    Parameters:
+        list
+        pattern}
+
+testTemplateStdout helpTest-3 {} {-help {Procedure generates sequence of numbers.}} {
+# {Optional sequence control switches}
+{-from= -default 1 -type double -help {Provides start of sequence}}
+{-to= -default 10 -type double -help {Provides end of sequence}}
+{-step= -default 1 -type double -help {Provides step between adjacent numbers of sequence}}
+{-prec= -default 1 -type double -help {Provides precision of numbers in the sequence}}
+} {-help} {Procedure generates sequence of numbers.
+Can accepts unambiguous prefixes instead of switches names.
+Accepts switches only before parameters.
+    Switches:
+        -from - Expects argument. Provides start of sequence. Default value is 1. Type
+            double.
+        -to - Expects argument. Provides end of sequence. Default value is 10. Type
+            double.
+        -step - Expects argument. Provides step between adjacent numbers of sequence.
+            Default value is 1. Type double.
+        -prec - Expects argument. Provides precision of numbers in the sequence. Default
+            value is 1. Type double.}
+
+testTemplateStdout helpTest-4 {} {-help {}} {
+# {Optional sequence control switches}
+{-from= -default 1 -type double -help {Provides start of sequence}}
+{-to= -default 10 -type double}
+{-step= -default 1 -type double -help {Provides step between adjacent numbers of sequence}}
+{-prec= -default 1 -type double -help {Provides precision of numbers in the sequence}}
+} {-help} {Can accepts unambiguous prefixes instead of switches names.
+Accepts switches only before parameters.
+    Switches:
+        -from - Expects argument. Provides start of sequence. Default value is 1. Type
+            double.
+        -to - Expects argument. Default value is 10. Type double.
+        -step - Expects argument. Provides step between adjacent numbers of sequence.
+            Default value is 1. Type double.
+        -prec - Expects argument. Provides precision of numbers in the sequence. Default
+            value is 1. Type double.}
+
+testTemplateStdout helpTest-5 {} {-help {} -inline\
+                                          -validate {date {\[string is double \$arg\]}\
+                                                             time {\[string is double \$arg\]}}} {
+        {date -validate date}
+        {time -validate time}
+        {-allday -allow {date time}}
+        {-duration= -allow {date time} -validate time}
+        {-endtime= -allow {date time} -validate time}
+} {-help} {Can accepts unambiguous prefixes instead of switches names.
+Accepts switches only before parameters.
+    Switches:
+        -allday - Allows date or time.
+        -duration - Expects argument. Allows date or time. Validation expression:
+            [string is double $arg].
+        -endtime - Expects argument. Allows date or time. Validation expression:
+            [string is double $arg].
+    Parameters:
+        date - Validation expression: [string is double $arg].
+        time - Validation expression: [string is double $arg].}
+
 
 cleanupTests
