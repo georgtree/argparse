@@ -35,10 +35,10 @@ See [original repository](https://core.tcl-lang.org/tcllib/timeline?r=amg-argpar
   - [Passthrough and normalization](#passthrough-and-normalization)
   - [Upvar Elements](#upvar-elements)
   - [Template](#template)
+  - [Help](#help)
   - [Argument Processing Sequence](#argument-processing-sequence)
   - [Return Value](#return-value)
   - [Author(s)](#author(s))
-
 
 
 ## Synopsys
