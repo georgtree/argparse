@@ -45,6 +45,7 @@ See [original repository](https://core.tcl-lang.org/tcllib/timeline?r=amg-argpar
 
 ``` text
 package require Tcl 8.6-
+package require textutil::adjust
 argparse ?-globalSwitch ...? ?--? definition ?arguments?
 ```
 
@@ -809,18 +810,17 @@ proc genNums {args} {
 genNums -help
 ```
 ```text
-Procedure generates sequence of numbers.
-Can accepts unambiguous prefixes instead of switches names.
-Accepts switches only before parameters.
+Procedure generates sequence of numbers.. Can accepts unambiguous prefixes
+instead of switches names. Accepts switches only before parameters.
     Switches:
-        -from - Expects argument. Provides start of sequence. Default value is 1. Type
-            double.
-        -to - Expects argument. Provides end of sequence. Default value is 10. Type
-            double.
-        -step - Expects argument. Provides step between adjacent numbers of sequence.
+        -from - Expects argument. Provides start of sequence. Default value is
+            1. Type double.
+        -to - Expects argument. Provides end of sequence. Default value is 10.
+            Type double.
+        -step - Expects argument. Provides step between adjacent numbers of
+            sequence. Default value is 1. Type double.
+        -prec - Expects argument. Provides precision of numbers in the sequence.
             Default value is 1. Type double.
-        -prec - Expects argument. Provides precision of numbers in the sequence. Default
-            value is 1. Type double.
 ```
 
 Generated message contains information important for the user of the command, not all information that is in definition
@@ -849,22 +849,18 @@ sheduleEvent -help
 ```
 ```text
 Procedure shedules event at cetain date. At least one of the switches must be
-provided: -allday, -duration or -endtime
-Can accepts unambiguous prefixes instead of switches names.
-Accepts switches only before parameters.
+provided: -allday, -duration or -endtime. Can accepts unambiguous prefixes
+instead of switches names. Accepts switches only before parameters.
     Switches:
-        -allday - Set event duration for the rest of the day. Allows date or time.
-        -duration - Expects argument. Set event duration in format HH:MM. Allows date or
-            time. Validation expression: [regexp
-            {^([01][0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?$} $arg].
-        -endtime - Expects argument. Set end time of event in format HH:MM. Allows date
-            or time. Validation expression: [regexp
-            {^([01][0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?$} $arg].
+        -allday - Set event duration for the rest of the day. Allows date or
+            time.
+        -duration - Expects argument. Set event duration in format HH:MM. Allows
+            date or time.
+        -endtime - Expects argument. Set end time of event in format HH:MM.
+            Allows date or time.
     Parameters:
-        date - Provides date in format DD-MM-YY. Validation expression: [regexp
-            {^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$} $arg].
-        time - Provides time in format HH:MM. Validation expression: [regexp
-            {^([01][0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?$} $arg].
+        date - Provides date in format DD-MM-YY.
+        time - Provides time in format HH:MM.
 ```
 
 ## Argument Processing Sequence

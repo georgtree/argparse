@@ -1628,7 +1628,7 @@ testTemplate allowTest-8 {} {} {
 g} {-c 2 -a 1 5} {a doesn't allow c}
 
 ### Check -help global switch
-testTemplateStdout helpTest-1 {} {-help {Description of procedure.}} {
+testTemplateStdout helpTest-1 {} {-help {Description of procedure}} {
 {-a -required -help {Description 1} -type double -validate {\[string is double \$arg\]}}
 {-b -help {Description 2} -require h -forbid e}
 {-hjk|h= -help {Description 3} -require {a b} -imply y}
@@ -1640,15 +1640,13 @@ testTemplateStdout helpTest-1 {} {-help {Description of procedure.}} {
 {-poy= -enum {a 2 t 6}}
 {p -allow {b h}}
 {y -optional -help {Description 9}}
-{-l -catchall}} {-help} {Description of procedure.
-Can accepts unambiguous prefixes instead of switches names.
-Accepts switches only before parameters.
+{-l -catchall}} {-help} {Description of procedure. Can accepts unambiguous prefixes instead of switches
+names. Accepts switches only before parameters.
     Switches:
-        -a - Required, expects argument. Description 1. Type double. Validation
-            expression: [string is double $arg].
+        -a - Required, expects argument. Description 1. Type double.
         -b - Description 2. Requires h. Forbids e.
-        -h - Expects argument. Description 3. Requires a or b. Alias is hjk. Expects two
-            arguments.
+        -h - Expects argument. Description 3. Requires a or b. Alias is hjk.
+            Expects two arguments.
         -c - Expects optional argument. Description 4. Requires a, b or c.
         -d - Required, expects optional argument. Description 5.
         -ty - Expects argument. Description 5. Links caller variable.
@@ -1660,7 +1658,7 @@ Accepts switches only before parameters.
         p - Allows b or h.
         y - Optional. Description 9.}
 
-testTemplateStdout helpTest-2 {} {-help {Description of procedure.}} {
+testTemplateStdout helpTest-2 {} {-help {Description of procedure}} {
 {-exact      -key match}
 {-glob       -key match -default glob}
 {-regexp     -key match}
@@ -1680,9 +1678,8 @@ testTemplateStdout helpTest-2 {} {-help {Description of procedure.}} {
 -index=
 {-subindices -require index}
 list
-pattern} {-help} {Description of procedure.
-Can accepts unambiguous prefixes instead of switches names.
-Accepts switches only before parameters.
+pattern} {-help} {Description of procedure. Can accepts unambiguous prefixes instead of switches
+names. Accepts switches only before parameters.
     Switches:
         -exact - Forbids glob or regexp.
         -glob - Forbids exact or regexp.
@@ -1706,24 +1703,23 @@ Accepts switches only before parameters.
         list
         pattern}
 
-testTemplateStdout helpTest-3 {} {-help {Procedure generates sequence of numbers.}} {
+testTemplateStdout helpTest-3 {} {-help {Procedure generates sequence of numbers}} {
 # {Optional sequence control switches}
 {-from= -default 1 -type double -help {Provides start of sequence}}
 {-to= -default 10 -type double -help {Provides end of sequence}}
 {-step= -default 1 -type double -help {Provides step between adjacent numbers of sequence}}
 {-prec= -default 1 -type double -help {Provides precision of numbers in the sequence}}
-} {-help} {Procedure generates sequence of numbers.
-Can accepts unambiguous prefixes instead of switches names.
-Accepts switches only before parameters.
+} {-help} {Procedure generates sequence of numbers. Can accepts unambiguous prefixes
+instead of switches names. Accepts switches only before parameters.
     Switches:
-        -from - Expects argument. Provides start of sequence. Default value is 1. Type
-            double.
-        -to - Expects argument. Provides end of sequence. Default value is 10. Type
-            double.
-        -step - Expects argument. Provides step between adjacent numbers of sequence.
-            Default value is 1. Type double.
-        -prec - Expects argument. Provides precision of numbers in the sequence. Default
-            value is 1. Type double.}
+        -from - Expects argument. Provides start of sequence. Default value is
+            1. Type double.
+        -to - Expects argument. Provides end of sequence. Default value is 10.
+            Type double.
+        -step - Expects argument. Provides step between adjacent numbers of
+            sequence. Default value is 1. Type double.
+        -prec - Expects argument. Provides precision of numbers in the sequence.
+            Default value is 1. Type double.}
 
 testTemplateStdout helpTest-4 {} {-help {}} {
 # {Optional sequence control switches}
@@ -1731,16 +1727,16 @@ testTemplateStdout helpTest-4 {} {-help {}} {
 {-to= -default 10 -type double}
 {-step= -default 1 -type double -help {Provides step between adjacent numbers of sequence}}
 {-prec= -default 1 -type double -help {Provides precision of numbers in the sequence}}
-} {-help} {Can accepts unambiguous prefixes instead of switches names.
-Accepts switches only before parameters.
+} {-help} {Can accepts unambiguous prefixes instead of switches names. Accepts switches
+only before parameters.
     Switches:
-        -from - Expects argument. Provides start of sequence. Default value is 1. Type
-            double.
+        -from - Expects argument. Provides start of sequence. Default value is
+            1. Type double.
         -to - Expects argument. Default value is 10. Type double.
-        -step - Expects argument. Provides step between adjacent numbers of sequence.
-            Default value is 1. Type double.
-        -prec - Expects argument. Provides precision of numbers in the sequence. Default
-            value is 1. Type double.}
+        -step - Expects argument. Provides step between adjacent numbers of
+            sequence. Default value is 1. Type double.
+        -prec - Expects argument. Provides precision of numbers in the sequence.
+            Default value is 1. Type double.}
 
 testTemplateStdout helpTest-5 {} {-help {} -inline\
                                           -validate {date {\[string is double \$arg\]}\
@@ -1750,17 +1746,15 @@ testTemplateStdout helpTest-5 {} {-help {} -inline\
         {-allday -allow {date time}}
         {-duration= -allow {date time} -validate time}
         {-endtime= -allow {date time} -validate time}
-} {-help} {Can accepts unambiguous prefixes instead of switches names.
-Accepts switches only before parameters.
+} {-help} {Can accepts unambiguous prefixes instead of switches names. Accepts switches
+only before parameters.
     Switches:
         -allday - Allows date or time.
-        -duration - Expects argument. Allows date or time. Validation expression:
-            [string is double $arg].
-        -endtime - Expects argument. Allows date or time. Validation expression:
-            [string is double $arg].
+        -duration - Expects argument. Allows date or time.
+        -endtime - Expects argument. Allows date or time.
     Parameters:
-        date - Validation expression: [string is double $arg].
-        time - Validation expression: [string is double $arg].}
+        date
+        time}
 
 
 cleanupTests

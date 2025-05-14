@@ -45,6 +45,7 @@ See [original repository](https://core.tcl-lang.org/tcllib/timeline?r=amg-argpar
 
 ``` text
 package require Tcl 8.6-
+package require textutil::adjust
 argparse ?-globalSwitch ...? ?--? definition ?arguments?
 ```
 

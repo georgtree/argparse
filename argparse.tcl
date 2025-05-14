@@ -378,7 +378,7 @@ proc ::argparse {args} {
                 return $str
             }}}
             if {$help ne {}} {
-                lappend description [adjust $help -length 80]
+                lappend description [adjust $help -length 80].
             }
             if {[info exists exact]} {
                 lappend description {Doesn't accept prefixes instead of switches names.}
@@ -452,9 +452,6 @@ proc ::argparse {args} {
                 if {[dict exists $opt type]} {
                     lappend combined "Type [dict get $opt type]."
                 }
-                if {[dict exists $opt validate]} {
-                    lappend combined "Validation expression: [dict get $opt validate]."
-                }
                 if {[dict exists $opt enum]} {
                     lappend combined "Value must be one of: [{*}$enumStrBuild enum $opt]."
                 }
@@ -467,29 +464,30 @@ proc ::argparse {args} {
                     } else {
                         set combined -$name
                     }
-                    lappend descriptionSwitches [indent [indent [adjust $combined -length 80] {    } 1] {        }]
+                    lappend descriptionSwitches [indent [indent [adjust $combined -length 72] {    } 1] {        }]
                 } else {
                     if {[info exists combined]} {
                         set combined "$name - [join $combined { }]"
                     } else {
                         set combined $name
                     }
-                    lappend descriptionParameters [indent [indent [adjust $combined -length 80] {    } 1] {        }]
+                    lappend descriptionParameters [indent [indent [adjust $combined -length 72] {    } 1] {        }]
                 }
                 unset -nocomplain elementDescr constraints combined
             }
+            set description [adjust [join $description] -length 80]
             if {[info exists descriptionSwitches] && [info exists descriptionParameters]} {
                 puts [string totitle [string map {{,;} {;} {,.} {.}}\
-                                              [join [list {*}$description [indent Switches: {    }]\
+                                              [join [list $description [indent Switches: {    }]\
                                                              {*}$descriptionSwitches [indent Parameters: {    }]\
                                                              {*}$descriptionParameters] \n]] 0 1]
             } elseif {[info exists descriptionSwitches]} {
                 puts [string totitle [string map {{,;} {;} {,.} {.}}\
-                                              [join [list {*}$description [indent Switches: {    }]\
+                                              [join [list $description [indent Switches: {    }]\
                                                              {*}$descriptionSwitches] \n]] 0 1]
             } elseif {[info exists descriptionParameters]} {
                 puts [string totitle [string map {{,;} {;} {,.} {.}}\
-                                              [join [list {*}$description [indent Parameters: {    }]\
+                                              [join [list $description [indent Parameters: {    }]\
                                                              {*}$descriptionParameters] \n]] 0 1]
             }
             return -level 2
