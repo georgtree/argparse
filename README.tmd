@@ -343,7 +343,7 @@ Also supported multiple aliases for single switch, for example:
 or
 
 ``` tcl
-{-var|v||variable= -required}
+{-var|v|variable= -required}
 ```
 
 The name of the element is the last name in the list of aliases, if it is provided via shorhand syntax.
