@@ -7,7 +7,7 @@
 # See the file "LICENSE" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 package require Tcl 8.6-
-package provide argparse 0.54
+package provide argparse 0.55
 interp alias {} @ {} lindex
 interp alias {} = {} expr
 # argparse --
@@ -40,6 +40,15 @@ proc ::argparse {args} {
             }
         }
         return $args
+    }}}
+### Check aliases
+    set aliasesChecker {apply {{aliases opt} {
+        foreach alias [dict get $opt alias] {
+            if {[dict exists $aliases $alias]} {
+                return false
+            }
+        }
+        return true
     }}}
 ### Process arguments to argparse procedure
     set level 1
@@ -145,10 +154,7 @@ proc ::argparse {args} {
         } elseif {![dict exists $opt switch] && ![dict exists $opt parameter]} {
             # If -switch and -parameter are not used, parse shorthand syntax.
             if {![regexp -expanded {
-                ^(?:(-)             # Leading switch "-"
-                (?:(\w[\w-]*)\|)?)? # Optional switch alias
-                (\w[\w-]*)          # Switch or parameter name
-                ([=?!*^]*)$         # Optional flags
+                ^(?:(-)(?:(.*)\|)?)?(\w[\w-]*)([=?!*^]*)$
             } [@ $elem 0] _ minus alias name flags]} {
                 return -code error "bad element shorthand: [@ $elem 0]"
             }
@@ -158,7 +164,7 @@ proc ::argparse {args} {
                 dict set opt parameter {}
             }
             if {$alias ne {}} {
-                dict set opt alias $alias
+                dict set opt alias [split $alias {|}]
             }
             foreach flag [split $flags {}] {
                 dict set opt [dict get {= argument ? optional ! required * catchall ^ upvar} $flag] {}
@@ -272,14 +278,20 @@ proc ::argparse {args} {
         } elseif {![dict exists $opt alias]} {
 ####  Build list of switches.
             lappend switches -$name
-        } elseif {![regexp {^\w[\w-]*$} [dict get $opt alias]]} {
+        } elseif {![regexp {^\w[\w-]*( \w[\w-]*)*$} [dict get $opt alias]]} {
             return -code error "bad alias: [dict get $opt alias]"
-        } elseif {[dict exists $aliases [dict get $opt alias]]} {
+        } elseif {![{*}$aliasesChecker $aliases $opt]} {
             return -code error "element alias collision: [dict get $opt alias]"
         } else {
 ####  Build list of switches (with aliases), and link switch aliases.
-            dict set aliases [dict get $opt alias] $name
-            lappend switches -[dict get $opt alias]|$name
+            foreach alias [dict get $opt alias] {
+                dict set aliases $alias $name
+            }
+            lappend switches -[join [list {*}[dict get $opt alias] $name] |]
+        }
+####  Check for collision between alias and other switch name
+        if {$name in [dict keys $aliases]} {
+            return -code error "collision of switch -[dict get $aliases $name] alias with the -$name switch"
         }
 ####  Map from upvar keys back to element names, and forbid collisions.
         if {[dict exists $opt upvar] && [dict exists $opt key]} {
@@ -441,7 +453,11 @@ proc ::argparse {args} {
                     lappend combined "Default value is [dict get $opt default]."
                 }
                 if {[dict exists $opt alias]} {
-                    lappend combined "Alias is [dict get $opt alias]."
+                    if {[dict get $opt alias]>1} {
+                        lappend combined "Aliases are [{*}$enumStrBuild alias $opt]."
+                    } else {
+                        lappend combined "Alias is [dict get $opt alias]."
+                    }
                 }
                 if {[dict exists $opt catchall]} {
                     lappend combined {Collects unassigned arguments.}
@@ -691,7 +707,7 @@ proc ::argparse {args} {
         dict for {name opt} $def {
             if {[dict exists $opt switch] && ![dict exists $opt present] && [dict exists $opt required]} {
                 if {[dict exists $opt alias]} {
-                    lappend missing -[dict get $opt alias]|$name
+                    lappend missing -[join [list {*}[dict get $opt alias] $name] |]
                 } else {
                     lappend missing -$name
                 }

@@ -334,6 +334,20 @@ or
 {-var|variable= -required}
 ```
 
+Also supported multiple aliases for single switch, for example:
+
+``` tcl
+{-variable= -alias {var v} -required}
+```
+
+or
+
+``` tcl
+{-var|v||variable= -required}
+```
+
+The name of the element is the last name in the list of aliases, if it is provided via shorhand syntax.
+
 ### Shorthand flag
 
 If neither `-switch` nor `-parameter` are used, a shorthand flag form is permitted. If the [name](#name) is preceded by
@@ -383,7 +397,7 @@ Comment is the [element](#element) started with `#` at the start of definition i
 |:---------------------------|:----------------------------------------------------------------------------------------|
 | `-switch`                  | Element is a switch; conflicts with `-parameter`                                        |
 | `-parameter`               | Element is a parameter; conflicts with `-switch`                                        |
-| `-alias aliasName`         | Alias name; requires `-switch`                                                          |
+| `-alias aliasName`         | Alias name(s); requires `-switch`                                                          |
 | `-ignore`                  | Element is omitted from result; conflicts with `-key` and `-pass`                       |
 | `-key keyName`             | Override key name; not affected by `-template`                                          |
 | `-pass keyName`            | Pass through to result key; not affected by `-template`                                 |

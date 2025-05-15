@@ -37,19 +37,44 @@ proc testTemplate {testName descr arguments definitionsStr inputStr refStr} {
 }
 
 
-proc sheduleEvent {args} {
-    set arguments [argparse -inline\
-            -validate [dict create date {[regexp {^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$} $arg]}\
-                time {[regexp {^([01][0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?$} $arg]}] {
-        {date -validate date}
-        {time -validate time}
-        {-allday -allow {date time}}
-        {-duration= -allow {date time} -validate time}
-        {-endtime= -allow {date time} -validate time}
-    }]
-    if {![dict exists $arguments allday] && ![dict exists $arguments duration] && ![dict exists $arguments endtime]} {
-        return -code error "One of the switch must be presented: -allday, -duration or -endtime"
-    }
-    return $arguments
-}
-sheduleEvent
+testTemplate multipleAliasesTest-1 {} {} {
+-a|e|i=
+-e|b
+-c
+r} {-w 1 -c} {element alias collision: e}
+
+testTemplate multipleAliasesTest-2 {} {} {
+-a|w|i=
+-b
+-c
+r} {-w 1 -c} {i 1 r -c}
+
+testTemplate multipleAliasesTest-3 {} {} {
+-a|b|i=
+-b
+-c
+r} {-a 1 -c} {collision of switch -i alias with the -b switch}
+
+testTemplate multipleAliasesTest-4 {} {} {
+{-i= -alias {a b}}
+-b
+-c
+r} {-b 1 -c} {collision of switch -i alias with the -b switch}
+
+testTemplate multipleAliasesTest-5 {} {} {
+{-i= -alias {a b y} -required}
+-uib
+-cab
+r} {-y 1 -cab 1} {i 1 r 1 cab {}}
+
+testTemplate multipleAliasesTest-6 {} {} {
+{-i= -alias {a b y} -required}
+-uib
+-cab
+r} {-cab 1} {missing required switch: -a|b|y|i}
+
+testTemplate multipleAliasesTest-7 {} {} {
+{-i= -alias {a b y} -required}
+{-uib -alias {po kl y}}
+-cab
+r} {-cab 1} {missing required switch: -a|b|y|i}

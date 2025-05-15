@@ -1389,6 +1389,11 @@ testTemplate miscTest-5 {} {} {
 {-b= -alias n} 
 -a} {-a -b} {element alias collision: n}
 
+testTemplate miscTest-5 {} {} {
+-b|p= 
+{-b= -alias n} 
+-a=} {-a 1 -b 1} {collision of switch -p alias with the -b switch}
+
 testTemplate miscTest-6 {} {} {
 {-a= -require t} 
 {-b= -alias n} 
@@ -1631,7 +1636,7 @@ g} {-c 2 -a 1 5} {a doesn't allow c}
 testTemplateStdout helpTest-1 {} {-help {Description of procedure}} {
 {-a -required -help {Description 1} -type double -validate {\[string is double \$arg\]}}
 {-b -help {Description 2} -require h -forbid e}
-{-hjk|h= -help {Description 3} -require {a b} -imply y}
+{-hjk|por|res|h= -help {Description 3} -require {a b} -imply y}
 {-c= -help {Description 4} -optional -require {a b c}}
 {-d -required -optional -help {Description 5}}
 {-ty= -help {Description 5} -upvar}
@@ -1645,8 +1650,8 @@ names. Accepts switches only before parameters.
     Switches:
         -a - Required, expects argument. Description 1. Type double.
         -b - Description 2. Requires h. Forbids e.
-        -h - Expects argument. Description 3. Requires a or b. Alias is hjk.
-            Expects two arguments.
+        -h - Expects argument. Description 3. Requires a or b. Aliases are hjk,
+            por or res. Expects two arguments.
         -c - Expects optional argument. Description 4. Requires a, b or c.
         -d - Required, expects optional argument. Description 5.
         -ty - Expects argument. Description 5. Links caller variable.
@@ -1756,5 +1761,47 @@ only before parameters.
         date
         time}
 
+### Check multiple aliases support
+testTemplate multipleAliasesTest-1 {} {} {
+-a|e|i=
+-e|b
+-c
+r} {-w 1 -c} {element alias collision: e}
+
+testTemplate multipleAliasesTest-2 {} {} {
+-a|w|i=
+-b
+-c
+r} {-w 1 -c} {i 1 r -c}
+
+testTemplate multipleAliasesTest-3 {} {} {
+-a|b|i=
+-b
+-c
+r} {-a 1 -c} {collision of switch -i alias with the -b switch}
+
+testTemplate multipleAliasesTest-4 {} {} {
+{-i= -alias {a b}}
+-b
+-c
+r} {-b 1 -c} {collision of switch -i alias with the -b switch}
+
+testTemplate multipleAliasesTest-5 {} {} {
+{-i= -alias {a b y} -required}
+-uib
+-cab
+r} {-y 1 -cab 1} {i 1 r 1 cab {}}
+
+testTemplate multipleAliasesTest-6 {} {} {
+{-i= -alias {a b y} -required}
+-uib
+-cab
+r} {-cab 1} {missing required switch: -a|b|y|i}
+
+testTemplate multipleAliasesTest-7 {} {} {
+{-i= -alias {a b y} -required}
+{-uib -alias {po kl y}}
+-cab
+r} {-cab 1} {element alias collision: po kl y}
 
 cleanupTests
