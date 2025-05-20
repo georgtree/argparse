@@ -1021,6 +1021,7 @@ testTemplate validateInlineTest-6 {} {} {
 -b=
 {c -validate {[string is integer $arg]}}} {-b 1 1 4.5} {c value "4.5" fails validation: [string is integer $arg]}
 
+
 ### Check global -enum option
 testTemplate enumTest-1 {} {-enum [dict create check1 {i o p} check2 {k m o}]} {
 {-a= -enum check1}
@@ -1918,5 +1919,26 @@ r
 {m -optional}
 l
 {k -optional}} {1 -a -a 2 10} {l -a m 10 i 2 r 1}
+
+### Check custom error message for validation fail 
+testTemplate errormsgTest-1 {} {} {
+{a -validate {[string is double $arg]}}
+-b=
+{c -validate {[string is integer $arg]} -errormsg {validation failed for switch $name with value $arg}}} {-b 1 2 4.0}\
+        {validation failed for switch c with value 4.0}
+
+testTemplate errormsgTest-2 {} {} {
+{a -validate {[string is double $arg]}}
+-b=
+{c -validate {[string is integer $arg]}\
+         -errormsg {validation [dict get $opt validate] failed for switch $name with value $arg}}} {-b 1 2 4.0}\
+        {validation [string is integer $arg] failed for switch c with value 4.0}
+
+testTemplate errormsgTest-3 {} {} {
+{a -validate {[string is double $arg]}}
+-b=
+{c -errormsg {validation [dict get $opt validate] failed for switch $name with value $arg}}} {-b 1 2 4.0}\
+        {-errormsg requires -validate}
+
 
 cleanupTests

@@ -439,6 +439,7 @@ Comment is the [element](#element) started with `#` at the start of definition i
 | `-imply argList`           | If element is present, extra switch arguments; requires `-switch`                       |
 | `-reciprocal`              | This element's `-require` is reciprocal; requires `-require`                            |
 | `-validate validNameOrDef` | Name of validation expression, or inline validation definition                          |
+| `-errormsg message`        | Custom error message that replaces the default one; requires `-validate`                |
 | `-enum enumNameOrDef`      | Name of enumeration list, or inline enumeration definition                              |
 | `-type typeName`           | Validate value according to type defined in [string is] command, requires `-argument`   |
 | `-help description`        | Provide description to element that is displayed when help message is generated         |
@@ -562,6 +563,25 @@ genNums -from 0 -to 10.. -step 2 sequenceVar
 ```
 ```{tclerr}
 -to value "10.." is not of the type double
+```
+
+
+For `-validation` switch the custom error message could be provided by element switch `-errormsg`. For substitution,
+`arg` and `name` variables are availible, as well as internal dictionary `opt` that contains processed definition of 
+element. For example, the previously defined procedure could be rewritted with custom error messages:
+```tcl
+proc exponentiation {args} {
+    argparse {
+        {-b!= -validate {[string is double $arg]} -errormsg {Value of switch '$name' must be double, '$arg' was provided}}
+        {-n!= -validate {[string is double $arg]} -errormsg {Value of switch '$name' must be double, '$arg' was provided}}
+    }
+    return [expr {$b**$n}]
+}
+
+exponentiation -b 2 -n 4t
+```
+```{tclerr}
+Value of switch '-n' must be double, '4t' was provided
 ```
 
 

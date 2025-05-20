@@ -7,7 +7,7 @@
 # See the file "LICENSE" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 package require Tcl 8.6-
-package provide argparse 0.56
+package provide argparse 0.57
 interp alias {} @ {} lindex
 interp alias {} = {} expr
 # argparse --
@@ -25,7 +25,11 @@ proc ::argparse {args} {
             set args [lmap arg $args {{*}$command $arg}]
         } elseif {[dict exists $opt validate]} {
             foreach arg $args [list if [dict get $opt validate] {} else {
-                return -code error -level 2 "$name value \"$arg\" fails [dict get $opt validateMsg]"
+                if {[dict exists $opt errormsg]} {
+                    return -code error -level 2 [subst [dict get $opt errormsg]]
+                } else {
+                    return -code error -level 2 "$name value \"$arg\" fails [dict get $opt validateMsg]"
+                }
             }]
         }
         return $args
@@ -134,8 +138,8 @@ proc ::argparse {args} {
         set opt {}
         set defsSwitches {-alias -argument -boolean -catchall -default -enum -forbid -ignore -imply -keep -key -level\
                                   -optional -parameter -pass -reciprocal -require -required -standalone -switch -upvar\
-                                  -validate -value -type -allow -help}
-        set defsSwitchesWArgs {alias default enum forbid imply key pass require validate value type allow help}
+                                  -validate -value -type -allow -help -errormsg}
+        set defsSwitchesWArgs {alias default enum forbid imply key pass require validate value type allow help errormsg}
         for {set i 1} {$i<[llength $elem]} {incr i} {
             if {[set switch [regsub {^-} [tcl::prefix match $defsSwitches [@ $elem $i]] {}]] ni $defsSwitchesWArgs} {
 #####   Process switches without arguments.
@@ -203,7 +207,7 @@ proc ::argparse {args} {
             }
         }
 ####  Check requirements and conflicts.
-        foreach {switch other} {reciprocal require   level upvar} {
+        foreach {switch other} {reciprocal require   level upvar  errormsg validate} {
             if {[dict exists $opt $switch] && ![dict exists $opt $other]} {
                 return -code error "-$switch requires -$other"
             }
