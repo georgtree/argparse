@@ -37,8 +37,12 @@ See [original repository](https://core.tcl-lang.org/tcllib/timeline?r=amg-argpar
   - [Template](#template)
   - [Help](#help)
   - [Argument Processing Sequence](#argument-processing-sequence)
+    - [Normal processing](#normal-processing)
+    - [Processing with parameters first](#processing-with-parameters-first)
+    - [Processing with mixed](#processing-with-mixed)
   - [Return Value](#return-value)
   - [Author(s)](#author(s))
+
 
 
 ## Synopsys

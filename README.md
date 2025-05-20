@@ -37,8 +37,12 @@ See [original repository](https://core.tcl-lang.org/tcllib/timeline?r=amg-argpar
   - [Template](#template)
   - [Help](#help)
   - [Argument Processing Sequence](#argument-processing-sequence)
+    - [Normal processing](#normal-processing)
+    - [Processing with parameters first](#processing-with-parameters-first)
+    - [Processing with mixed](#processing-with-mixed)
   - [Return Value](#return-value)
   - [Author(s)](#author(s))
+
 
 
 ## Synopsys
@@ -414,7 +418,7 @@ Comment is the [element](#element) started with `#` at the start of definition i
 |:---------------------------|:----------------------------------------------------------------------------------------|
 | `-switch`                  | Element is a switch; conflicts with `-parameter`                                        |
 | `-parameter`               | Element is a parameter; conflicts with `-switch`                                        |
-| `-alias aliasName`         | Alias name(s); requires `-switch`                                                          |
+| `-alias aliasName`         | Alias name(s); requires `-switch`                                                       |
 | `-ignore`                  | Element is omitted from result; conflicts with `-key` and `-pass`                       |
 | `-key keyName`             | Override key name; not affected by `-template`                                          |
 | `-pass keyName`            | Pass through to result key; not affected by `-template`                                 |
@@ -1104,8 +1108,8 @@ argProcSeq 1 2 -c -a 1 3 4
 ==> c {} a 1 d 1 e 2 f 3 g 4
 ```
 
-The result is different from the last example from `-pfirst` chapter example because in this case the process is
-going as usual, but can be interrupted by providing switch with possible arguments.
+The result is different from the last example from [chapter](#processing-with-parameters-first) example because in this 
+case the process is going as usual, but can be interrupted by providing switch with possible arguments.
 
 The processing could be altered multiple times:
 ```tcl
@@ -1138,13 +1142,14 @@ bad switch "-2": must be -a, -b, or -c
 
 
 ```tcl
-argProcSeq 1 -c -a 1 15 -- -2 3 4
+argProcSeq 1 -c -a 1 -- -2 3 4
 ```
 ```text
 ==> c {} a 1 d -2 e 3 f 4 g {}
 ```
 
-in that case the first argument before switch `-c` is ignored.
+in that case the arguments before switch `--` that are not arguments to switches and does not look like a switch are 
+ignored.
 
 
 ## Return Value
