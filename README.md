@@ -387,24 +387,26 @@ Comment is the [element](#element) started with `#` at the start of definition i
 
 ## Global Switches
 
-| Switch                     | Description                                                      |
-|:---------------------------|:-----------------------------------------------------------------|
-| `-inline`                  | Return the result dict rather than setting caller variables      |
-| `-exact`                   | Require exact switch name matches, and do not accept prefixes    |
-| `-mixed`                   | Allow switches to appear after parameters                        |
-| `-long`                    | Recognize `--switch` long option alternative syntax              |
-| `-equalarg`                | Recognize `-switch=arg` inline argument alternative syntax       |
-| `-normalize`               | Normalize switch syntax in passthrough result keys               |
-| `-reciprocal`              | Every element's `-require` constraints are reciprocal            |
-| `-level levelSpec`         | Every `-upvar` element's `[upvar]` level; defaults to 1          |
-| `-template templateString` | Transform default element names using a substitution template    |
-| `-pass passKey`            | Pass unrecognized elements through to a result key               |
-| `-keep`                    | Do not unset omitted element variables; conflicts with `-inline` |
-| `-boolean`                 | Treat switches as having `-boolean` wherever possible            |
-| `-validate validDef`       | Define named validation expressions to be used by elements       |
-| `-enum enumDef`            | Define named enumeration lists to be used by elements            |
-| `-help description`        | Enable help message generating when -help argument is provided   |
-| `--`                       | Force next argument to be interpreted as the definition list     |
+| Switch                     | Description                                                                |
+|:---------------------------|:---------------------------------------------------------------------------|
+| `-inline`                  | Return the result dict rather than setting caller variables                |
+| `-exact`                   | Require exact switch name matches, and do not accept prefixes              |
+| `-mixed`                   | Allow switches to appear after parameters                                  |
+| `-pfirst`                  | Set required parameters to appear before switches; conflicts with `-mixed` |
+| `-long`                    | Recognize `--switch` long option alternative syntax                        |
+| `-equalarg`                | Recognize `-switch=arg` inline argument alternative syntax                 |
+| `-normalize`               | Normalize switch syntax in passthrough result keys                         |
+| `-reciprocal`              | Every element's `-require` constraints are reciprocal                      |
+| `-level levelSpec`         | Every `-upvar` element's `[upvar]` level; defaults to 1                    |
+| `-template templateString` | Transform default element names using a substitution template              |
+| `-pass passKey`            | Pass unrecognized elements through to a result key                         |
+| `-keep`                    | Do not unset omitted element variables; conflicts with `-inline`           |
+| `-boolean`                 | Treat switches as having `-boolean` wherever possible                      |
+| `-validate validDef`       | Define named validation expressions to be used by elements                 |
+| `-enum enumDef`            | Define named enumeration lists to be used by elements                      |
+| `-help description`        | Enable help message generating when -help argument is provided             |
+| `-helplevel value`         | Set -level option for return command in help evaluation                    |
+| `--`                       | Force next argument to be interpreted as the definition list               |
 
 ## Element Switches
 
@@ -882,22 +884,268 @@ instead of switches names. Accepts switches only before parameters.
 [Argument](#argument) processing is performed in three stages: [switch](#switch) processing, [parameter](#parameter)
 allocation, and parameter assignment. Each argument processing stage and pass is performed left-to-right.
 
+### Normal processing
+
 All switches must normally appear in the argument list before any parameters. Switch processing terminates with the
 first argument (besides arguments to switches) that does not start with `-` (or `--`, if `-long` is used). The special
 switch `--` can be used to force switch termination if the first parameter happens to start with `-`. If no switches are
-defined, the first argument is known to be a parameter even if it starts with `-`.
+defined, the first argument is known to be a parameter even if it starts with `-`. 
 
-When the `-mixed` switch is used, switch processing continues after encountering arguments that do not start with `-` or
-`--`. This is convenient but may be ambiguous in cases where parameters look like switches. To resolve ambiguity, the
-special `--` switch terminates switch processing and forces all remaining arguments to be parameters.
-
-When `-mixed` is not used, the required parameters are counted, then that number of arguments at the end of the argument
-list are treated as parameters even if they begin with `-`. This avoids the need for `--` in many cases.
+When `-mixed` is not used, the required parameters are counted, then that number of arguments at the **end** of the
+argument list are treated as parameters even if they begin with `-`. This avoids the need for `--` in many cases.
 
 After switch processing, parameter allocation determines how many arguments to assign to each parameter. Arguments
 assigned to switches are not used in parameter processing. First, arguments are allocated to required parameters;
 second, to optional, non-catchall parameters; and last to catchall parameters. Finally, each parameter is assigned the
 allocated number of arguments.
+
+Let's look at normal operation in the next example:
+```tcl
+proc argProcSeq {args} {
+    set arguments [argparse -inline {
+        -a=
+        -b=
+        -c
+        d
+        e?
+    }]
+    return $arguments
+}
+argProcSeq -c -a 1 2
+```
+```text
+==> c {} a 1 d 2
+```
+
+First switches are processed, and there one argument left and it is assigned to required parameter `r`. If we provided
+another additional argument, it will be assigned to optional parameter `e`:
+```tcl
+argProcSeq -c -a 1 2 3
+```
+```text
+==> c {} a 1 d 2 e 3
+```
+
+More complicated example:
+```tcl
+proc argProcSeq {args} {
+    set arguments [argparse -inline {
+        -a=
+        -b=
+        -c
+        d
+        e?
+        f
+    }]
+    return $arguments
+}
+argProcSeq -c -a 1 2 3
+```
+```text
+==> c {} a 1 d 2 f 3
+```
+
+In that case the last two arguments is assigned to *two* required parameters. If we provide two arguments after switch
+`-a`, then again they are assigned to required parameters, but because `-a` require argument, the error is thrown:
+```tcl
+argProcSeq -c -a 1 2
+```
+```{tclerr}
+-a requires an argument
+```
+
+
+If we provide four arguments after `-a`:
+```tcl
+argProcSeq -c -a 1 2 3 4
+```
+```text
+==> c {} a 1 d 2 e 3 f 4
+```
+
+All three arguments are assigned to parameters in order presented in definition. So, if only two remaining arguments
+are there - they are assigned to two required parameters, **but** if three parameters presented, optional parameter
+also gets the value in *order in definition*.
+
+There is a special case when argument to parameter looks like a switch:
+```tcl
+argProcSeq -c -a 1 -2 3 4
+```
+```{tclerr}
+bad switch "-2": must be -a, -b, or -c
+```
+
+
+The error is appeared because after counting required parameters (two required), last two arguments are assigned to
+that parameters, and the -2 looks like a switch, so argparse tries to parse it as a switch. To fix that we can use `--`:
+```tcl
+argProcSeq -c -a 1 -- -2 3 4
+```
+```text
+==> c {} a 1 d -2 e 3 f 4
+```
+
+If one of the last two switches appears with `-`, all is processed as it should:
+```tcl
+argProcSeq -c -a 1 -- 2 -3 4
+```
+```text
+==> c {} a 1 d 2 e -3 f 4
+```
+
+### Processing with parameters first
+
+If `-mixed` is not used and `-pfirst` is used, the required parameters are counted, then that number of arguments at the
+**start** of the argument list are treated as parameters even if they begin with `-`.
+
+The global switch `-pfirst` allows to assign first `n` arguments to `n` **required** parameters irrespectively of how these
+arguments looks like. Then switches and optional parameters are processed. 
+
+But, even if number arguments are enough to assign to both required and optional parameters, required parameters are 
+assigned first - it is different to how it works when parameters arguments are provided after switches. These two
+examples demonstrating that:
+```tcl
+proc argProcSeq {args} {
+    set arguments [argparse -inline -pfirst {
+        -a=
+        -b=
+        -c
+        d
+        e?
+        f
+    }]
+    return $arguments
+}
+argProcSeq 1 2 -c -a 1
+```
+```text
+==> c {} a 1 d 1 f 2
+```
+
+```tcl
+argProcSeq 1 2 3 -c -a 1
+```
+```text
+==> c {} a 1 d 1 f 2 e 3
+```
+
+Also, the remaining parameters could be provided after switches:
+```tcl
+argProcSeq 1 2 -c -a 1 3
+```
+```text
+==> c {} a 1 d 1 f 2 e 3
+```
+
+But it doesn't work in case of parameter argument looking like a switch:
+```tcl
+argProcSeq 1 2 -c -a 1 -3
+```
+```{tclerr}
+bad switch "-3": must be -a, -b, or -c
+```
+
+
+In that case we can use the same trick with `--` termination of switch processing:
+```tcl
+argProcSeq 1 2 -c -a 1 -- -3
+```
+```text
+==> c {} a 1 d 1 f 2 e -3
+```
+
+Also there is a special treatment of `-catchall` parameter;
+```tcl
+proc argProcSeq {args} {
+    set arguments [argparse -inline -pfirst {
+        -a=
+        -b=
+        -c
+        d
+        e?
+        f
+        {g -catchall}
+    }]
+    return $arguments
+}
+argProcSeq 1 2 -c -a 1 3 4
+```
+```text
+==> c {} a 1 d 1 f 2 e 3 g 4
+```
+
+Catchall parameters are treated after required and optional parameters.
+
+`-pfirst` is in conflict with `-mixed`.
+
+### Processing with mixed
+
+When the `-mixed` switch is used, switch processing continues after encountering arguments that start with `-` or
+`--`. This is convenient but may be ambiguous in cases where parameters look like switches. To resolve ambiguity, the
+special `--` switch terminates switch processing and forces all remaining arguments to be parameters.
+
+Let's see in example:
+```tcl
+proc argProcSeq {args} {
+    set arguments [argparse -inline -mixed {
+        -a=
+        -b=
+        -c
+        d
+        e?
+        f
+        {g -catchall}
+    }]
+    return $arguments
+}
+argProcSeq 1 2 -c -a 1 3 4
+```
+```text
+==> c {} a 1 d 1 e 2 f 3 g 4
+```
+
+The result is different from the last example from `-pfirst` chapter example because in this case the process is
+going as usual, but can be interrupted by providing switch with possible arguments.
+
+The processing could be altered multiple times:
+```tcl
+proc argProcSeq {args} {
+    set arguments [argparse -inline -mixed {
+        -a=
+        -b=
+        -c
+        d
+        e?
+        f
+        {g -catchall}
+    }]
+    return $arguments
+}
+argProcSeq 1 -c 2 -a 1 3 4
+```
+```text
+==> c {} a 1 d 1 e 2 f 3 g 4
+```
+
+Result is exact the same as in the previous example. Problems started when parameter looks like a switch, in that case
+only `--` can force the rest of arguments considered as parameters arguments:
+```tcl
+argProcSeq 1 -c -2 -a 1 3 4
+```
+```{tclerr}
+bad switch "-2": must be -a, -b, or -c
+```
+
+
+```tcl
+argProcSeq 1 -c -a 1 15 -- -2 3 4
+```
+```text
+==> c {} a 1 d -2 e 3 f 4 g {}
+```
+
+in that case the first argument before switch `-c` is ignored.
+
 
 ## Return Value
 

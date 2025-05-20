@@ -1761,6 +1761,17 @@ only before parameters.
         date
         time}
 
+testTemplateStdout helpTest-6 {} {-helplevel 3 -help {} -inline\
+                                          -validate {date {\[string is double \$arg\]}\
+                                                             time {\[string is double \$arg\]}}} {
+        {date -validate date}
+        {time -validate time}
+        {-allday -allow {date time}}
+        {-duration= -allow {date time} -validate time}
+        {-endtime= -allow {date time} -validate time}
+} {-help} {}
+
+
 ### Check multiple aliases support
 testTemplate multipleAliasesTest-1 {} {} {
 -a|e|i=
@@ -1803,5 +1814,109 @@ testTemplate multipleAliasesTest-7 {} {} {
 {-uib -alias {po kl y}}
 -cab
 r} {-cab 1} {element alias collision: po kl y}
+
+### Check -pfirst global switch
+testTemplate pfirstTest-1 {} {-pfirst} {
+-a|e|i=
+-b
+-c
+r
+l
+{m -optional}} {1 -8 5} {l -8 m 5 r 1}
+
+testTemplate pfirstTest-2 {} {-pfirst} {
+-a|e|i=
+-b
+-c
+r
+l} {1 -8 -c -a 2} {l -8 i 2 r 1 c {}}
+
+testTemplate pfirstTest-3 {} {-pfirst} {
+-a|e|i=
+-b
+-c
+r
+l
+{m -catchall}} {1 -8 5 8 9 0} {l -8 m {5 8 9 0} r 1}
+
+testTemplate pfirstTest-4 {} {-pfirst} {
+-a|e|i=
+-b
+-c
+r
+l
+{m -optional}
+{k -optional}} {1 -8 5 0} {l -8 m 5 r 1 k 0}
+
+testTemplate pfirstTest-5 {} {-pfirst} {
+r
+-a|e|i=
+-b
+-c
+{m -optional}
+l
+{k -optional}} {1 -8 -a 2 5 0} {l -8 m 5 i 2 r 1 k 0}
+
+testTemplate pfirstTest-6 {} {-pfirst} {
+r
+-a|e|i=
+-b
+-c
+{m -optional}
+l
+{k -optional}} {1 -a 8 5 0} {too many arguments}
+
+testTemplate pfirstTest-7 {} {-pfirst} {
+r
+-a|e|i=
+-b
+-c
+{m -optional}
+l
+{k -optional}} {1 -a 8 5 -a 2} {l -a m 8 i 2 r 1 k 5}
+
+testTemplate pfirstTest-8 {} {-pfirst} {
+r
+-a|e|i=
+-b
+-c
+{m -optional}
+l
+{k -optional}} {9 1 -a 8 5} {l 1 m 5 i 8 r 9}
+
+testTemplate pfirstTest-9 {} {-pfirst -mixed} {
+r
+-a|e|i=
+-b
+-c
+{m -optional}
+l
+{k -optional}} {1 -i 8 5 -a 2 9} {-mixed and -pfirst conflict}
+
+testTemplate pfirstTest-10 {} {-pfirst} {
+-a|e|i=
+-b
+-c
+r
+l
+{m -optional}} {1 -b 5} {l -b m 5 r 1}
+
+testTemplate pfirstTest-11 {} {-pfirst} {
+r
+-a|e|i=
+-b
+-c
+{m -optional}
+l
+{k -optional}} {1 -a 8 -a 2} {l -a m 8 i 2 r 1}
+
+testTemplate pfirstTest-12 {} {-pfirst} {
+r
+-a|e|i=
+-b
+-c
+{m -optional}
+l
+{k -optional}} {1 -a -a 2 10} {l -a m 10 i 2 r 1}
 
 cleanupTests

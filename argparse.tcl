@@ -7,7 +7,7 @@
 # See the file "LICENSE" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 package require Tcl 8.6-
-package provide argparse 0.55
+package provide argparse 0.56
 interp alias {} @ {} lindex
 interp alias {} = {} expr
 # argparse --
@@ -55,7 +55,7 @@ proc ::argparse {args} {
     set enum {}
     set validate {}
     set globalSwitches {-boolean -enum -equalarg -exact -inline -keep -level -long -mixed -normalize -pass -reciprocal\
-                                -template -validate -help}
+                                -template -validate -help -helplevel -pfirst}
     for {set i 0} {$i<[llength $args]} {incr i} {
         if {[catch {regsub {^-} [tcl::prefix match -message switch $globalSwitches [@ $args $i]] {} switch} errorMsg]} {
             # Do not allow "--" or definition lists nested within the special
@@ -100,7 +100,7 @@ proc ::argparse {args} {
                     lappend definition $elem
                 }
             }
-        } elseif {$switch ni {enum level pass template validate help}} {
+        } elseif {$switch ni {enum level pass template validate help helplevel}} {
             # Process switches with no arguments.
             set $switch {}
         } elseif {$i == [llength $args]-1} {
@@ -117,6 +117,10 @@ proc ::argparse {args} {
     # Forbid using -inline and -keep at the same time.
     if {[info exists inline] && [info exists keep]} {
         return -code error {-inline and -keep conflict}
+    }
+    # Forbid using -mixed and -pfirst at the same time.
+    if {[info exists mixed] && [info exists pfirst]} {
+        return -code error {-mixed and -pfirst conflict}
     }
 ### Parse element definition list.
     set def {}
@@ -402,6 +406,9 @@ proc ::argparse {args} {
             } else {
                 lappend description {Accepts switches only before parameters.}
             }
+            if {[info exists pfirst]} {
+                lappend description {Set required parameters to appear before switches.}
+            }
             if {[info exists long]} {
                 lappend description {Recognizes --switch long option alternative syntax.}
             }
@@ -506,24 +513,60 @@ proc ::argparse {args} {
                                               [join [list $description [indent Parameters: {    }]\
                                                              {*}$descriptionParameters] \n]] 0 1]
             }
-            return -level 2
+            if {[info exists helplevel]} {
+                return -level $helplevel
+            } else {
+                return -level 2
+            }
         }
     }
 ### Handle default pass-through switch by creating a dummy element.
     if {[info exists pass]} {
         dict set def {} pass $pass
     }
-### Force required parameters to bypass switch logic.
-    set end [= {[llength $argv]-1}]
-    if {![info exists mixed]} {
+### Reorder parameters to have required parameters first if -pfirst global switch is specified
+    if {[info exists pfirst]} {
         foreach name $order {
             if {[dict exists $def $name required]} {
-                incr end -1
+                lappend orderReq $name
+            } else {
+                lappend orderOpt $name
             }
         }
+        if {[info exists orderReq] && [info exists orderOpt]} {
+            set order [list {*}$orderReq {*}$orderOpt]
+        } elseif {[info exists orderReq]} {
+            set order $orderReq
+        } elseif {[info exists orderOpt]} {
+            set order $orderReq
+        }
     }
-    set force [lreplace $argv 0 $end]
-    set argv [lrange $argv 0 $end]
+### Force required parameters to bypass switch logic.
+    set end [= {[llength $argv]-1}]
+    set start 0
+    if {![info exists mixed]} {
+        if {[info exists pfirst]} {
+            foreach name $order {
+                if {[dict exists $def $name required]} {
+                    incr start
+                }
+            }
+            set force [lreplace $argv $start end]
+            set argv [lrange $argv $start end]
+        } else {
+            foreach name $order {
+                if {[dict exists $def $name required]} {
+                    incr end -1
+                }
+            }
+            set force [lreplace $argv 0 $end]
+            set argv [lrange $argv 0 $end]
+        }
+    } else {
+        set force [lreplace $argv $start end]
+        set argv [lrange $argv $start end]
+    }
+    
 ### Perform switch logic.
     set result {}
     set missing {}
@@ -552,7 +595,7 @@ proc ::argparse {args} {
                 # remaining arguments are parameters.
                 set params $argv
                 break
-            } elseif {[info exists mixed]} {
+            } elseif {[info exists mixed] || [info exists pfirst]} {
                 # If -mixed is used and this is not a switch, it is a parameter.
                 # Add it to the parameter list, then go to the next argument.
                 lappend params $arg
@@ -730,7 +773,11 @@ proc ::argparse {args} {
     }
 ### Allocate one argument to each required parameter, including catchalls.
     set alloc {}
-    lappend params {*}$force
+    if {[info exists pfirst]} {
+        set params [linsert $params 0 {*}$force]
+    } else {
+        lappend params {*}$force
+    }
     set count [llength $params]
     set i 0
     foreach name $order {
