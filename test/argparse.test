@@ -1790,6 +1790,39 @@ must appear before switches.
         date
         time}
 
+testTemplateStdout helpTest-8 {} {-help {} -inline -pfirst\
+                                          -validate {date {\[string is double \$arg\]}\
+                                                             time {\[string is double \$arg\]}}} {
+        {date -validate date -hsuppress}
+        {time -validate time}
+        {-allday -allow {date time}}
+        {-duration= -allow {date time} -validate time}
+        {-endtime= -allow {date time} -validate time}
+} {-help} {Can accepts unambiguous prefixes instead of switches names. Required parameters
+must appear before switches.
+    Switches:
+        -allday - Allows date or time.
+        -duration - Expects argument. Allows date or time.
+        -endtime - Expects argument. Allows date or time.
+    Parameters:
+        time}
+
+testTemplateStdout helpTest-9 {} {-help {} -inline -pfirst\
+                                          -validate {date {\[string is double \$arg\]}\
+                                                             time {\[string is double \$arg\]}}} {
+        {date -validate date -hsuppress}
+        {time -validate time}
+        {-allday -allow {date time}}
+        {-duration= -allow {date time} -validate time -hsuppress}
+        {-endtime= -allow {date time} -validate time}
+} {-help} {Can accepts unambiguous prefixes instead of switches names. Required parameters
+must appear before switches.
+    Switches:
+        -allday - Allows date or time.
+        -endtime - Expects argument. Allows date or time.
+    Parameters:
+        time}
+
 ### Check multiple aliases support
 testTemplate multipleAliasesTest-1 {} {} {
 -a|e|i=

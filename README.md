@@ -443,6 +443,7 @@ Comment is the [element](#element) started with `#` at the start of definition i
 | `-enum enumNameOrDef`      | Name of enumeration list, or inline enumeration definition                              |
 | `-type typeName`           | Validate value according to type defined in [string is] command, requires `-argument`   |
 | `-help description`        | Provide description to element that is displayed when help message is generated         |
+| `-hsuppress`               | Suppress help generation for certain element                                            |
 
 ## Collecting unassigned arguments
 

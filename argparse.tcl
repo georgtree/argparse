@@ -138,7 +138,7 @@ proc ::argparse {args} {
         set opt {}
         set defsSwitches {-alias -argument -boolean -catchall -default -enum -forbid -ignore -imply -keep -key -level\
                                   -optional -parameter -pass -reciprocal -require -required -standalone -switch -upvar\
-                                  -validate -value -type -allow -help -errormsg}
+                                  -validate -value -type -allow -help -errormsg -hsuppress}
         set defsSwitchesWArgs {alias default enum forbid imply key pass require validate value type allow help errormsg}
         for {set i 1} {$i<[llength $elem]} {incr i} {
             if {[set switch [regsub {^-} [tcl::prefix match $defsSwitches [@ $elem $i]] {}]] ni $defsSwitchesWArgs} {
@@ -207,7 +207,7 @@ proc ::argparse {args} {
             }
         }
 ####  Check requirements and conflicts.
-        foreach {switch other} {reciprocal require   level upvar  errormsg validate} {
+        foreach {switch other} {reciprocal require  level upvar  errormsg validate} {
             if {[dict exists $opt $switch] && ![dict exists $opt $other]} {
                 return -code error "-$switch requires -$other"
             }
@@ -421,6 +421,9 @@ proc ::argparse {args} {
             }
             dict for {name opt} $def {
                 # basic element string building
+                if {[dict exists $opt hsuppress]} {
+                    continue
+                }
                 if {[dict exists $opt switch]} {
                     if {[dict exists $opt required]} {
                         lappend elementDescr required,
