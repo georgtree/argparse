@@ -407,11 +407,11 @@ proc ::argparse {args} {
             }
             if {[info exists mixed]} {
                 lappend description {Allows switches to appear after parameters.}
-            } else {
+            } elseif {![info exists pfirst]} {
                 lappend description {Accepts switches only before parameters.}
             }
             if {[info exists pfirst]} {
-                lappend description {Set required parameters to appear before switches.}
+                lappend description {Required parameters must appear before switches.}
             }
             if {[info exists long]} {
                 lappend description {Recognizes --switch long option alternative syntax.}

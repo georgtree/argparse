@@ -1772,6 +1772,23 @@ testTemplateStdout helpTest-6 {} {-helplevel 3 -help {} -inline\
         {-endtime= -allow {date time} -validate time}
 } {-help} {}
 
+testTemplateStdout helpTest-7 {} {-help {} -inline -pfirst\
+                                          -validate {date {\[string is double \$arg\]}\
+                                                             time {\[string is double \$arg\]}}} {
+        {date -validate date}
+        {time -validate time}
+        {-allday -allow {date time}}
+        {-duration= -allow {date time} -validate time}
+        {-endtime= -allow {date time} -validate time}
+} {-help} {Can accepts unambiguous prefixes instead of switches names. Required parameters
+must appear before switches.
+    Switches:
+        -allday - Allows date or time.
+        -duration - Expects argument. Allows date or time.
+        -endtime - Expects argument. Allows date or time.
+    Parameters:
+        date
+        time}
 
 ### Check multiple aliases support
 testTemplate multipleAliasesTest-1 {} {} {
