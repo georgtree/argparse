@@ -1731,8 +1731,8 @@ testTemplateStdout helpTest-4 {} {-help {}} {
 # {Optional sequence control switches}
 {-from= -default 1 -type double -help {Provides start of sequence}}
 {-to= -default 10 -type double}
-{-step= -default 1 -type double -help {Provides step between adjacent numbers of sequence}}
-{-prec= -default 1 -type double -help {Provides precision of numbers in the sequence}}
+{-st|rt|step= -default 1 -type double -help {Provides step between adjacent numbers of sequence}}
+{-pre|prec= -default 1 -type double -help {Provides precision of numbers in the sequence}}
 } {-help} {Can accepts unambiguous prefixes instead of switches names. Accepts switches
 only before parameters.
     Switches:
@@ -1740,9 +1740,9 @@ only before parameters.
             1. Type double.
         -to - Expects argument. Default value is 10. Type double.
         -step - Expects argument. Provides step between adjacent numbers of
-            sequence. Default value is 1. Type double.
+            sequence. Default value is 1. Aliases are st or rt. Type double.
         -prec - Expects argument. Provides precision of numbers in the sequence.
-            Default value is 1. Type double.}
+            Default value is 1. Alias is pre. Type double.}
 
 testTemplateStdout helpTest-5 {} {-help {} -inline\
                                           -validate {date {\[string is double \$arg\]}\

@@ -467,7 +467,7 @@ proc ::argparse {args} {
                     lappend combined "Default value is [dict get $opt default]."
                 }
                 if {[dict exists $opt alias]} {
-                    if {[dict get $opt alias]>1} {
+                    if {[llength [dict get $opt alias]]>1} {
                         lappend combined "Aliases are [{*}$enumStrBuild alias $opt]."
                     } else {
                         lappend combined "Alias is [dict get $opt alias]."
