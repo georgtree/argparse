@@ -7,7 +7,7 @@
 # See the file "LICENSE" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 package require Tcl 8.6-
-package provide argparse 0.57
+package provide argparse 0.58
 interp alias {} @ {} lindex
 interp alias {} = {} expr
 # argparse --
