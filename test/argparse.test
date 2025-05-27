@@ -1823,6 +1823,11 @@ must appear before switches.
     Parameters:
         time}
 
+testTemplateStdout helpTest-10 {} {-help {Help information string}} {} {-help} {Help information string.}
+testTemplateStdout helpTest-11 {} {-help {Help information string}} { } {-help} {Help information string.}
+testTemplateStdout helpTest-12 {} {-help {Help information string}} {   
+} {-help} {Help information string.}
+
 ### Check multiple aliases support
 testTemplate multipleAliasesTest-1 {} {} {
 -a|e|i=
