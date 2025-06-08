@@ -1660,6 +1660,9 @@ names. Accepts switches only before parameters.
         -k - Expects argument.
         -poy - Expects argument. Value must be one of: a, 2, t or 6.
         -l - Expects argument. Collects unassigned arguments.
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.
     Parameters:
         p - Allows b or h.
         y - Optional. Description 9.}
@@ -1705,6 +1708,9 @@ names. Accepts switches only before parameters.
         -bisect - Forbids all or not. Expects two arguments.
         -index - Expects argument.
         -subindices - Requires index.
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.
     Parameters:
         list
         pattern}
@@ -1725,7 +1731,10 @@ instead of switches names. Accepts switches only before parameters.
         -step - Expects argument. Provides step between adjacent numbers of
             sequence. Default value is 1. Type double.
         -prec - Expects argument. Provides precision of numbers in the sequence.
-            Default value is 1. Type double.}
+            Default value is 1. Type double.
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.}
 
 testTemplateStdout helpTest-4 {} {-help {}} {
 # {Optional sequence control switches}
@@ -1742,7 +1751,10 @@ only before parameters.
         -step - Expects argument. Provides step between adjacent numbers of
             sequence. Default value is 1. Aliases are st or rt. Type double.
         -prec - Expects argument. Provides precision of numbers in the sequence.
-            Default value is 1. Alias is pre. Type double.}
+            Default value is 1. Alias is pre. Type double.
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.}
 
 testTemplateStdout helpTest-5 {} {-help {} -inline\
                                           -validate {date {\[string is double \$arg\]}\
@@ -1758,6 +1770,9 @@ only before parameters.
         -allday - Allows date or time.
         -duration - Expects argument. Allows date or time.
         -endtime - Expects argument. Allows date or time.
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.
     Parameters:
         date
         time}
@@ -1786,6 +1801,9 @@ must appear before switches.
         -allday - Allows date or time.
         -duration - Expects argument. Allows date or time.
         -endtime - Expects argument. Allows date or time.
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.
     Parameters:
         date
         time}
@@ -1804,6 +1822,9 @@ must appear before switches.
         -allday - Allows date or time.
         -duration - Expects argument. Allows date or time.
         -endtime - Expects argument. Allows date or time.
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.
     Parameters:
         time}
 
@@ -1820,13 +1841,33 @@ must appear before switches.
     Switches:
         -allday - Allows date or time.
         -endtime - Expects argument. Allows date or time.
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.
     Parameters:
         time}
 
-testTemplateStdout helpTest-10 {} {-help {Help information string}} {} {-help} {Help information string.}
-testTemplateStdout helpTest-11 {} {-help {Help information string}} { } {-help} {Help information string.}
+testTemplateStdout helpTest-10 {} {-help {Help information string}} {} {-help} {Help information string.\
+Can accepts unambiguous prefixes instead of switches
+names. Accepts switches only before parameters.
+    Switches:
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.}
+testTemplateStdout helpTest-11 {} {-help {Help information string}} { } {-help} {Help information string.\
+Can accepts unambiguous prefixes instead of switches
+names. Accepts switches only before parameters.
+    Switches:
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.}
 testTemplateStdout helpTest-12 {} {-help {Help information string}} {   
-} {-help} {Help information string.}
+} {-help} {Help information string. Can accepts unambiguous prefixes instead of switches
+names. Accepts switches only before parameters.
+    Switches:
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.}
 
 ### Check multiple aliases support
 testTemplate multipleAliasesTest-1 {} {} {

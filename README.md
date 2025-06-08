@@ -862,6 +862,9 @@ instead of switches names. Accepts switches only before parameters.
             sequence. Default value is 1. Type double.
         -prec - Expects argument. Provides precision of numbers in the sequence.
             Default value is 1. Type double.
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.
 ```
 
 Generated message contains information important for the user of the command, not all information that is in definition
@@ -899,6 +902,9 @@ instead of switches names. Accepts switches only before parameters.
             date or time.
         -endtime - Expects argument. Set end time of event in format HH:MM.
             Allows date or time.
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.
     Parameters:
         date - Provides date in format DD-MM-YY.
         time - Provides time in format HH:MM.
