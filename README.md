@@ -123,10 +123,6 @@ proc greet {args} {
     append msg " " $subject
 }
 ```
-```{tclerr}
-can't find package argparse
-```
-
 
 This example demonstrates many of the argparse core concepts and features. The greet command is defined to accept args.
 When not explicitly given an argument list to parse, argparse parses the value of the args variable and stores the
@@ -151,10 +147,9 @@ an argument, its variable's value (if the variable exists at all) is predefined 
 ```tcl
 greet world
 ```
-```{tclerr}
-invalid command name "greet"
+```text
+==> hello world
 ```
-
 
 The first time `greet` is called, it is given only one argument, which is bound to the `subject` parameter. Normally,
 switch arguments appear to the left of parameter arguments, and parameter arguments are bound first. Thus, the final
@@ -166,10 +161,9 @@ lacking a default.
 ```tcl
 greet -salutation howdy world
 ```
-```{tclerr}
-invalid command name "greet"
+```text
+==> howdy world
 ```
-
 
 The second time `greet` is called, it is given three arguments. As discussed above, the final argument (`world`) is
 immediately stored into the `subject` variable before any switch processing occurs. Next, the remaining two arguments
@@ -179,10 +173,9 @@ stored in the `salutation` variable. The `modifier` and `title` variables are un
 ```tcl
 greet -title -mod "my dear" world
 ```
-```{tclerr}
-invalid command name "greet"
+```text
+==> Hello, my dear world
 ```
-
 
 The third time `greet` is called, it is given four arguments. The first is `-title`, causing the title variable to be
 set to empty string. The second is the name of the `modifier` switch. More precisely, it is an unambiguous prefix
@@ -193,10 +186,9 @@ default (`hello`).
 ```tcl
 greet -title
 ```
-```{tclerr}
-invalid command name "greet"
+```text
+==> hello -title
 ```
-
 
 The fourth time `greet` is called, it is given one argument. Because the final argument is always bound to the `subject`
 parameter, `subject` is set to `-title` even though there happens to be a switch with the same name. There are no
@@ -257,10 +249,9 @@ proc genNums {args} {
 genNums -from 0 -to 10 -step 2 sequenceVar
 puts $sequenceVar
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+0.0 2.0 4.0 6.0 8.0
 ```
-
 
 In this example procedure definition `{-prec= -default 1}` is added and defines precision of resulted sequence of
 numbers. Instead of returning value via `[return]` command we save resulted list directly in variable of caller scope
@@ -501,10 +492,9 @@ proc applyOperator {args} {
 
 applyOperator -op * -elements 1 2 3 4 5
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> 120
 ```
-
 
 This procedure make summation or product of all arguments passed after `-elements` switch with `-catchall` element
 switch. There is also an example of using `-enum` switch to [validate](#validation) possible values of argument to `-op`
@@ -543,10 +533,9 @@ proc exponentiation {args} {
 
 exponentiation -b 2 -n 4
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> 16
 ```
-
 
 This simple function return exponentiation of number `b` in `n`. Our simple tests verify that the arguments are strings
 that could be considered as floating numbers, and only after that set the corresponding variables.
@@ -557,7 +546,7 @@ If wrong string is provided, a error message appears:
 exponentiation -b a -n 4
 ```
 ```{tclerr}
-invalid command name "argparse"
+-b value "a" fails validation: [string is double $arg]
 ```
 
 
@@ -601,7 +590,7 @@ If we provide the wrong argument type to `genNums` procedure, the error occurs:
 genNums -from 0 -to 10.. -step 2 sequenceVar
 ```
 ```{tclerr}
-invalid command name "argparse"
+-to value "10.." is not of the type double
 ```
 
 
@@ -620,7 +609,7 @@ proc exponentiation {args} {
 exponentiation -b 2 -n 4t
 ```
 ```{tclerr}
-invalid command name "argparse"
+Value of switch '-n' must be double, '4t' was provided
 ```
 
 
@@ -667,16 +656,15 @@ Normal operation:
 ```tcl
 sheduleEvent -duration 01:30 20-12-2024 13:30
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> duration 01:30 date 20-12-2024 time 13:30
 ```
-
 Error is issued in case of providing conflicting switches:
 ```tcl
 sheduleEvent -allday -duration 01:30 20-12-2024 13:30
 ```
 ```{tclerr}
-invalid command name "argparse"
+-allday conflicts with -duration
 ```
 
 
@@ -710,16 +698,15 @@ Normal operation:
 ```tcl
 sheduleEvent -duration 01:30 20-12-2024 13:30
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> duration 01:30 date 20-12-2024 time 13:30
 ```
-
 Error is issued in case of providing conflicting switches:
 ```tcl
 sheduleEvent -allday -duration 01:30 20-12-2024 13:30
 ```
 ```{tclerr}
-invalid command name "argparse"
+allday doesn't allow duration
 ```
 
 
@@ -768,17 +755,16 @@ If we provide an additional argument to `-b`, it will be assigned to `-c` [key](
 ```tcl
 implyTest -a 1 -b 2 3
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> a 1 b 2 c 3
 ```
-
 
 If additional argument is not provided, the error is raised:
 ```tcl
 implyTest -a 1 -b 2
 ```
 ```{tclerr}
-invalid command name "argparse"
+-c requires an argument
 ```
 
 
@@ -786,10 +772,9 @@ And if `-b` switch with argument is not provided at all, `-c` is also considered
 ```tcl
 implyTest -a 1
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> a 1
 ```
-
 
 ## Passthrough and normalization
 
@@ -856,10 +841,9 @@ proc genNums {args} {
 }
 genNums -from 0 -to 10 -step 2
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> 0.0 2.0 4.0 6.0 8.0
 ```
-
 
 Here all switches are accesible as an array element.
 
@@ -893,10 +877,22 @@ proc genNums {args} {
 }
 genNums -help
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+Procedure generates sequence of numbers.. Can accepts unambiguous prefixes
+instead of switches names. Accepts switches only before parameters.
+    Switches:
+        -from - Expects argument. Provides start of sequence. Default value is
+            1. Type double.
+        -to - Expects argument. Provides end of sequence. Default value is 10.
+            Type double.
+        -step - Expects argument. Provides step between adjacent numbers of
+            sequence. Default value is 1. Type double.
+        -prec - Expects argument. Provides precision of numbers in the sequence.
+            Default value is 1. Type double.
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.
 ```
-
 
 Generated message contains information important for the user of the command, not all information that is in definition
 of elements. Individual description for each parameter can be added as and argument to [element switch](#element-switch)
@@ -922,10 +918,24 @@ proc sheduleEvent {args} {
 }
 sheduleEvent -help
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+Procedure shedules event at cetain date. At least one of the switches must be
+provided: -allday, -duration or -endtime. Can accepts unambiguous prefixes
+instead of switches names. Accepts switches only before parameters.
+    Switches:
+        -allday - Set event duration for the rest of the day. Allows date or
+            time.
+        -duration - Expects argument. Set event duration in format HH:MM. Allows
+            date or time.
+        -endtime - Expects argument. Set end time of event in format HH:MM.
+            Allows date or time.
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.
+    Parameters:
+        date - Provides date in format DD-MM-YY.
+        time - Provides time in format HH:MM.
 ```
-
 
 ## Argument Processing Sequence
 
@@ -961,20 +971,18 @@ proc argProcSeq {args} {
 }
 argProcSeq -c -a 1 2
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> c {} a 1 d 2
 ```
-
 
 First switches are processed, and there one argument left and it is assigned to required parameter `r`. If we provided
 another additional argument, it will be assigned to optional parameter `e`:
 ```tcl
 argProcSeq -c -a 1 2 3
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> c {} a 1 d 2 e 3
 ```
-
 
 More complicated example:
 ```tcl
@@ -991,10 +999,9 @@ proc argProcSeq {args} {
 }
 argProcSeq -c -a 1 2 3
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> c {} a 1 d 2 f 3
 ```
-
 
 In that case the last two arguments is assigned to *two* required parameters. If we provide two arguments after switch
 `-a`, then again they are assigned to required parameters, but because `-a` require argument, the error is thrown:
@@ -1002,7 +1009,7 @@ In that case the last two arguments is assigned to *two* required parameters. If
 argProcSeq -c -a 1 2
 ```
 ```{tclerr}
-invalid command name "argparse"
+-a requires an argument
 ```
 
 
@@ -1010,10 +1017,9 @@ If we provide four arguments after `-a`:
 ```tcl
 argProcSeq -c -a 1 2 3 4
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> c {} a 1 d 2 e 3 f 4
 ```
-
 
 All three arguments are assigned to parameters in order presented in definition. So, if only two remaining arguments
 are there - they are assigned to two required parameters, **but** if three parameters presented, optional parameter
@@ -1024,7 +1030,7 @@ There is a special case when argument to parameter looks like a switch:
 argProcSeq -c -a 1 -2 3 4
 ```
 ```{tclerr}
-invalid command name "argparse"
+bad switch "-2": must be -a, -b, or -c
 ```
 
 
@@ -1033,19 +1039,17 @@ that parameters, and the -2 looks like a switch, so argparse tries to parse it a
 ```tcl
 argProcSeq -c -a 1 -- -2 3 4
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> c {} a 1 d -2 e 3 f 4
 ```
-
 
 If one of the last two switches appears with `-`, all is processed as it should:
 ```tcl
 argProcSeq -c -a 1 -- 2 -3 4
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> c {} a 1 d 2 e -3 f 4
 ```
-
 
 ### Processing with parameters first
 
@@ -1072,34 +1076,31 @@ proc argProcSeq {args} {
 }
 argProcSeq 1 2 -c -a 1
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> c {} a 1 d 1 f 2
 ```
-
 
 ```tcl
 argProcSeq 1 2 3 -c -a 1
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> c {} a 1 d 1 f 2 e 3
 ```
-
 
 Also, the remaining parameters could be provided after switches:
 ```tcl
 argProcSeq 1 2 -c -a 1 3
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> c {} a 1 d 1 f 2 e 3
 ```
-
 
 But it doesn't work in case of parameter argument looking like a switch:
 ```tcl
 argProcSeq 1 2 -c -a 1 -3
 ```
 ```{tclerr}
-invalid command name "argparse"
+bad switch "-3": must be -a, -b, or -c
 ```
 
 
@@ -1107,10 +1108,9 @@ In that case we can use the same trick with `--` termination of switch processin
 ```tcl
 argProcSeq 1 2 -c -a 1 -- -3
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> c {} a 1 d 1 f 2 e -3
 ```
-
 
 Also there is a special treatment of `-catchall` parameter;
 ```tcl
@@ -1128,10 +1128,9 @@ proc argProcSeq {args} {
 }
 argProcSeq 1 2 -c -a 1 3 4
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> c {} a 1 d 1 f 2 e 3 g 4
 ```
-
 
 Catchall parameters are treated after required and optional parameters.
 
@@ -1159,10 +1158,9 @@ proc argProcSeq {args} {
 }
 argProcSeq 1 2 -c -a 1 3 4
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> c {} a 1 d 1 e 2 f 3 g 4
 ```
-
 
 The result is different from the last example from [chapter](#processing-with-parameters-first) example because in this 
 case the process is going as usual, but can be interrupted by providing switch with possible arguments.
@@ -1183,10 +1181,9 @@ proc argProcSeq {args} {
 }
 argProcSeq 1 -c 2 -a 1 3 4
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> c {} a 1 d 1 e 2 f 3 g 4
 ```
-
 
 Result is exact the same as in the previous example. Problems started when parameter looks like a switch, in that case
 only `--` can force the rest of arguments considered as parameters arguments:
@@ -1194,17 +1191,16 @@ only `--` can force the rest of arguments considered as parameters arguments:
 argProcSeq 1 -c -2 -a 1 3 4
 ```
 ```{tclerr}
-invalid command name "argparse"
+bad switch "-2": must be -a, -b, or -c
 ```
 
 
 ```tcl
 argProcSeq 1 -c -a 1 -- -2 3 4
 ```
-```{tclerr}
-invalid command name "argparse"
+```text
+==> c {} a 1 d -2 e 3 f 4 g {}
 ```
-
 
 in that case the arguments before switch `--` that are not arguments to switches and does not look like a switch are 
 ignored.
