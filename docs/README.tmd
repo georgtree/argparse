@@ -1,7 +1,34 @@
+# argparse
+
 This is a fork of argparse project initially developed by Andy Goth <andrew.m.goth@gmail.com>.
 
 See [original repository](https://core.tcl-lang.org/tcllib/timeline?r=amg-argparse), and 
 [wiki page](https://wiki.tcl-lang.org/page/argparse).
+
+## Installation
+
+You have two ways: install from git repo (convinient for Linux users) or from archive package release.
+
+### From git repo
+
+Run following commands:
+- `git clone https://github.com/georgtree/argparse.git`
+- `./configure`
+- `sudo make install`
+
+During installing it installs manpages.
+
+For test package in place run `make test`.
+
+For package uninstall run `sudo make uninstall`.
+
+### From archive
+
+To install the package you should extract archive with source code and add path of the package folder to `auto_path`
+variable:
+```tcl
+lappend auto_path "path to argparse package"
+```
 
 ## Table of content
 

@@ -78,9 +78,9 @@ binaries: $(BINARIES)
 libraries:
 
 doc:
-	$(TCLSH) $(srcdir)/doc_gen.tcl
+	$(TCLSH) $(srcdir)/docs/doc_gen.tcl
 
-install: all install-libraries
+install: all install-libraries install-doc
 
 install-libraries:
 	@mkdir -p $(DESTDIR)$(pkglibdir)
@@ -93,6 +93,14 @@ install-libraries:
 	done
 	@echo " Install pkgIndex.tcl $(DESTDIR)$(pkglibdir)"; \
 	$(INSTALL_DATA) pkgIndex.tcl $(DESTDIR)$(pkglibdir); \
+
+install-doc:
+	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(mandir)/mann"
+	@echo "Installing documentation in $(DESTDIR)$(mandir)"
+	@list='$(srcdir)/docs/*.n'; for i in $$list; do \
+	    echo "Installing $$i"; \
+	    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/mann" ; \
+	done
 
 test: libraries
 	$(TCLSH) `@CYGPATH@ $(srcdir)/test/all.tcl` $(TESTFLAGS)
