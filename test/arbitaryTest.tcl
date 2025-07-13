@@ -37,17 +37,14 @@ proc testTemplate {testName descr arguments definitionsStr inputStr refStr} {
 }
 
 
-proc argProcSeq {args} {
-    set arguments [argparse -inline -mixed {
-        -a=
-        -b=
-        -c
-        d
-        e?
-        f
-        {g -catchall}
-    }]
-    return $arguments
-}
+testTemplate miscTest-16 {} {-normalize -equalarg} {
+{-cer= -key j -optional}
+-dta=
+-art=
+-bet=
+{-e -key y}
+lab
+had} {-e -cer 1 4 5} {had 5 y {} j {{} 1} lab 4}
 
-puts [argProcSeq 10 -c -a 1 -- -2 3 4]
+
+

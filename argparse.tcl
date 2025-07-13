@@ -64,9 +64,6 @@ proc ::argparse {args} {
         if {[catch {regsub {^-} [tcl::prefix match -message switch $globalSwitches [@ $args $i]] {} switch} errorMsg]} {
             # Do not allow "--" or definition lists nested within the special
             # empty-string element containing extra overall switches.
-            if {[info exists reparse]} {
-                return -code error $msg
-            }
             # Stop after "--" or at the first non-switch argument.
             if {[@ $args $i] eq {--}} {
                 incr i
@@ -89,7 +86,6 @@ proc ::argparse {args} {
             # be overall switches, and arrange to reparse those switches.  Also,
             # remove inline comments from the definition list.
             set args {}
-            set reparse {}
             set i -1
             foreach elem $definition[set definition {}] {
                 if {[@ $elem 0] eq "#"} {
@@ -98,8 +94,6 @@ proc ::argparse {args} {
                     }
                 } elseif {[info exists comment]} {
                     unset comment
-                } elseif {[@ $elem 0] eq {}} {
-                    lappend args {*}[lrange $elem 1 end]
                 } else {
                     lappend definition $elem
                 }
@@ -153,7 +147,7 @@ proc ::argparse {args} {
             }
         }
 ####  Process the first element of the element definition.
-        if {![llength $elem]} {
+        if {$elem eq {}} {
             return -code error {element definition cannot be empty}
         } elseif {[dict exists $opt switch] && [dict exists $opt parameter]} {
             return -code error {-switch and -parameter conflict}
@@ -190,7 +184,7 @@ proc ::argparse {args} {
         }
         if {[dict exists $opt switch]} {
 ####  Add -argument switch if particular switches are presented
-            # -optional, -required, -catchall, and -upvar imply -argument when
+            # -optional, -required, -catchall, -upvar and -type imply -argument when
             # used with switches.
             foreach switch {optional required catchall upvar type} {
                 if {[dict exists $opt $switch]} {
@@ -552,7 +546,7 @@ proc ::argparse {args} {
         } elseif {[info exists orderReq]} {
             set order $orderReq
         } elseif {[info exists orderOpt]} {
-            set order $orderReq
+            set order $orderOpt
         }
     }
 ### Force required parameters to bypass switch logic.
@@ -580,7 +574,6 @@ proc ::argparse {args} {
         set force [lreplace $argv $start end]
         set argv [lrange $argv $start end]
     }
-    
 ### Perform switch logic.
     set result {}
     set missing {}
@@ -753,7 +746,6 @@ proc ::argparse {args} {
                     }
                 }
             }
-
             # Insert this switch's implied arguments into the argument list.
             if {[dict exists $def $name imply]} {
                 set argv [concat [dict get $def $name imply] $argv]
@@ -970,6 +962,7 @@ proc ::argparse {args} {
                 uplevel 1 [list ::upvar [dict get $def [dict get $upvars $key] level] $val $key]
             } else {
                 # Store result into caller variables.
+                
                 uplevel 1 [list ::set $key $val]
             }
         }

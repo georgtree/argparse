@@ -1053,6 +1053,16 @@ testTemplate enumTest-6 {} {-enum [dict create check1 {i o p} check2 {k m o}]} {
 -b=
 {c -enum check2}} {-b 1 o p} {bad c value "p": must be k, m, or o}
 
+testTemplate enumTest-7 {} {-exact -enum [dict create check1 {i ort p} check2 {k m o}]} {
+{-a= -enum check1}
+-b=
+{-c= -enum check2}} {-a o -b 2 -c m} {bad -a value "o": must be i, ort, or p}
+
+testTemplate enumTest-8 {} {-enum [dict create check1 {i ort p} check2 {k m o}]} {
+{-a= -enum check1}
+-b=
+{-c= -enum check2}} {-a o -b 2 -c m} {a o b 2 c m}
+
 ### Check inline -enum option
 testTemplate enumInlineTest-1 {} {} {
 {-a= -enum {i o p}}
@@ -1368,7 +1378,7 @@ testTemplate miscTest-1 {} {} {
 {}
 -b
 {# comment2}
--c} {-a -c} {a {} c {}}
+-c} {-a -c} {element definition cannot be empty}
 
 testTemplate miscTest-2 {} {} {
 {-a= -enum}
@@ -2035,6 +2045,10 @@ testTemplate errormsgTest-3 {} {} {
 -b=
 {c -errormsg {validation [dict get $opt validate] failed for switch $name with value $arg}}} {-b 1 2 4.0}\
         {-errormsg requires -validate}
-
+### Check wrong element switch
+testTemplate onlySwitchNoArgsTest-1 {} {} {
+    {-a= -defauldt 1}
+-b
+-c} {-a -c} {bad option "-defauldt": must be -alias, -argument, -boolean, -catchall, -default, -enum, -forbid, -ignore, -imply, -keep, -key, -level, -optional, -parameter, -pass, -reciprocal, -require, -required, -standalone, -switch, -upvar, -validate, -value, -type, -allow, -help, -errormsg, or -hsuppress}
 
 cleanupTests
