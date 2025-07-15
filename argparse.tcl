@@ -201,7 +201,7 @@ proc ::argparse {args} {
             }
         }
 ####  Check requirements and conflicts.
-        foreach {switch other} {reciprocal require  level upvar  errormsg validate -helpret -help} {
+        foreach {switch other} {reciprocal require  level upvar  errormsg validate} {
             if {[dict exists $opt $switch] && ![dict exists $opt $other]} {
                 return -code error "-$switch requires -$other"
             }
