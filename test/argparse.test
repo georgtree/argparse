@@ -38,70 +38,6 @@ proc testTemplate {testName descr arguments definitionsStr inputStr refStr} {
     }
 }
 
-proc stdout2var {var} { 
-    set level [info level]
-    # we may have called stdout2var before so this allows only one variable at a time
-    # and preserves tcls original puts in putsorig 
-    if {[string length [info commands putsorig]]==0} { 
-        rename ::puts ::putsorig
-    } 
-    eval [subst -nocommands {proc ::puts {args} { 
-        set fd stdout 
-        # args check 
-        switch -exact -- [llength \$args] {
-            1 { 
-                set fd stdout
-            } 
-            2 { 
-                if {![string equal \"-nonewline\" [lindex \$args 0]]} {
-                    set fd [lindex \$args 0]
-                }
-            }
-            3 {
-                set fd [lindex \$args 1]
-            }
-            default { 
-                error \"to many or too few args to puts must be at most 3 ( -nonewline fd message )\" 
-            }
-        }
-        # only put stdout to the var 
-        if {[string equal \"stdout\" \$fd ]} {
-            # just level and var are subst 
-            set message [lindex \$args end]
-            uplevel [expr {[info level]-$level+1}] set $var \\\"\$message\\\"
-        } else {
-            # otherwise evaluate with tcls puts 
-            eval ::putsorig \$args 
-        }
-    }}]
-} 
-
-proc restorestdout { } {
-    # only do rename if putsorig exists incase restorestdout is call before stdout2var or 
-    # if its called multiple times
-    if {[string length [info commands putsorig]]!=0} { 
-        rename ::puts {}
-        rename ::putsorig ::puts 
-    } 
-}
-
-proc testTemplateStdout {testName descr arguments definitionsStr inputStr refStr} {
-    variable templateProcStr
-    test $testName $descr -body {
-        eval [string map [list @definitions@ $definitionsStr @additionalArgs@ $arguments] $templateProcStr]
-        stdout2var output
-        if {[catch {set result [templateProc {*}$inputStr]} errorStr]} {
-            restorestdout
-            return $errorStr
-        } else {
-            restorestdout
-            return $output
-        }
-    } -result $refStr -cleanup {
-        rename templateProc {}
-    }
-}
-
 
 ### Only switches test without arguments
 testTemplate onlySwitchNoArgsTest-1 {} {} {
@@ -1644,7 +1580,7 @@ testTemplate allowTest-8 {} {} {
 g} {-c 2 -a 1 5} {a doesn't allow c}
 
 ### Check -help global switch
-testTemplateStdout helpTest-1 {} {-help {Description of procedure}} {
+testTemplate helpTest-1 {} {-help {Description of procedure} -helpret} {
 {-a -required -help {Description 1} -type double -validate {\[string is double \$arg\]}}
 {-b -help {Description 2} -require h -forbid e}
 {-hjk|por|res|h= -help {Description 3} -require {a b} -imply y}
@@ -1677,7 +1613,7 @@ names. Accepts switches only before parameters.
         p - Allows b or h.
         y - Optional. Description 9.}
 
-testTemplateStdout helpTest-2 {} {-help {Description of procedure}} {
+testTemplate helpTest-2 {} {-help {Description of procedure} -helpret} {
 {-exact      -key match}
 {-glob       -key match -default glob}
 {-regexp     -key match}
@@ -1725,7 +1661,7 @@ names. Accepts switches only before parameters.
         list
         pattern}
 
-testTemplateStdout helpTest-3 {} {-help {Procedure generates sequence of numbers}} {
+testTemplate helpTest-3 {} {-help {Procedure generates sequence of numbers} -helpret} {
 # {Optional sequence control switches}
 {-from= -default 1 -type double -help {Provides start of sequence}}
 {-to= -default 10 -type double -help {Provides end of sequence}}
@@ -1746,7 +1682,7 @@ instead of switches names. Accepts switches only before parameters.
             and parameters, prints the help message to stdout, and returns up to 2
             levels above the current level.}
 
-testTemplateStdout helpTest-4 {} {-help {}} {
+testTemplate helpTest-4 {} {-help {} -helpret} {
 # {Optional sequence control switches}
 {-from= -default 1 -type double -help {Provides start of sequence}}
 {-to= -default 10 -type double}
@@ -1766,9 +1702,9 @@ only before parameters.
             and parameters, prints the help message to stdout, and returns up to 2
             levels above the current level.}
 
-testTemplateStdout helpTest-5 {} {-help {} -inline\
-                                          -validate {date {\[string is double \$arg\]}\
-                                                             time {\[string is double \$arg\]}}} {
+testTemplate helpTest-5 {} {-help {} -helpret -inline\
+                                    -validate {date {\[string is double \$arg\]}\
+                                                       time {\[string is double \$arg\]}}} {
         {date -validate date}
         {time -validate time}
         {-allday -allow {date time}}
@@ -1787,7 +1723,7 @@ only before parameters.
         date
         time}
 
-testTemplateStdout helpTest-6 {} {-helplevel 3 -help {} -inline\
+testTemplate helpTest-6 {} {-helplevel 3 -help {} -helpret -inline\
                                           -validate {date {\[string is double \$arg\]}\
                                                              time {\[string is double \$arg\]}}} {
         {date -validate date}
@@ -1795,9 +1731,20 @@ testTemplateStdout helpTest-6 {} {-helplevel 3 -help {} -inline\
         {-allday -allow {date time}}
         {-duration= -allow {date time} -validate time}
         {-endtime= -allow {date time} -validate time}
-} {-help} {}
+} {-help} {Can accepts unambiguous prefixes instead of switches names. Accepts switches
+only before parameters.
+    Switches:
+        -allday - Allows date or time.
+        -duration - Expects argument. Allows date or time.
+        -endtime - Expects argument. Allows date or time.
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 3
+            levels above the current level.
+    Parameters:
+        date
+        time}
 
-testTemplateStdout helpTest-7 {} {-help {} -inline -pfirst\
+testTemplate helpTest-7 {} {-help {} -helpret -inline -pfirst\
                                           -validate {date {\[string is double \$arg\]}\
                                                              time {\[string is double \$arg\]}}} {
         {date -validate date}
@@ -1818,7 +1765,7 @@ must appear before switches.
         date
         time}
 
-testTemplateStdout helpTest-8 {} {-help {} -inline -pfirst\
+testTemplate helpTest-8 {} {-help {} -helpret -inline -pfirst\
                                           -validate {date {\[string is double \$arg\]}\
                                                              time {\[string is double \$arg\]}}} {
         {date -validate date -hsuppress}
@@ -1838,7 +1785,7 @@ must appear before switches.
     Parameters:
         time}
 
-testTemplateStdout helpTest-9 {} {-help {} -inline -pfirst\
+testTemplate helpTest-9 {} {-help {} -helpret -inline -pfirst\
                                           -validate {date {\[string is double \$arg\]}\
                                                              time {\[string is double \$arg\]}}} {
         {date -validate date -hsuppress}
@@ -1857,21 +1804,21 @@ must appear before switches.
     Parameters:
         time}
 
-testTemplateStdout helpTest-10 {} {-help {Help information string}} {} {-help} {Help information string.\
+testTemplate helpTest-10 {} {-help {Help information string} -helpret} {} {-help} {Help information string.\
 Can accepts unambiguous prefixes instead of switches
 names. Accepts switches only before parameters.
     Switches:
         -help - Help switch, when provided, forces ignoring all other switches
             and parameters, prints the help message to stdout, and returns up to 2
             levels above the current level.}
-testTemplateStdout helpTest-11 {} {-help {Help information string}} { } {-help} {Help information string.\
+testTemplate helpTest-11 {} {-help {Help information string} -helpret} { } {-help} {Help information string.\
 Can accepts unambiguous prefixes instead of switches
 names. Accepts switches only before parameters.
     Switches:
         -help - Help switch, when provided, forces ignoring all other switches
             and parameters, prints the help message to stdout, and returns up to 2
             levels above the current level.}
-testTemplateStdout helpTest-12 {} {-help {Help information string}} {   
+testTemplate helpTest-12 {} {-help {Help information string} -helpret} {   
 } {-help} {Help information string. Can accepts unambiguous prefixes instead of switches
 names. Accepts switches only before parameters.
     Switches:

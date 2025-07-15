@@ -418,26 +418,27 @@ Comment is the [element](#element) started with `#` at the start of definition i
 
 ## Global Switches
 
-| Switch                     | Description                                                                |
-|:---------------------------|:---------------------------------------------------------------------------|
-| `-inline`                  | Return the result dict rather than setting caller variables                |
-| `-exact`                   | Require exact switch name matches, and do not accept prefixes              |
-| `-mixed`                   | Allow switches to appear after parameters                                  |
-| `-pfirst`                  | Set required parameters to appear before switches; conflicts with `-mixed` |
-| `-long`                    | Recognize `--switch` long option alternative syntax                        |
-| `-equalarg`                | Recognize `-switch=arg` inline argument alternative syntax                 |
-| `-normalize`               | Normalize switch syntax in passthrough result keys                         |
-| `-reciprocal`              | Every element's `-require` constraints are reciprocal                      |
-| `-level levelSpec`         | Every `-upvar` element's `[upvar]` level; defaults to 1                    |
-| `-template templateString` | Transform default element names using a substitution template              |
-| `-pass passKey`            | Pass unrecognized elements through to a result key                         |
-| `-keep`                    | Do not unset omitted element variables; conflicts with `-inline`           |
-| `-boolean`                 | Treat switches as having `-boolean` wherever possible                      |
-| `-validate validDef`       | Define named validation expressions to be used by elements                 |
-| `-enum enumDef`            | Define named enumeration lists to be used by elements                      |
-| `-help description`        | Enable help message generating when -help argument is provided             |
-| `-helplevel value`         | Set -level option for return command in help evaluation                    |
-| `--`                       | Force next argument to be interpreted as the definition list               |
+| Switch                     | Description                                                                              |
+|:---------------------------|:-----------------------------------------------------------------------------------------|
+| `-inline`                  | Return the result dict rather than setting caller variables                              |
+| `-exact`                   | Require exact switch name matches, and do not accept prefixes                            |
+| `-mixed`                   | Allow switches to appear after parameters                                                |
+| `-pfirst`                  | Set required parameters to appear before switches; conflicts with `-mixed`               |
+| `-long`                    | Recognize `--switch` long option alternative syntax                                      |
+| `-equalarg`                | Recognize `-switch=arg` inline argument alternative syntax                               |
+| `-normalize`               | Normalize switch syntax in passthrough result keys                                       |
+| `-reciprocal`              | Every element's `-require` constraints are reciprocal                                    |
+| `-level levelSpec`         | Every `-upvar` element's `[upvar]` level; defaults to 1                                  |
+| `-template templateString` | Transform default element names using a substitution template                            |
+| `-pass passKey`            | Pass unrecognized elements through to a result key                                       |
+| `-keep`                    | Do not unset omitted element variables; conflicts with `-inline`                         |
+| `-boolean`                 | Treat switches as having `-boolean` wherever possible                                    |
+| `-validate validDef`       | Define named validation expressions to be used by elements                               |
+| `-enum enumDef`            | Define named enumeration lists to be used by elements                                    |
+| `-help description`        | Enable help message generating when -help argument is provided                           |
+| `-helplevel value`         | Set -level option for return command in help evaluation                                  |
+| `-helpret`                 | Set to return help message as a return value of procedure instead of putting into stdout |
+| `--`                       | Force next argument to be interpreted as the definition list                             |
 
 ## Element Switches
 
@@ -877,22 +878,6 @@ proc genNums {args} {
 }
 genNums -help
 ```
-```text
-Procedure generates sequence of numbers.. Can accepts unambiguous prefixes
-instead of switches names. Accepts switches only before parameters.
-    Switches:
-        -from - Expects argument. Provides start of sequence. Default value is
-            1. Type double.
-        -to - Expects argument. Provides end of sequence. Default value is 10.
-            Type double.
-        -step - Expects argument. Provides step between adjacent numbers of
-            sequence. Default value is 1. Type double.
-        -prec - Expects argument. Provides precision of numbers in the sequence.
-            Default value is 1. Type double.
-        -help - Help switch, when provided, forces ignoring all other switches
-            and parameters, prints the help message to stdout, and returns up to 2
-            levels above the current level.
-```
 
 Generated message contains information important for the user of the command, not all information that is in definition
 of elements. Individual description for each parameter can be added as and argument to [element switch](#element-switch)
@@ -917,24 +902,6 @@ proc sheduleEvent {args} {
     return $arguments
 }
 sheduleEvent -help
-```
-```text
-Procedure shedules event at cetain date. At least one of the switches must be
-provided: -allday, -duration or -endtime. Can accepts unambiguous prefixes
-instead of switches names. Accepts switches only before parameters.
-    Switches:
-        -allday - Set event duration for the rest of the day. Allows date or
-            time.
-        -duration - Expects argument. Set event duration in format HH:MM. Allows
-            date or time.
-        -endtime - Expects argument. Set end time of event in format HH:MM.
-            Allows date or time.
-        -help - Help switch, when provided, forces ignoring all other switches
-            and parameters, prints the help message to stdout, and returns up to 2
-            levels above the current level.
-    Parameters:
-        date - Provides date in format DD-MM-YY.
-        time - Provides time in format HH:MM.
 ```
 
 ## Argument Processing Sequence

@@ -59,7 +59,7 @@ proc ::argparse {args} {
     set enum {}
     set validate {}
     set globalSwitches {-boolean -enum -equalarg -exact -inline -keep -level -long -mixed -normalize -pass -reciprocal\
-                                -template -validate -help -helplevel -pfirst}
+                                -template -validate -help -helplevel -pfirst -helpret}
     for {set i 0} {$i<[llength $args]} {incr i} {
         if {[catch {regsub {^-} [tcl::prefix match -message switch $globalSwitches [@ $args $i]] {} switch} errorMsg]} {
             # Do not allow "--" or definition lists nested within the special
@@ -201,7 +201,7 @@ proc ::argparse {args} {
             }
         }
 ####  Check requirements and conflicts.
-        foreach {switch other} {reciprocal require  level upvar  errormsg validate} {
+        foreach {switch other} {reciprocal require  level upvar  errormsg validate -helpret -help} {
             if {[dict exists $opt $switch] && ![dict exists $opt $other]} {
                 return -code error "-$switch requires -$other"
             }
@@ -510,22 +510,28 @@ proc ::argparse {args} {
                     levels above the current level." -length 72] $4spaces 1] $8spaces]
             set description [adjust [join $description] -length 80]
             if {[info exists descriptionSwitches] && [info exists descriptionParameters]} {
-                puts [string totitle [string map {{,;} {;} {,.} {.}}\
-                                              [join [list $description [indent Switches: $4spaces]\
-                                                             {*}$descriptionSwitches [indent Parameters: $4spaces]\
-                                                             {*}$descriptionParameters] \n]] 0 1]
+                set finalHelpStr [string totitle [string map {{,;} {;} {,.} {.}}\
+                                                          [join [list $description\
+                                                                         [indent Switches: $4spaces]\
+                                                                         {*}$descriptionSwitches\
+                                                                         [indent Parameters: $4spaces]\
+                                                                         {*}$descriptionParameters] \n]] 0 1]
             } elseif {[info exists descriptionSwitches]} {
-                puts [string totitle [string map {{,;} {;} {,.} {.}}\
-                                              [join [list $description [indent Switches: $4spaces]\
-                                                             {*}$descriptionSwitches] \n]] 0 1]
+                set finalHelpStr [string totitle [string map {{,;} {;} {,.} {.}}\
+                                                          [join [list $description [indent Switches: $4spaces]\
+                                                                         {*}$descriptionSwitches] \n]] 0 1]
             } elseif {[info exists descriptionParameters]} {
-                puts [string totitle [string map {{,;} {;} {,.} {.}}\
-                                              [join [list $description [indent Parameters: $4spaces]\
-                                                             {*}$descriptionParameters] \n]] 0 1]
+                set finalHelpStr [string totitle [string map {{,;} {;} {,.} {.}}\
+                                                          [join [list $description [indent Parameters: $4spaces]\
+                                                                         {*}$descriptionParameters] \n]] 0 1]
             } else {
-                puts [string totitle [string map {{,;} {;} {,.} {.}} $providedHelp] 0 1]
+                set finalHelpStr [string totitle [string map {{,;} {;} {,.} {.}} $providedHelp] 0 1]
             }
-            return -level $helplevel
+            if {[info exists helpret]} {
+                return -level $helplevel $finalHelpStr
+            } else {
+                return -level $helplevel
+            }
         }
     }
 ### Handle default pass-through switch by creating a dummy element.

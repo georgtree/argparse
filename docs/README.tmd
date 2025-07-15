@@ -403,26 +403,27 @@ Comment is the [element](#element) started with `#` at the start of definition i
 
 ## Global Switches
 
-| Switch                     | Description                                                                |
-|:---------------------------|:---------------------------------------------------------------------------|
-| `-inline`                  | Return the result dict rather than setting caller variables                |
-| `-exact`                   | Require exact switch name matches, and do not accept prefixes              |
-| `-mixed`                   | Allow switches to appear after parameters                                  |
-| `-pfirst`                  | Set required parameters to appear before switches; conflicts with `-mixed` |
-| `-long`                    | Recognize `--switch` long option alternative syntax                        |
-| `-equalarg`                | Recognize `-switch=arg` inline argument alternative syntax                 |
-| `-normalize`               | Normalize switch syntax in passthrough result keys                         |
-| `-reciprocal`              | Every element's `-require` constraints are reciprocal                      |
-| `-level levelSpec`         | Every `-upvar` element's `[upvar]` level; defaults to 1                    |
-| `-template templateString` | Transform default element names using a substitution template              |
-| `-pass passKey`            | Pass unrecognized elements through to a result key                         |
-| `-keep`                    | Do not unset omitted element variables; conflicts with `-inline`           |
-| `-boolean`                 | Treat switches as having `-boolean` wherever possible                      |
-| `-validate validDef`       | Define named validation expressions to be used by elements                 |
-| `-enum enumDef`            | Define named enumeration lists to be used by elements                      |
-| `-help description`        | Enable help message generating when -help argument is provided             |
-| `-helplevel value`         | Set -level option for return command in help evaluation                    |
-| `--`                       | Force next argument to be interpreted as the definition list               |
+| Switch                     | Description                                                                              |
+|:---------------------------|:-----------------------------------------------------------------------------------------|
+| `-inline`                  | Return the result dict rather than setting caller variables                              |
+| `-exact`                   | Require exact switch name matches, and do not accept prefixes                            |
+| `-mixed`                   | Allow switches to appear after parameters                                                |
+| `-pfirst`                  | Set required parameters to appear before switches; conflicts with `-mixed`               |
+| `-long`                    | Recognize `--switch` long option alternative syntax                                      |
+| `-equalarg`                | Recognize `-switch=arg` inline argument alternative syntax                               |
+| `-normalize`               | Normalize switch syntax in passthrough result keys                                       |
+| `-reciprocal`              | Every element's `-require` constraints are reciprocal                                    |
+| `-level levelSpec`         | Every `-upvar` element's `[upvar]` level; defaults to 1                                  |
+| `-template templateString` | Transform default element names using a substitution template                            |
+| `-pass passKey`            | Pass unrecognized elements through to a result key                                       |
+| `-keep`                    | Do not unset omitted element variables; conflicts with `-inline`                         |
+| `-boolean`                 | Treat switches as having `-boolean` wherever possible                                    |
+| `-validate validDef`       | Define named validation expressions to be used by elements                               |
+| `-enum enumDef`            | Define named enumeration lists to be used by elements                                    |
+| `-help description`        | Enable help message generating when -help argument is provided                           |
+| `-helplevel value`         | Set -level option for return command in help evaluation                                  |
+| `-helpret`                 | Set to return help message as a return value of procedure instead of putting into stdout |
+| `--`                       | Force next argument to be interpreted as the definition list                             |
 
 ## Element Switches
 
