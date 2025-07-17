@@ -2021,12 +2021,13 @@ testTemplate helpTest-2 {} {} {
 list
 pattern} {-exact -regexp 1 2} {-exact conflicts with -regexp}
 
-### Some tests from real-life packages
+### Some tests from other packages
 
 testTemplate helpTest-2 {} {-pfirst} {
     y
     {winsize -type integer}
-    -x=} {{11 12 13 14 15 16 17} 3 -x {0 1 2 3 4 5 6 7 8 9 10}} {x {0 1 2 3 4 5 6 7 8 9 10} winsize 3 y {11 12 13 14 15 16 17}}
+    -x=} {{11 12 13 14 15 16 17} 3 -x {0 1 2 3 4 5 6 7 8 9 10}}\
+        {x {0 1 2 3 4 5 6 7 8 9 10} winsize 3 y {11 12 13 14 15 16 17}}
 
 testTemplate helpTest-2 {} {-pfirst} {
     {-model= -required -help {Name of the model}}
@@ -2044,6 +2045,26 @@ testTemplate helpTest-2 {} {-pfirst} {
     {name -help {Name of the device without first-letter designator}}
     {nc -help {Name of node connected to collector pin}}
     {nb -help {Name of node connected to base pin}}
-    {ne -help {Name of node connected to emitter pin}}} {1 netc netb nete -model bjtmod -ns nets -tj nettj -area 1e-3 -temp 25 -ic {1 2}} {nb netb ic {1 2} nc netc name 1 area 1e-3 ns nets model bjtmod temp 25 tj nettj off 0 ne nete}
+    {ne -help {Name of node connected to emitter pin}}}\
+        {1 netc netb nete -model bjtmod -ns nets -tj nettj -area 1e-3 -temp 25 -ic {1 2}}\
+        {nb netb ic {1 2} nc netc name 1 area 1e-3 ns nets model bjtmod temp 25 tj nettj off 0 ne nete}
+
+testTemplate helpTest-2 {} {-inline -help {Initialize object 'Dataset'}} {
+    {name -pass rest -help {Name of the trace}}
+    {type -pass rest -help {Type of trace}}
+    {len -pass rest -help {Total number of points}}
+    {axis -help {Name of axis that is linked to trace}}
+    {numtype -pass rest -optional -default real -help {Numerical type of trace}}}\
+        {{v(m1#body diode)} voltage 51 complex} {arguments {rest {{v(m1#body diode)} voltage 51} axis complex}}
+
+testTemplate helpTest-2 {} {-inline -help {Initialize object 'Dataset'}} {
+    {-name= -pass rest -help {Name of the trace}}
+    {type -pass rest -help {Type of trace}}
+    {len -pass rest -help {Total number of points}}
+    {axis -help {Name of axis that is linked to trace}}
+    {numtype -pass rest -optional -default real -help {Numerical type of trace}}}\
+        {-name {v(m1#body diode)} voltage 51 complex}\
+        {arguments {rest {-name {v(m1#body diode)} voltage 51} axis complex}}
+
 
 cleanupTests

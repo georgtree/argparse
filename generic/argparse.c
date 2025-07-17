@@ -1390,6 +1390,47 @@ int DictLappend(Tcl_Interp *interp, Tcl_Obj *dictObjPtr, Tcl_Obj *keyObj, Tcl_Ob
     for (Tcl_Size i = 0; i < listLen; i++) {
         Tcl_ListObjAppendElement(interp, existingList, elements[i]);
     }
+    
+    Tcl_DictObjPut(interp, dictObjPtr, keyObj, existingList);
+    return TCL_OK;
+}
+//***    DictLappendElem function
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * DictLappend --
+ *
+ *      Append a value to an existing list stored at a given key in a Tcl dictionary.  
+ *      If the key does not exist, a new list is created and inserted.
+ *
+ * Parameters:
+ *      Tcl_Interp *interp         - input: target interpreter
+ *      Tcl_Obj *dictObjPtr        - input: pointer to Tcl_Obj representing the dictionary (duplicated if shared)
+ *      Tcl_Obj *keyObj            - input: pointer to Tcl_Obj representing the dictionary key to update
+ *      Tcl_Obj *valueObj          - input: pointer to Tcl_Obj representing the value to append
+ *
+ * Results:
+ *      Code TCL_OK - values were successfully appended or inserted
+ *
+ * Side Effects:
+ *      If `dictObjPtr` or the existing list at `keyObj` is shared, it is duplicated before modification  
+ *      A new list is created if the key does not exist in the dictionary  
+ *      The updated list is stored under `keyObj` in the dictionary
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
+int DictLappendElem(Tcl_Interp *interp, Tcl_Obj *dictObjPtr, Tcl_Obj *keyObj, Tcl_Obj *valueObj) {
+    Tcl_Obj *existingList = NULL;
+    if (Tcl_IsShared(dictObjPtr)) {
+        dictObjPtr = Tcl_DuplicateObj(dictObjPtr);
+    }
+    Tcl_DictObjGet(interp, dictObjPtr, keyObj, &existingList);
+    if (existingList == NULL) {
+        existingList = Tcl_NewListObj(0, NULL);
+    } else if (Tcl_IsShared(existingList)) {
+        existingList = Tcl_DuplicateObj(existingList);
+    }
+    Tcl_ListObjAppendElement(interp, existingList, valueObj);
     Tcl_DictObjPut(interp, dictObjPtr, keyObj, existingList);
     return TCL_OK;
 }
@@ -3307,7 +3348,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                                 otherOpt = Tcl_DuplicateObj(otherOpt);
                             }
                             Tcl_IncrRefCount(otherOpt);
-                            DictLappend(interp, otherOpt, elswitch_forbid, name);
+                            DictLappendElem(interp, otherOpt, elswitch_forbid, name);
                             Tcl_DictObjPut(interp, argDefCtx->defDict, otherName, otherOpt);
                             //printf("otherOpt: %s\n", Tcl_GetString(otherOpt));
                             //fflush(stdout);
@@ -3596,6 +3637,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
             if (NestedDictKeyExists(interp, argDefCtx->defDict, name, elswitch_pass)) {
                 GetNestedDictValue(interp, argDefCtx->defDict, name, elswitch_pass, &passLoc);
             }
+            
 //*****          Keep track of which switches have been seen
             Tcl_DictObjRemove(interp, argDefCtx->omittedDict, name);
 //*****          Validate switch arguments and store values into the result dict
@@ -3650,9 +3692,9 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 }
                 if (passLoc != NULL) {
                     if (HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_NORMALIZE)) {
-                        DictLappend(interp, resultDict, passLoc, normal);
+                        DictLappendElem(interp, resultDict, passLoc, normal);
                     } else {
-                        DictLappend(interp, resultDict, passLoc, arg);
+                        DictLappendElem(interp, resultDict, passLoc, arg);
                     }
                 }
             } else if (argvLen > 0) {
@@ -3683,11 +3725,17 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 }
                 if (passLoc != NULL) {
                     if (HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_NORMALIZE)) {
-                        DictLappend(interp, resultDict, passLoc, MergeTwoLists(interp, normal, resultList));
+                        Tcl_Obj *objv[2];
+                        objv[0] = normal;
+                        objv[1] = resultList;
+                        DictLappend(interp, resultDict, passLoc, Tcl_NewListObj(2, objv));
                     } else if (strcmp(Tcl_GetString(equal), "=") == 0) {
-                        DictLappend(interp, resultDict, passLoc, arg);
+                        DictLappendElem(interp, resultDict, passLoc, arg);
                     } else {
-                        DictLappend(interp, resultDict, passLoc, MergeTwoLists(interp, arg, argLoc));
+                        Tcl_Obj *objv[2];
+                        objv[0] = arg;
+                        objv[1] = argLoc;
+                        DictLappend(interp, resultDict, passLoc, Tcl_NewListObj(2, objv));
                     }
                 }
                 argv = ListRange(interp, argv, 1, end);
@@ -3704,9 +3752,9 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 }
                 if (passLoc != NULL) {
                     if (HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_NORMALIZE)) {
-                        DictLappend(interp, resultDict, passLoc, normal);
+                        DictLappendElem(interp, resultDict, passLoc, normal);
                     } else {
-                        DictLappend(interp, resultDict, passLoc, arg);
+                        DictLappendElem(interp, resultDict, passLoc, arg);
                     }
                 }
             }
@@ -3960,7 +4008,10 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 DICT_GET_IF_EXISTS(interp, argDefCtx->omittedDict, name, &nameLoc)) {
                 nameLoc = Tcl_DuplicateObj(misc_dashStrObj);
                 Tcl_AppendStringsToObj(nameLoc, Tcl_GetString(name), NULL);
-                DictLappend(interp, resultDict, passLoc, MergeTwoLists(interp, nameLoc, defaultLoc));
+                Tcl_Obj *objv[2];
+                objv[0] = nameLoc;
+                objv[1] = defaultLoc;
+                DictLappend(interp, resultDict, passLoc, Tcl_NewListObj(2, objv));
             }
             Tcl_DictObjNext(&search, &name, &opt, &done);
         }
@@ -3995,9 +4046,10 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 if (DICT_GET_IF_EXISTS(interp, opt, elswitch_pass, &passLoc)) {
                     char *str = Tcl_GetString(val);
                     if ((str[0] == '-') && !DictKeyExists(interp, resultDict, passLoc)) {
-                        DictLappend(interp, resultDict, passLoc, misc_doubleDashStrObj);
+                        DictLappendElem(interp, resultDict, passLoc, misc_doubleDashStrObj);
                     }
-                    DictLappend(interp, resultDict, passLoc, val);
+                    
+                    DictLappendElem(interp, resultDict, passLoc, val);
                 }
                 indx++;
             } else {
@@ -4024,7 +4076,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                     Tcl_DictObjGet(interp, opt, elswitch_pass, &passLoc);
                     char *str = Tcl_GetString(val0);
                     if ((str[0] == '-') && !DictKeyExists(interp, resultDict, passLoc)) {
-                        DictLappend(interp, resultDict, passLoc, misc_doubleDashStrObj);
+                        DictLappendElem(interp, resultDict, passLoc, misc_doubleDashStrObj);
                     }
                     DictLappend(interp, resultDict, passLoc, val);
                 }
@@ -4039,9 +4091,9 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                    DICT_GET_IF_EXISTS(interp, opt, elswitch_pass, &passLoc)) {
             char *str = Tcl_GetString(defaultLoc);
             if ((str[0] == '-') && !DictKeyExists(interp, resultDict, passLoc)) {
-                DictLappend(interp, resultDict, passLoc, misc_doubleDashStrObj);
+                DictLappendElem(interp, resultDict, passLoc, misc_doubleDashStrObj);
             }
-            DictLappend(interp, resultDict, passLoc, defaultLoc);
+            DictLappendElem(interp, resultDict, passLoc, defaultLoc);
         }
     }
 //***    Create default values for missing elements

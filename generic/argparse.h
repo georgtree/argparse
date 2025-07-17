@@ -252,6 +252,7 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
                    Tcl_Obj *argsListObj, Tcl_Obj **resultPtr);
 int TypeChecker(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_Obj *argsListObj, Tcl_Obj **resultPtr);
 int DictLappend(Tcl_Interp *interp, Tcl_Obj *dictObjPtr, Tcl_Obj *keyObj, Tcl_Obj *valuesList);
+int DictLappendElem(Tcl_Interp *interp, Tcl_Obj *dictObjPtr, Tcl_Obj *keyObj, Tcl_Obj *valueObj);
 Tcl_Obj *BuildMissingSwitchesError(Tcl_Interp *interp, Tcl_Obj *missingList);
 Tcl_Obj *BuildMissingParameterError(Tcl_Interp *interp, Tcl_Obj *missingList);
 int DictIncr(Tcl_Interp *interp, Tcl_Obj *dictObjPtr, Tcl_Obj *keyObj, Tcl_Obj *countObj);
