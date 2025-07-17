@@ -2289,6 +2289,9 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
     Tcl_Obj *validateCmd = NULL;
     Tcl_Obj *errormsgObj = NULL;
     Tcl_Obj *validateMsgObj = NULL;
+    if (Tcl_IsShared(nameObj)) {
+        nameObj = Tcl_DuplicateObj(nameObj);
+    }
     if (DICT_GET_IF_EXISTS(interp, optDictObj, elswitch_enum, &enumList)) {
         enumExists = 1;
     }
@@ -2319,9 +2322,11 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
         int result = 0;
         int code = Tcl_ExprBooleanObj(interp, validateCmd, &result);
         if (code == TCL_ERROR || !result) {
+            
             if (DICT_GET_IF_EXISTS(interp, optDictObj, elswitch_errormsg, &errormsgObj)) {
                 Tcl_Obj *substErr = Tcl_DuplicateObj(errormsgObj);
                 Tcl_IncrRefCount(substErr);
+                
                 Tcl_Obj *substErrResult = Tcl_SubstObj(interp, substErr, TCL_SUBST_VARIABLES | TCL_SUBST_COMMANDS);
                 Tcl_DecrRefCount(substErr);
                 if (substErrResult != NULL) {
@@ -2388,7 +2393,7 @@ int TypeChecker(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_O
         Tcl_ListObjGetElements(interp, argsListObj, &argc, &argv);
         for (Tcl_Size i = 0; i < argc; ++i) {
             int isValid = 0;
-            if (strcmp(typeStr, "int") == 0) {
+            if (strcmp(typeStr, "integer") == 0) {
                 int dummy;
                 isValid = (Tcl_GetIntFromObj(interp, argv[i], &dummy) == TCL_OK);
             } else if (strcmp(typeStr, "double") == 0) {
@@ -2409,7 +2414,7 @@ int TypeChecker(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_O
                 cmd[4] = argv[i];
                 for (int j = 0; j < 5; ++j)
                     Tcl_IncrRefCount(cmd[j]);
-                if (Tcl_EvalObjv(interp, 5, cmd, TCL_EVAL_DIRECT) != TCL_OK) {
+                if (Tcl_EvalObjv(interp, 5, cmd, 0) != TCL_OK) {
                     for (int j = 0; j < 5; ++j)
                         Tcl_DecrRefCount(cmd[j]);
                     return TCL_ERROR;
@@ -2423,7 +2428,6 @@ int TypeChecker(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_O
                 Tcl_Obj *errMsg = Tcl_ObjPrintf("%s value \"%s\" is not of the type %s", Tcl_GetString(nameObj),
                                                 Tcl_GetString(argv[i]), typeStr);
                 Tcl_SetObjResult(interp, errMsg);
-                Tcl_SetErrorCode(interp, "TCL", "TYPE", "MISMATCH", NULL);
                 return TCL_ERROR;
             }
         }
@@ -3563,6 +3567,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
 //*****          Preliminary guess for the normalized switch name
             Tcl_Obj *normal = Tcl_DuplicateObj(misc_dashStrObj);
             Tcl_AppendStringsToObj(normal, Tcl_GetString(name), NULL);
+            Tcl_IncrRefCount(normal);
 //*****          Perform switch name lookup
             Tcl_DictSearch search;
             Tcl_Obj *key = NULL, *data = NULL;
@@ -3637,7 +3642,6 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
             if (NestedDictKeyExists(interp, argDefCtx->defDict, name, elswitch_pass)) {
                 GetNestedDictValue(interp, argDefCtx->defDict, name, elswitch_pass, &passLoc);
             }
-            
 //*****          Keep track of which switches have been seen
             Tcl_DictObjRemove(interp, argDefCtx->omittedDict, name);
 //*****          Validate switch arguments and store values into the result dict
@@ -3648,8 +3652,9 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 // validate
                 Tcl_Obj *resultList = NULL;
                 Tcl_Obj *elementDefDict = NULL;
-                 Tcl_DictObjGet(interp, argDefCtx->defDict, name, &elementDefDict);
+                Tcl_DictObjGet(interp, argDefCtx->defDict, name, &elementDefDict);
                 if (ValidateHelper(interp, &ctx, normal, elementDefDict, argv, &resultList) != TCL_OK) {
+                    Tcl_DecrRefCount(normal);
                     goto cleanupOnError;
                 }
                 Tcl_IncrRefCount(resultList);
@@ -3657,6 +3662,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 argv = resultList;
                 // type check
                 if (TypeChecker(interp, normal, elementDefDict, argv, &resultList) != TCL_OK) {
+                    Tcl_DecrRefCount(normal);
                     goto cleanupOnError;
                 }
                 Tcl_IncrRefCount(resultList);
@@ -3679,6 +3685,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                     Tcl_Obj *msg = Tcl_DuplicateObj(normal);
                     Tcl_AppendStringsToObj(msg, " doesn't allow an argument", NULL);
                     Tcl_SetObjResult(interp, msg);
+                    Tcl_DecrRefCount(normal);
                     goto cleanupOnError;
                 }
                 if (keyLoc != NULL) {
@@ -3704,14 +3711,20 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 Tcl_Obj *elementDefDict = NULL;
                 Tcl_DictObjGet(interp, argDefCtx->defDict, name, &elementDefDict);
                 Tcl_ListObjIndex(interp, argv, 0, &argLoc);
-                
+                Tcl_IncrRefCount(elementDefDict);
+                Tcl_IncrRefCount(argLoc);
                 if (ValidateHelper(interp, &ctx, normal, elementDefDict, argLoc, &resultList) != TCL_OK) {
+                    Tcl_DecrRefCount(elementDefDict);
+                    Tcl_DecrRefCount(argLoc);
+                    Tcl_DecrRefCount(normal);
                     goto cleanupOnError;
                 }
                 if (TypeChecker(interp, normal, elementDefDict, argLoc, &resultList) != TCL_OK) {
+                    Tcl_DecrRefCount(elementDefDict);
+                    Tcl_DecrRefCount(argLoc);
+                    Tcl_DecrRefCount(normal);
                     goto cleanupOnError;
                 }
-                
                 if (keyLoc != NULL) {
                     if (NestedDictKeyExists(interp, argDefCtx->defDict, name, elswitch_optional)) {
                         Tcl_Obj *list = Tcl_NewListObj(0, NULL);
@@ -3739,6 +3752,8 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                     }
                 }
                 argv = ListRange(interp, argv, 1, end);
+                Tcl_DecrRefCount(elementDefDict);
+                Tcl_DecrRefCount(argLoc);
             } else {
                 // The switch was not given the expected argument
                 if (!NestedDictKeyExists(interp, argDefCtx->defDict, name, elswitch_optional)) {
@@ -4034,11 +4049,14 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 Tcl_Obj *parami = NULL;
                 Tcl_Obj *resultList = NULL;
                 Tcl_ListObjIndex(interp, params, indx, &parami);
+                Tcl_IncrRefCount(parami);
                 if (ValidateHelper(interp, &ctx, name, opt, parami, &resultList) != TCL_OK) {
+                    Tcl_DecrRefCount(parami);
                     goto cleanupOnError;
                 }
                 val = resultList;
                 if (TypeChecker(interp, name, opt, parami, &resultList) != TCL_OK) {
+                    Tcl_DecrRefCount(parami);
                     goto cleanupOnError;
                 }
                 val = resultList;
@@ -4052,6 +4070,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                     DictLappendElem(interp, resultDict, passLoc, val);
                 }
                 indx++;
+                Tcl_DecrRefCount(parami);
             } else {
                 Tcl_Obj *allocValLoc = NULL;
                 Tcl_DictObjGet(interp, allocDict, name, &allocValLoc);
@@ -4061,10 +4080,12 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 if (nameLen > 0) {
                     Tcl_Obj *resultList = NULL;
                     if (ValidateHelper(interp, &ctx, name, opt, val, &resultList) != TCL_OK) {
+                        Tcl_DecrRefCount(val);
                         goto cleanupOnError;
                     }
                     val = resultList;
                     if (TypeChecker(interp, name, opt, val, &resultList) != TCL_OK) {
+                        Tcl_DecrRefCount(val);
                         goto cleanupOnError;
                     }
                     val = resultList;

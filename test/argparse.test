@@ -1488,6 +1488,14 @@ testTemplate typeTest-7 {} {-mixed} {
 {-b= -type boolean}
 {c -type integer}} {-b False 1 -a y ty 1} {-a value "1" is not of the type alpha}
 
+testTemplate typeTest-8 {} {} {
+{-a= -type alpha}
+{-b= -type boolean}
+{-nterms= -default 3 -type integer -validate {$arg>0}\
+                 -errormsg {Number of terms -nterms must be more than zero}\
+                 -help {Number of terms of interpolation polynom}}} {-a y -b False -nterms 10.5}\
+        {-nterms value "10.5" is not of the type integer}
+
 ### Check -allow in definitions 
 testTemplate allowTest-1 {} {} {
 {-a= -allow {c}}

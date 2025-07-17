@@ -37,10 +37,9 @@ proc testTemplate {testName descr arguments definitionsStr inputStr refStr} {
 }
 
 
-testTemplate helpTest-2 {} {-inline -help {Initialize object 'Dataset'}} {
-    {name -pass rest -help {Name of the trace}}
-    {type -pass rest -help {Type of trace}}
-    {len -pass rest -help {Total number of points}}
-    {axis -help {Name of axis that is linked to trace}}
-    {numtype -pass rest -optional -default real -help {Numerical type of trace}}} {{v(m1#body diode)} voltage 51 complex} {x {0 1 2 3 4 5 6 7 8 9 10} winsize 3 y {11 12 13 14 15 16 17}}
+testTemplate typeTest-8 {} {} {
+{-a= -type alpha}
+{-b= -type boolean}
+{-nterms= -default 3 -type integer -validate {$arg > 0}\
+                 }} {-a y -b False -nterms 10.5} {a y b False c 10.5}
 
