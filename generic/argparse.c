@@ -2248,7 +2248,6 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
     Tcl_Obj *validateCmd = NULL;
     Tcl_Obj *errormsgObj = NULL;
     Tcl_Obj *validateMsgObj = NULL;
-    Tcl_Size argc, i;
     if (DICT_GET_IF_EXISTS(interp, optDictObj, elswitch_enum, &enumList)) {
         enumExists = 1;
     }
@@ -2256,9 +2255,6 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
         validateExists = 1;
     }
     Tcl_DictObjGet(interp, optDictObj, misc_validateMsgStrObj, &validateMsgObj);
-    if (Tcl_ListObjLength(interp, argsListObj, &argc) != TCL_OK) {
-        return TCL_ERROR;
-    }
     if (enumExists) {
         Tcl_Obj *messageStr = Tcl_ObjPrintf("%s value", Tcl_GetString(nameObj));
         Tcl_IncrRefCount(messageStr);
@@ -2266,69 +2262,48 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
         if (HAS_GLOBAL_SWITCH(ctx, GLOBAL_SWITCH_EXACT)) {
             useExact = 1;
         }
-        Tcl_Obj *newArgsList = Tcl_NewListObj(0, NULL);
-        for (i = 0; i < argc; i++) {
-            Tcl_Obj *arg = NULL;
-            if (Tcl_ListObjIndex(interp, argsListObj, i, &arg) != TCL_OK) {
-                Tcl_DecrRefCount(newArgsList);
-                Tcl_DecrRefCount(messageStr);
-                return TCL_ERROR;
-            }
-            Tcl_Obj *prefixResult = NULL;
-            int code = EvalPrefixMatch(interp, enumList, arg, useExact, 1, messageStr, 1, &prefixResult);
-            if (code != TCL_OK) {
-                Tcl_DecrRefCount(newArgsList);
-                Tcl_DecrRefCount(messageStr);
-                return TCL_ERROR;
-            }
-            Tcl_ListObjAppendElement(interp, newArgsList, prefixResult);
-            SAFE_DECR_REF_AND_NULL(prefixResult);
+        Tcl_Obj *prefixResult = NULL;
+        int code = EvalPrefixMatch(interp, enumList, argsListObj, useExact, 1, messageStr, 1, &prefixResult);
+        if (code != TCL_OK) {
+            Tcl_DecrRefCount(messageStr);
+            return TCL_ERROR;
         }
         Tcl_DecrRefCount(messageStr);
-        *resultPtr = newArgsList;
+        *resultPtr = prefixResult;
         return TCL_OK;
     } else if (validateExists) {
-        Tcl_Obj *newArgsList = Tcl_NewListObj(0, NULL);
-        for (i = 0; i < argc; i++) {
-            Tcl_Obj *arg = NULL;
-            if (Tcl_ListObjIndex(interp, argsListObj, i, &arg) != TCL_OK) {
-                Tcl_DecrRefCount(newArgsList);
-                return TCL_ERROR;
-            }
-            Tcl_ObjSetVar2(interp, Tcl_NewStringObj("opt", -1), NULL, optDictObj, 0);
-            Tcl_ObjSetVar2(interp, Tcl_NewStringObj("name", -1), NULL, nameObj, 0);
-            Tcl_ObjSetVar2(interp, Tcl_NewStringObj("arg", -1), NULL, arg, 0);
-            int result = 0;
-            int code = Tcl_ExprBooleanObj(interp, validateCmd, &result);
-            if (code == TCL_ERROR || !result) {
-                Tcl_DecrRefCount(newArgsList);
-                if (DICT_GET_IF_EXISTS(interp, optDictObj, elswitch_errormsg, &errormsgObj)) {
-                    Tcl_Obj *substErr = Tcl_DuplicateObj(errormsgObj);
-                    Tcl_IncrRefCount(substErr);
-                    Tcl_Obj *substErrResult = Tcl_SubstObj(interp, substErr, TCL_SUBST_VARIABLES | TCL_SUBST_COMMANDS);
-                    Tcl_DecrRefCount(substErr);
-                    if (substErrResult != NULL) {
-                        Tcl_SetObjResult(interp, substErrResult);
-                        return TCL_ERROR;
-                    } else {
-                        Tcl_SetObjResult(interp, Tcl_GetObjResult(interp));
-                        return TCL_ERROR;
-                    }
+        Tcl_ObjSetVar2(interp, Tcl_NewStringObj("opt", -1), NULL, optDictObj, 0);
+        Tcl_ObjSetVar2(interp, Tcl_NewStringObj("name", -1), NULL, nameObj, 0);
+        Tcl_ObjSetVar2(interp, Tcl_NewStringObj("arg", -1), NULL, argsListObj, 0);
+        int result = 0;
+        int code = Tcl_ExprBooleanObj(interp, validateCmd, &result);
+        if (code == TCL_ERROR || !result) {
+            if (DICT_GET_IF_EXISTS(interp, optDictObj, elswitch_errormsg, &errormsgObj)) {
+                Tcl_Obj *substErr = Tcl_DuplicateObj(errormsgObj);
+                Tcl_IncrRefCount(substErr);
+                Tcl_Obj *substErrResult = Tcl_SubstObj(interp, substErr, TCL_SUBST_VARIABLES | TCL_SUBST_COMMANDS);
+                Tcl_DecrRefCount(substErr);
+                if (substErrResult != NULL) {
+                    Tcl_SetObjResult(interp, substErrResult);
+                    return TCL_ERROR;
+                } else {
+                    Tcl_SetObjResult(interp, Tcl_GetObjResult(interp));
+                    return TCL_ERROR;
                 }
-                Tcl_Obj *errMsg = Tcl_ObjPrintf("%s value \"%s\" fails %s", Tcl_GetString(nameObj), Tcl_GetString(arg),
-                                                validateMsgObj ? Tcl_GetString(validateMsgObj) : "validation");
-                Tcl_UnsetVar(interp, "arg", 0);
-                Tcl_UnsetVar(interp, "name", 0);
-                Tcl_UnsetVar(interp, "opt", 0);
-                Tcl_SetObjResult(interp, errMsg);
-                return TCL_ERROR;
             }
+            Tcl_Obj *errMsg =
+                Tcl_ObjPrintf("%s value \"%s\" fails %s", Tcl_GetString(nameObj), Tcl_GetString(argsListObj),
+                              validateMsgObj ? Tcl_GetString(validateMsgObj) : "validation");
             Tcl_UnsetVar(interp, "arg", 0);
             Tcl_UnsetVar(interp, "name", 0);
             Tcl_UnsetVar(interp, "opt", 0);
-            Tcl_ListObjAppendElement(interp, newArgsList, arg);
+            Tcl_SetObjResult(interp, errMsg);
+            return TCL_ERROR;
         }
-        *resultPtr = newArgsList;
+        Tcl_UnsetVar(interp, "arg", 0);
+        Tcl_UnsetVar(interp, "name", 0);
+        Tcl_UnsetVar(interp, "opt", 0);
+        *resultPtr = Tcl_DuplicateObj(argsListObj);
         return TCL_OK;
     }
     *resultPtr = Tcl_DuplicateObj(argsListObj);
@@ -3687,12 +3662,14 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 Tcl_Obj *elementDefDict = NULL;
                 Tcl_DictObjGet(interp, argDefCtx->defDict, name, &elementDefDict);
                 Tcl_ListObjIndex(interp, argv, 0, &argLoc);
+                
                 if (ValidateHelper(interp, &ctx, normal, elementDefDict, argLoc, &resultList) != TCL_OK) {
                     goto cleanupOnError;
                 }
                 if (TypeChecker(interp, normal, elementDefDict, argLoc, &resultList) != TCL_OK) {
                     goto cleanupOnError;
                 }
+                
                 if (keyLoc != NULL) {
                     if (NestedDictKeyExists(interp, argDefCtx->defDict, name, elswitch_optional)) {
                         Tcl_Obj *list = Tcl_NewListObj(0, NULL);
