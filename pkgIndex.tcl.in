@@ -1,1 +1,16 @@
-package ifneeded @PACKAGE_NAME@ @PACKAGE_VERSION@ [list source [file join $dir @PACKAGE_NAME@.tcl]]
+if {@HAVE_TCL_ONLY@} {
+    # Code for the tcl-only version
+    package ifneeded @PACKAGE_NAME@ @PACKAGE_VERSION@ [list source [file join $dir @PACKAGE_NAME@.tcl]]
+} else {
+    # Code for the non-tcl-only version
+    if {[package vsatisfies [package provide Tcl] 9.0-]} {
+        package ifneeded @PACKAGE_NAME@ @PACKAGE_VERSION@ "[list load [file join $dir @PKG_LIB_FILE9@]]"
+    } else {
+        package ifneeded @PACKAGE_NAME@ @PACKAGE_VERSION@ "[list load [file join $dir @PKG_LIB_FILE8@]]"
+    }
+}
+
+
+
+
+

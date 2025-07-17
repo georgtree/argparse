@@ -1998,4 +1998,27 @@ testTemplate onlySwitchNoArgsTest-1 {} {} {
 -b
 -c} {-a -c} {bad option "-defauldt": must be -alias, -argument, -boolean, -catchall, -default, -enum, -forbid, -ignore, -imply, -keep, -key, -level, -optional, -parameter, -pass, -reciprocal, -require, -required, -standalone, -switch, -upvar, -validate, -value, -type, -allow, -help, -errormsg, or -hsuppress}
 
+### Check the constraints of elements with shared keys
+testTemplate helpTest-2 {} {} {
+{-exact      -key match}
+{-glob       -key match -default glob}
+{-regexp     -key match}
+{-sorted     -forbid {glob regexp}}
+-all
+-inline
+-not
+-start=
+{-ascii      -key format -value text -default text}
+{-dictionary -key format}
+{-integer    -key format}
+{-nocase     -key format}
+{-real       -key format}
+{-increasing -key order -require {sorted ascii} -default increasing}
+{-decreasing -key order -require sorted}
+{-bisect     -imply -sorted -forbid {all not}}
+-index=
+{-subindices -require index}
+list
+pattern} {-exact -regexp 1 2} {-exact conflicts with -regexp}
+
 cleanupTests

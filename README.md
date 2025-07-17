@@ -5,22 +5,29 @@ This is a fork of argparse project initially developed by Andy Goth <andrew.m.go
 See [original repository](https://core.tcl-lang.org/tcllib/timeline?r=amg-argparse), and 
 [wiki page](https://wiki.tcl-lang.org/page/argparse).
 
+Starting from 0.6 version, the base implementation is in C. Tcl-only version is still availible and will be availible
+in future with the same feature set. C version is in order of magnitude faster than Tcl-only version due to cashing of
+the parsed once argument definition.
+
 ## Installation
 
 You have two ways: install from git repo (convinient for Linux users) or from archive package release.
 
 ### From git repo
 
-Run following commands:
+To install default C implementation, run following commands:
 - `git clone https://github.com/georgtree/argparse.git`
 - `./configure`
 - `sudo make install`
 
-During installing it installs manpages.
+During installation manpages are also installed.
 
 For test package in place run `make test`.
 
 For package uninstall run `sudo make uninstall`.
+
+To install Tcl-only version, the sequence is the same, except the flag `--enable-tcl-only` provided to `./configure`
+script.
 
 ### From archive
 
@@ -28,7 +35,11 @@ To install the package you should extract archive with source code and add path 
 variable:
 ```tcl
 lappend auto_path "path to argparse package"
+package require argparse
 ```
+
+There are two pre-compiled version: for Linux x86-64 and for Windows x86-64 UCRT. Both archives provide C and Tcl-only
+versions, you can select the version you need in `pkgIndex.tcl` by conditional statement.
 
 ## Table of content
 
@@ -1185,4 +1196,4 @@ elements. Unless `-keep` or `-inline` are used, the caller variables for omitted
 
 Andy Goth <andrew.m.goth@gmail.com> - all code and most of documentation
 
-George Yashin <georgtree@gmail.com> - some documentation, test suite and new features
+George Yashin <georgtree@gmail.com> - some documentation, test suite, C-implementation and new features
