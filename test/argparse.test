@@ -2021,4 +2021,12 @@ testTemplate helpTest-2 {} {} {
 list
 pattern} {-exact -regexp 1 2} {-exact conflicts with -regexp}
 
+
+testTemplate helpTest-2 {} {-pfirst} {
+    y
+    {winsize -type integer}
+    -x=} {{11 12 13 14 15 16 17} 3 -x {0 1 2 3 4 5 6 7 8 9 10}} {x {0 1 2 3 4 5 6 7 8 9 10} winsize 3 y {11 12 13 14 15 16 17}}
+
+
+
 cleanupTests

@@ -3354,8 +3354,6 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
         }
     }
     free(keyObjs);
-    //printf("defDict: %s\n", Tcl_GetString(argDefCtx->defDict));
-    //fflush(stdout);
 //****       Build help string
     if (HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_HELP)) {
         if (Tcl_PkgRequire(interp, "textutil::adjust", "0", 0) == NULL) {
@@ -3684,7 +3682,6 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 }
             } else if (argvLen > 0) {
                 // The switch was given the expected argument.
-                Tcl_Obj *argv0 = NULL;
                 Tcl_Obj *resultList = NULL;
                 Tcl_Obj *argLoc = NULL;
                 Tcl_Obj *elementDefDict = NULL;
@@ -3693,25 +3690,23 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 if (ValidateHelper(interp, &ctx, normal, elementDefDict, argLoc, &resultList) != TCL_OK) {
                     goto cleanupOnError;
                 }
-                Tcl_ListObjIndex(interp, resultList, 0, &argv0);
                 if (TypeChecker(interp, normal, elementDefDict, argLoc, &resultList) != TCL_OK) {
                     goto cleanupOnError;
                 }
-                Tcl_ListObjIndex(interp, resultList, 0, &argv0);
                 if (keyLoc != NULL) {
                     if (NestedDictKeyExists(interp, argDefCtx->defDict, name, elswitch_optional)) {
                         Tcl_Obj *list = Tcl_NewListObj(0, NULL);
                         Tcl_Obj *emptyList = Tcl_NewListObj(0, NULL);
                         Tcl_ListObjAppendElement(interp, list, emptyList);
-                        Tcl_ListObjAppendElement(interp, list, argv0);
+                        Tcl_ListObjAppendElement(interp, list, resultList);
                         Tcl_DictObjPut(interp, resultDict, keyLoc, list);
                     } else {
-                        Tcl_DictObjPut(interp, resultDict, keyLoc, argv0);
+                        Tcl_DictObjPut(interp, resultDict, keyLoc, resultList);
                     }
                 }
                 if (passLoc != NULL) {
                     if (HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_NORMALIZE)) {
-                        DictLappend(interp, resultDict, passLoc, MergeTwoLists(interp, normal, argv0));
+                        DictLappend(interp, resultDict, passLoc, MergeTwoLists(interp, normal, resultList));
                     } else if (strcmp(Tcl_GetString(equal), "=") == 0) {
                         DictLappend(interp, resultDict, passLoc, arg);
                     } else {
