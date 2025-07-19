@@ -6,8 +6,6 @@
 #include <string.h>
 #include <tcl.h>
 
-//** Global switches definition and machinery
-static Tcl_Obj *globalSwitchObjs[GLOBAL_SWITCH_COUNT] = {0};
 
 //***    SetGlobalSwitch function
 /*
@@ -72,67 +70,6 @@ void FreeGlobalSwitches(GlobalSwitchesContext *ctx) {
         }
     }
     ctx->globalSwitches = 0;
-}
-
-//***    InitGlobalSwitchesObjs function
-/*
- *----------------------------------------------------------------------------------------------------------------------
- *
- * InitGlobalSwitchesObjs --
- *
- *      Initializes the global switch objects by creating new Tcl_Obj instances for each global switch name. Each object
- *      is stored in the `globalSwitchObjs` array, and its reference count is incremented to ensure proper memory
- *       management.
- *
- * Parameters:
- *      None.
- *
- * Results:
- *      This function modifies the `globalSwitchObjs` array by creating and storing Tcl_Obj instances for each global
- *      switch.
- *
- * Side Effects:
- *      - Creates new Tcl_Obj instances for each global switch name and stores them in the `globalSwitchObjs` array.
- *      - Increments the reference count for each newly created Tcl_Obj to ensure proper memory management.
- *
- *----------------------------------------------------------------------------------------------------------------------
- */
-void InitGlobalSwitchesObjs(void) {
-    for (int i = 0; i < GLOBAL_SWITCH_COUNT; ++i) {
-        if (!globalSwitchObjs[i]) {
-            globalSwitchObjs[i] = Tcl_NewStringObj(globalSwitchesNames[i], -1);
-            Tcl_IncrRefCount(globalSwitchObjs[i]);
-        }
-    }
-}
-
-//***    MatchGlobalSwitchesObj function
-/*
- *----------------------------------------------------------------------------------------------------------------------
- *
- * MatchGlobalSwitchesObj --
- *
- *      Matches the provided Tcl_Obj object to one of the global switch objects and returns the corresponding index.
- *      If no match is found, the function returns -1.
- *
- * Parameters:
- *      Tcl_Obj *obj          - input: the Tcl_Obj representing the global switch to match
- *
- * Results:
- *      Returns the index of the matched global switch in the `globalSwitchObjs` array, or -1 if no match is found.
- *
- * Side Effects:
- *      None. The function only compares the provided `obj` with the existing global switch objects.
- *
- *----------------------------------------------------------------------------------------------------------------------
- */
-int MatchGlobalSwitchesObj(Tcl_Obj *obj) {
-    for (int i = 0; i < GLOBAL_SWITCH_COUNT; ++i) {
-        if (strcmp(Tcl_GetString(obj), Tcl_GetString(globalSwitchObjs[i])) == 0) {
-            return i;
-        }
-    }
-    return -1;
 }
 
 //** Initialization functions
@@ -338,7 +275,6 @@ void InitLists(void) {
     INIT_LIST(allowedTypes, allowedTypes, ELEMENT_SWITCH_COUNT_TYPES);
     INIT_LIST(templateSubstNames, templateSubstNames, TEMPLATE_SUBST_COUNT);
     INIT_LIST(helpGenSubstNames, helpGenSubstNames, HELP_GEN_SUBST_COUNT);
-    INIT_LIST(globalSwitches, globalSwitches, GLOBAL_SWITCH_COUNT);
     INIT_LIST(elementSwitches, elementSwitches, ELEMENT_SWITCH_COUNT);
 }
 /*
@@ -372,7 +308,6 @@ void FreeLists(void) {
     FREE_LIST(allowedTypes);
     FREE_LIST(templateSubstNames);
     FREE_LIST(helpGenSubstNames);
-    FREE_LIST(globalSwitches);
     FREE_LIST(elementSwitches);
 }
 
@@ -2980,7 +2915,7 @@ static Tcl_Obj *GenerateGlobalSwitchesKey(const GlobalSwitchesContext *ctx) {
             Tcl_Obj *argObj = ctx->values[i];
             if (argObj != NULL) {
                 const char *argStr = Tcl_GetString(argObj);
-                Tcl_AppendPrintfToObj(keyObj, "%s=%s;", globalSwitchesNames[i], argStr);
+                Tcl_AppendPrintfToObj(keyObj, "%s=%s;", 1+globalSwitches[i], argStr);
             }
         }
     }
@@ -3118,35 +3053,27 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     Tcl_Obj *definition = NULL; // stores input definition list
     Tcl_Obj *argv = NULL;       // stores arguments to target procedure
     ArgumentDefinition *argDefCtx = NULL;
-    InitGlobalSwitchesObjs();
 
 //***    Process arguments to argparse procedure
     Tcl_Size defListLen;
     Tcl_Obj **defListElems;
     for (Tcl_Size i = 1; i < objc; ++i) {
-        Tcl_Obj *prefixResult = NULL;
-        Tcl_Obj *prefixRegSubResult = NULL;
-        int prefixCode = TCL_ERROR;
-        int regSubPrefixCode = TCL_ERROR;
-        prefixCode = EvalPrefixMatch(interp, list_globalSwitches, objv[i], 1, 1, elswitch_switch, 0, &prefixResult);
-        if (prefixCode == TCL_OK) {
-            regSubPrefixCode =
-                EvalRegsubFirstMatch(interp, regexpSwitch, prefixResult, misc_emptyStrObj, &prefixRegSubResult);
-        }
-        SAFE_DECR_REF(prefixResult);
-        if ((prefixCode == TCL_OK) && (regSubPrefixCode == TCL_OK)) {
-            int globalSwitchId = MatchGlobalSwitchesObj(prefixRegSubResult);
-            SAFE_DECR_REF(prefixRegSubResult);
+        int globalSwitchId;
+        if (Tcl_GetIndexFromObj(NULL, objv[i], globalSwitches, "option", 0, &globalSwitchId)
+            == TCL_OK) {
             // handle flags that take arguments
             if (GLOBAL_SWITCH_TAKES_ARG_MASK & (1 << globalSwitchId)) {
                 if (i + 1 >= objc) {
-                    Tcl_SetObjResult(interp,
-                                     Tcl_ObjPrintf("Missing argument for %s", globalSwitchesNames[globalSwitchId]));
+                    Tcl_SetObjResult(
+                        interp,
+                        Tcl_ObjPrintf("Missing argument for %s",
+                                      globalSwitches[globalSwitchId]));
                     goto cleanupOnError;
                 }
                 SetGlobalSwitch(&ctx, globalSwitchId, objv[i + 1]);
                 i++; // skip value
-            } else {
+            }
+            else {
                 SetGlobalSwitch(&ctx, globalSwitchId, NULL);
             }
         } else {
