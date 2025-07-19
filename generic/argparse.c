@@ -2802,6 +2802,7 @@ static void CleanupStaticObjects(ClientData clientData, Tcl_Interp *interp) {
  *
  * Parameters:
  *      Tcl_Interp *interp             - input: target interpreter
+ *      ArgparseInterpCtx *argparseInterpCtx - input: per-interpreter context containing the hash table
  *      Tcl_Obj *definition            - input: Tcl list object containing switch/parameter definitions
  *      GlobalSwitchesContext *ctx     - input: pointer to global parsing context
  *      const char *key                - input: key string used to cache the parsed result in the internal hash table
@@ -2813,16 +2814,16 @@ static void CleanupStaticObjects(ClientData clientData, Tcl_Interp *interp) {
  *
  * Side Effects:
  *      - Allocates and initializes a new `ArgumentDefinition` structure if not cached
- *      - Stores the result in `argDefHashTable` using the provided key
+ *      - Stores the result in `argDefHashTable` in the per-interpreter context using the provided key
  *      - On error, cleans up and removes the partially inserted hash entry
  *
  *----------------------------------------------------------------------------------------------------------------------
  */
-ArgumentDefinition *CreateAndCacheArgDef(Tcl_Interp *interp, Tcl_Obj *definition, GlobalSwitchesContext *ctx,
+ArgumentDefinition *CreateAndCacheArgDef(Tcl_Interp *interp, ArgparseInterpCtx *argparseInterpCtx, Tcl_Obj *definition, GlobalSwitchesContext *ctx,
                                          const char *key) {
     Tcl_HashEntry *entry;
     int isNew;
-    entry = Tcl_CreateHashEntry(&argDefHashTable, key, &isNew);
+    entry = Tcl_CreateHashEntry(&argparseInterpCtx->argDefHashTable, key, &isNew);
     if (!isNew) {
         // already cached
         return (ArgumentDefinition *)Tcl_GetHashValue(entry);
@@ -2854,7 +2855,7 @@ ArgumentDefinition *CreateAndCacheArgDef(Tcl_Interp *interp, Tcl_Obj *definition
  *
  * CleanupAllArgumentDefinitions --
  *
- *      Free all cached `ArgumentDefinition` structures stored in the internal hash table.
+ *      Free all cached `ArgumentDefinition` structures stored in the per-interpreter context.
  *      Intended to be called during interpreter finalization or library shutdown.
  *
  * Parameters:
@@ -2864,24 +2865,22 @@ ArgumentDefinition *CreateAndCacheArgDef(Tcl_Interp *interp, Tcl_Obj *definition
  *      None
  *
  * Side Effects:
- *      - Iterates over all entries in `argDefHashTable`  
+ *      - Iterates over all entries in `argDefHashTable` in the provided `ArgparseInterpCtx`
  *      - Calls `FreeArgumentDefinition` on each stored structure to release all associated memory and Tcl objects  
  *      - Deletes the hash table to fully release all resources
  *
  *----------------------------------------------------------------------------------------------------------------------
  */
-void CleanupAllArgumentDefinitions(void *clientData, Tcl_Interp *interp) {
-    (void)clientData;
-    (void)interp;
+static void CleanupAllArgumentDefinitions(ArgparseInterpCtx *argparseInterpCtx) {
     Tcl_HashSearch search;
-    Tcl_HashEntry *entry = Tcl_FirstHashEntry(&argDefHashTable, &search);
+    Tcl_HashEntry *entry = Tcl_FirstHashEntry(&argparseInterpCtx->argDefHashTable, &search);
     while (entry != NULL) {
         ArgumentDefinition *argDef = (ArgumentDefinition *)Tcl_GetHashValue(entry);
         // free Tcl objects and other cleanup inside argDef
         FreeArgumentDefinition(argDef);
         entry = Tcl_NextHashEntry(&search);
     }
-    Tcl_DeleteHashTable(&argDefHashTable);
+    Tcl_DeleteHashTable(&argparseInterpCtx->argDefHashTable);
 }
 
 //***    GenerateGlobalSwitchesKey function
@@ -2974,6 +2973,53 @@ Tcl_Obj *DuplicateDictWithNestedDicts(Tcl_Interp *interp, Tcl_Obj *dictObj) {
     return newDict;
 }
 
+//** FreeArgparseInterpCtx
+/*
+ * FreeArgparseInterpCtx --
+ *
+ *     Frees the per-interpreter argparse context
+ *
+ * Parameters:
+ *     argparseInterpCtx - pointer to argparse context. Must not be NULL.
+ *
+ * Side-effects:
+ *     The memory for the context as well as its contained elements, such
+ *     as hash tables are freed.
+ */
+static void FreeArgparseInterpCtx(void *clientData) {
+    ArgparseInterpCtx *argparseInterpCtx = (ArgparseInterpCtx *)clientData;
+    CleanupAllArgumentDefinitions(argparseInterpCtx);
+    Tcl_Free(argparseInterpCtx);
+}
+
+//** InitArgparseInterpCtx function
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * InitArgparseInterpCtx --
+ *
+ *     Allocates and initializes the per-interpreter context used by argparse.
+ *     This is passed as the clientData parameter to argparse command implementation.
+ *
+ * Parameters:
+ *      Tcl_Interp *interp - input: target interpreter to initialize the extension within
+ *
+ * Results:
+ *     Returns pointer to initialized context. This is eventually freed by
+ *     FreeArgparseInterpCtx when the command is deleted. Returns NULL on failure.
+ */
+static ArgparseInterpCtx *InitArgparseInterpCtx(Tcl_Interp *interp) {
+    ArgparseInterpCtx *argparseInterpCtx = Tcl_AttemptAlloc(sizeof(*argparseInterpCtx));
+    if (argparseInterpCtx == NULL) {
+        if (interp) {
+            Tcl_SetResult(interp, "Could not allocate memory for argparse context", TCL_STATIC);
+        }
+        return NULL;
+    }
+    Tcl_InitHashTable(&argparseInterpCtx->argDefHashTable, TCL_STRING_KEYS);
+    return argparseInterpCtx;
+}
+
 //** Package initialization function
 /*
  *----------------------------------------------------------------------------------------------------------------------
@@ -3011,11 +3057,15 @@ extern DLLEXPORT int Argparse_Init(Tcl_Interp *interp) {
     InitElementSwitchKeys();
     InitRegexpPatterns(interp);
     InitLists();
-    Tcl_InitHashTable(&argDefHashTable, TCL_STRING_KEYS);
+
+    ArgparseInterpCtx *argparseInterpCtx = InitArgparseInterpCtx(interp);
+    if (argparseInterpCtx == NULL) {
+	return TCL_ERROR;
+    }
+
     /* Register commands */
-    Tcl_CreateObjCommand2(interp, "argparse", (Tcl_ObjCmdProc2 *)ArgparseCmdProc2, NULL, NULL);
+    Tcl_CreateObjCommand2(interp, "argparse", (Tcl_ObjCmdProc2 *)ArgparseCmdProc2, argparseInterpCtx, FreeArgparseInterpCtx);
     Tcl_CallWhenDeleted(interp, CleanupStaticObjects, NULL);
-    Tcl_CallWhenDeleted(interp, CleanupAllArgumentDefinitions, NULL);
     return TCL_OK;
 }
 
@@ -3053,6 +3103,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     Tcl_Obj *definition = NULL; // stores input definition list
     Tcl_Obj *argv = NULL;       // stores arguments to target procedure
     ArgumentDefinition *argDefCtx = NULL;
+    ArgparseInterpCtx *argparseInterpCtx = (ArgparseInterpCtx *)clientData;
 
     //***    Process arguments to argparse procedure
     Tcl_Size defListLen;
@@ -3162,11 +3213,11 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     const char *keyArgDefinition = Tcl_GetString(definition);
     const char *keyStr = Tcl_GetString(GenerateGlobalSwitchesKey(&ctx));
     keyArgDefinition = Tcl_GetString(Tcl_ObjPrintf("%s %s",keyArgDefinition, keyStr));
-    Tcl_HashEntry *entry = Tcl_FindHashEntry(&argDefHashTable, keyArgDefinition);
+    Tcl_HashEntry *entry = Tcl_FindHashEntry(&argparseInterpCtx->argDefHashTable, keyArgDefinition);
     ArgumentDefinition *cashedArgDefCtx = NULL;
     if (entry == NULL) {
         // no cashed definition
-        cashedArgDefCtx = CreateAndCacheArgDef(interp, definition, &ctx, keyArgDefinition);
+        cashedArgDefCtx = CreateAndCacheArgDef(interp, argparseInterpCtx, definition, &ctx, keyArgDefinition);
         if (!cashedArgDefCtx) {
             goto cleanupOnError;
         }

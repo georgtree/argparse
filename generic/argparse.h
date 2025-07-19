@@ -54,8 +54,11 @@ typedef struct {
     Tcl_Obj *catchall;
 } ArgumentDefinition;
 
-//** arguments definition hash table
-static Tcl_HashTable argDefHashTable;
+//** A per-interpreter context for argparse.
+typedef struct {
+    Tcl_HashTable argDefHashTable; // arguments definition hash table
+} ArgparseInterpCtx;
+
 
 //** global switches declarations and definitions. Order MUST match globaSwitches[]
 enum GlobalSwitchId {
@@ -253,7 +256,7 @@ Tcl_Obj *BuildBadSwitchError(Tcl_Interp *interp, Tcl_Obj *argObj, Tcl_Obj *switc
 int EvalMatchRegexpGroups(Tcl_Interp *interp, Tcl_RegExp regexp, Tcl_Obj *textObj, Tcl_Obj **resultListPtr);
 static void CleanupStaticObjects(ClientData clientData, Tcl_Interp *interp);
 static Tcl_Obj *GenerateGlobalSwitchesKey(const GlobalSwitchesContext *ctx);
-ArgumentDefinition *CreateAndCacheArgDef(Tcl_Interp *interp, Tcl_Obj *definition, GlobalSwitchesContext *ctx,
+ArgumentDefinition *CreateAndCacheArgDef(Tcl_Interp *interp, ArgparseInterpCtx *, Tcl_Obj *definition, GlobalSwitchesContext *ctx,
                                          const char *key);
 void CleanupAllArgumentDefinitions();
 ArgumentDefinition *DeepCopyArgumentDefinition(Tcl_Interp *interp, const ArgumentDefinition *src);
