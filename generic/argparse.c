@@ -3121,7 +3121,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
             Tcl_NewStringObj("error getting elements definition list", -1));
         goto cleanupOnError;
     }
-    Tcl_Obj *definitionTemp = Tcl_NewListObj(0, NULL);
+    definition = Tcl_NewListObj(defListLen, NULL); /* Preallocate storage */
     int commentFlag         = 0;
     for (Tcl_Size j = 0; j < defListLen; ++j) {
         Tcl_Size elemListLen;
@@ -3134,24 +3134,21 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 Tcl_NewStringObj("error getting element definition list", -1));
             goto cleanupOnError;
         }
+	if (elemListLen == 0) {
+            Tcl_SetResult(interp, "element definition cannot be empty", TCL_STATIC);
+            goto cleanupOnError;
+        }
         if (strcmp(Tcl_GetString(elemListElems[0]), "#") == 0) {
             if (elemListLen == 1) {
                 commentFlag = 1;
             }
-        }
-        else if (commentFlag == 1) {
+        } else if (commentFlag == 1) {
             commentFlag = 0;
-        }
-        else {
-            Tcl_ListObjAppendElement(interp, definitionTemp, defListElems[j]);
+        } else {
+            Tcl_ListObjAppendElement(interp, definition, defListElems[j]);
         }
     }
-    definition = definitionTemp;
 
-    if (definition == NULL) {
-        Tcl_SetObjResult(interp, Tcl_NewStringObj("missing required parameter: definition", -1));
-        goto cleanupOnError;
-    }
     if (HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_INLINE) && HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_KEEP)) {
         Tcl_SetObjResult(interp, Tcl_NewStringObj("-inline and -keep conflict", -1));
         goto cleanupOnError;
