@@ -3085,17 +3085,12 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
 	/* Explicit end of global options marker. Skip it */
         i++;
     }
-    if (i == objc) {
-        Tcl_SetObjResult(interp, Tcl_NewStringObj("missing required parameter: definition", -1));
-        goto cleanupOnError;
-    }
     switch (objc - i) {
     case 0:
         Tcl_SetObjResult(interp, Tcl_NewStringObj("missing required parameter: definition", -1));
         goto cleanupOnError;
     case 1:
         /* if args is omitted, pulled it from the caller args variable */
-        definition = objv[objc - 1];
         argv       = Tcl_GetVar2Ex(interp, "args", NULL, 0);
         if (argv == NULL) {
             Tcl_SetObjResult(interp,
@@ -3104,7 +3099,6 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
         }
         break;
     case 2:
-        definition = objv[objc - 2];
         argv       = objv[objc - 1];
         break;
     default:
@@ -3112,8 +3106,15 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
         goto cleanupOnError;
     };
 
+    /* Verify argv is a list before further processing - Bug #17 */
+    Tcl_Size lenArgv;
+    if (Tcl_ListObjLength(interp, argv, &lenArgv) != TCL_OK) {
+        Tcl_SetResult(interp, "argument is not a list", TCL_STATIC);
+        goto cleanupOnError;
+    }
+
     /* pre-process definition list */
-    if (Tcl_ListObjGetElements(interp, definition, &defListLen, &defListElems)
+    if (Tcl_ListObjGetElements(interp, objv[i], &defListLen, &defListElems)
         != TCL_OK) {
         Tcl_SetObjResult(
             interp,
@@ -3147,7 +3148,6 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     }
     definition = definitionTemp;
 
-    /* --- */
     if (definition == NULL) {
         Tcl_SetObjResult(interp, Tcl_NewStringObj("missing required parameter: definition", -1));
         goto cleanupOnError;
@@ -3399,7 +3399,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     }
 
 //***    Force required parameters to bypass switch logic
-    Tcl_Size lenArgv, end, start;
+    Tcl_Size end, start;
     Tcl_Obj *force = Tcl_DuplicateObj(argv);
     Tcl_ListObjLength(interp, argv, &lenArgv);
     end = lenArgv - 1;
