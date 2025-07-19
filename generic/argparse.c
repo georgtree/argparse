@@ -3398,7 +3398,6 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
 //***    Force required parameters to bypass switch logic
     Tcl_Size end, start;
     Tcl_Obj *force = Tcl_DuplicateObj(argv);
-    Tcl_ListObjLength(interp, argv, &lenArgv);
     end = lenArgv - 1;
     start = 0;
     if (!HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_MIXED)) {
