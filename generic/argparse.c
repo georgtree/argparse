@@ -3054,84 +3054,100 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     Tcl_Obj *argv = NULL;       // stores arguments to target procedure
     ArgumentDefinition *argDefCtx = NULL;
 
-//***    Process arguments to argparse procedure
+    //***    Process arguments to argparse procedure
     Tcl_Size defListLen;
     Tcl_Obj **defListElems;
-    for (Tcl_Size i = 1; i < objc; ++i) {
+    Tcl_Size i;
+    for (i = 1; i < objc; ++i) {
         int globalSwitchId;
         if (Tcl_GetIndexFromObj(NULL, objv[i], globalSwitches, "option", 0, &globalSwitchId)
-            == TCL_OK) {
-            // handle flags that take arguments
-            if (GLOBAL_SWITCH_TAKES_ARG_MASK & (1 << globalSwitchId)) {
-                if (i + 1 >= objc) {
-                    Tcl_SetObjResult(
-                        interp,
-                        Tcl_ObjPrintf("Missing argument for %s",
-                                      globalSwitches[globalSwitchId]));
-                    goto cleanupOnError;
-                }
-                SetGlobalSwitch(&ctx, globalSwitchId, objv[i + 1]);
-                i++; // skip value
-            }
-            else {
-                SetGlobalSwitch(&ctx, globalSwitchId, NULL);
-            }
-        } else {
-            if (strcmp(Tcl_GetString(objv[i]), "--") == 0) {
-                i++;
-            }
-            switch (objc - i) {
-            case 0:
-                break;
-            case 1:
-                /* if args is ommited, pulled it from the caller args variable */
-                definition = objv[objc - 1];
-                argv = Tcl_GetVar2Ex(interp, "args", NULL, 0);
-                if (argv == NULL) {
-                    Tcl_SetObjResult(interp, Tcl_NewStringObj("Variable 'args' not found", -1));
-                    goto cleanupOnError;
-                }
-                break;
-            case 2:
-                definition = objv[objc - 2];
-                argv = objv[objc - 1];
-                break;
-            default:
-                Tcl_SetObjResult(interp, Tcl_NewStringObj("too many arguments", -1));
-                goto cleanupOnError;
-            };
-            if (objc - i == 0) {
-                break;
-            }
-            /* condition to exit the loop */
-            i = objc;
-            /* pre-process definition list */
-            if (Tcl_ListObjGetElements(interp, definition, &defListLen, &defListElems) != TCL_OK) {
-                Tcl_SetObjResult(interp, Tcl_NewStringObj("error getting elements definition list", -1));
+            != TCL_OK) {
+            break;
+        }
+        // handle flags that take arguments
+        if (GLOBAL_SWITCH_TAKES_ARG_MASK & (1 << globalSwitchId)) {
+            if (i + 1 >= objc) {
+                Tcl_SetObjResult(interp,
+                                 Tcl_ObjPrintf("Missing argument for %s",
+                                               globalSwitches[globalSwitchId]));
                 goto cleanupOnError;
             }
-            Tcl_Obj *definitionTemp = Tcl_NewListObj(0, NULL);
-            int commentFlag = 0;
-            for (Tcl_Size j = 0; j < defListLen; ++j) {
-                Tcl_Size elemListLen;
-                Tcl_Obj **elemListElems;
-                if (Tcl_ListObjGetElements(interp, defListElems[j], &elemListLen, &elemListElems) != TCL_OK) {
-                    Tcl_SetObjResult(interp, Tcl_NewStringObj("error getting element definition list", -1));
-                    goto cleanupOnError;
-                }
-                if (strcmp(Tcl_GetString(elemListElems[0]), "#") == 0) {
-                    if (elemListLen == 1) {
-                        commentFlag = 1;
-                    }
-                } else if (commentFlag == 1) {
-                    commentFlag = 0;
-                } else {
-                    Tcl_ListObjAppendElement(interp, definitionTemp, defListElems[j]);
-                }
-            }
-            definition = definitionTemp;
+            SetGlobalSwitch(&ctx, globalSwitchId, objv[i + 1]);
+            i++; // skip value
+        }
+        else {
+            SetGlobalSwitch(&ctx, globalSwitchId, NULL);
         }
     }
+    /* End of global options. */
+
+    if (i < objc && strcmp(Tcl_GetString(objv[i]), "--") == 0) {
+	/* Explicit end of global options marker. Skip it */
+        i++;
+    }
+    if (i == objc) {
+        Tcl_SetObjResult(interp, Tcl_NewStringObj("missing required parameter: definition", -1));
+        goto cleanupOnError;
+    }
+    switch (objc - i) {
+    case 0:
+        Tcl_SetObjResult(interp, Tcl_NewStringObj("missing required parameter: definition", -1));
+        goto cleanupOnError;
+    case 1:
+        /* if args is omitted, pulled it from the caller args variable */
+        definition = objv[objc - 1];
+        argv       = Tcl_GetVar2Ex(interp, "args", NULL, 0);
+        if (argv == NULL) {
+            Tcl_SetObjResult(interp,
+                             Tcl_NewStringObj("Variable 'args' not found", -1));
+            goto cleanupOnError;
+        }
+        break;
+    case 2:
+        definition = objv[objc - 2];
+        argv       = objv[objc - 1];
+        break;
+    default:
+        Tcl_SetObjResult(interp, Tcl_NewStringObj("too many arguments", -1));
+        goto cleanupOnError;
+    };
+
+    /* pre-process definition list */
+    if (Tcl_ListObjGetElements(interp, definition, &defListLen, &defListElems)
+        != TCL_OK) {
+        Tcl_SetObjResult(
+            interp,
+            Tcl_NewStringObj("error getting elements definition list", -1));
+        goto cleanupOnError;
+    }
+    Tcl_Obj *definitionTemp = Tcl_NewListObj(0, NULL);
+    int commentFlag         = 0;
+    for (Tcl_Size j = 0; j < defListLen; ++j) {
+        Tcl_Size elemListLen;
+        Tcl_Obj **elemListElems;
+        if (Tcl_ListObjGetElements(
+                interp, defListElems[j], &elemListLen, &elemListElems)
+            != TCL_OK) {
+            Tcl_SetObjResult(
+                interp,
+                Tcl_NewStringObj("error getting element definition list", -1));
+            goto cleanupOnError;
+        }
+        if (strcmp(Tcl_GetString(elemListElems[0]), "#") == 0) {
+            if (elemListLen == 1) {
+                commentFlag = 1;
+            }
+        }
+        else if (commentFlag == 1) {
+            commentFlag = 0;
+        }
+        else {
+            Tcl_ListObjAppendElement(interp, definitionTemp, defListElems[j]);
+        }
+    }
+    definition = definitionTemp;
+
+    /* --- */
     if (definition == NULL) {
         Tcl_SetObjResult(interp, Tcl_NewStringObj("missing required parameter: definition", -1));
         goto cleanupOnError;
