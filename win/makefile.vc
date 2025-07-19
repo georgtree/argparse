@@ -1,0 +1,81 @@
+#------------------------------------------------------------- -*- makefile -*-
+#
+# nmake Makefile for argparse
+#
+# Basic build, test and install
+#   nmake /f makefile.vc INSTALLDIR=c:\path\to\tcl
+#   nmake /f makefile.vc INSTALLDIR=c:\path\to\tcl test
+#   nmake /f makefile.vc INSTALLDIR=c:\path\to\tcl install
+#
+# For other build options (debug, static etc.),
+# See TIP 477 (https://core.tcl-lang.org/tips/doc/main/tip/477.md) for
+# detailed documentation.
+#
+# See the file "license.terms" for information on usage and redistribution
+# of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+#------------------------------------------------------------------------------
+
+# The name of the package
+PROJECT = argparse
+
+# Define TESTDIR because it is named "test" and not the standard "tests"
+TESTDIR  = $(ROOT)\test
+
+!include "rules-ext.vc"
+
+# Define the object files and resource file that make up the extension.
+# Note the resource file does not makes sense if doing a static library build
+# hence it is under that condition. TMP_DIR is the output directory
+# defined by rules for object files.
+PRJ_OBJS = \
+	$(TMP_DIR)\argparse.obj
+
+PRJ_INCLUDES = -I$(TMP_DIR)
+
+# Define any additional compiler flags that might be required for the project
+# PRJ_DEFINES = -D_CRT_SECURE_NO_DEPRECATE
+
+# Define the standard targets
+!include "$(_RULESDIR)\targets.vc"
+
+# We must define a pkgindex target that will create a pkgIndex.tcl
+# file in the $(OUT_DIR) directory. We could normally just use the
+# pkgindex-default-tea rules but not in this case as there is the
+# non-standard HAVE_TCL_ONLY substitution.
+pkgindex:
+	@if exist $(ROOT)\pkgIndex.tcl.in nmakehlp -s << $(ROOT)\pkgIndex.tcl.in > $(OUT_DIR)\pkgIndex.tcl
+@PACKAGE_VERSION@    $(DOTVERSION)
+@PACKAGE_NAME@       $(PRJ_PACKAGE_TCLNAME)
+@PACKAGE_TCLNAME@    $(PRJ_PACKAGE_TCLNAME)
+@PKG_LIB_FILE@       $(PRJLIBNAME)
+@PKG_LIB_FILE8@      $(PRJLIBNAME8)
+@PKG_LIB_FILE9@      $(PRJLIBNAME9)
+@HAVE_TCL_ONLY@      0
+<<
+
+# Uncomment following if there is documentation to be copied
+# and layed out as per TEA.
+# install: default-install-docs-n default-install-docs-html
+
+# Use manifest file which defines commit id for build-info command
+$(TMP_DIR)\manifest.uuid:
+!IF EXIST($(ROOT)\manifest.uuid)
+	@copy "$(ROOT)\manifest.uuid" "$(TMP_DIR)\manifest.uuid"
+!ELSE
+!IF EXIST($(ROOT)\.git)
+	@echo puts -nonewline git- | "$(TCLSH)" >$(TMP_DIR)\manifest.uuid
+	@git rev-parse HEAD >>$(TMP_DIR)\manifest.uuid || echo git-unknown >$(TMP_DIR)\manifest.uuid
+!ELSE
+	@echo unknown >$(TMP_DIR)\manifest.uuid
+!ENDIF
+!ENDIF
+
+$(TMP_DIR)\myExtensionUuid.h: $(TMP_DIR)\manifest.uuid
+	@echo #define MYEXTENSION_VERSION_UUID \> $(TMP_DIR)\myExtensionUuid.h
+	@type $(TMP_DIR)\manifest.uuid >> $(TMP_DIR)\myExtensionUuid.h
+	@echo:>>$(TMP_DIR)\myExtensionUuid.h
+
+
+# Explicit dependency rules
+$(GENERICDIR)\argparse.c : $(GENERICDIR)\argparse.h

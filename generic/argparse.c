@@ -2935,7 +2935,9 @@ ArgumentDefinition *CreateAndCacheArgDef(Tcl_Interp *interp, Tcl_Obj *definition
  *
  *----------------------------------------------------------------------------------------------------------------------
  */
-void CleanupAllArgumentDefinitions() {
+void CleanupAllArgumentDefinitions(void *clientData, Tcl_Interp *interp) {
+    (void)clientData;
+    (void)interp;
     Tcl_HashSearch search;
     Tcl_HashEntry *entry = Tcl_FirstHashEntry(&argDefHashTable, &search);
     while (entry != NULL) {
@@ -3121,7 +3123,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
 //***    Process arguments to argparse procedure
     Tcl_Size defListLen;
     Tcl_Obj **defListElems;
-    for (int i = 1; i < objc; ++i) {
+    for (Tcl_Size i = 1; i < objc; ++i) {
         Tcl_Obj *prefixResult = NULL;
         Tcl_Obj *prefixRegSubResult = NULL;
         int prefixCode = TCL_ERROR;
