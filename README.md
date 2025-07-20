@@ -6,7 +6,7 @@ See [original repository](https://core.tcl-lang.org/tcllib/timeline?r=amg-argpar
 [wiki page](https://wiki.tcl-lang.org/page/argparse).
 
 Starting from 0.6 version, the base implementation is in C. Tcl-only version is still availible and will be availible
-in future with the same feature set. C version is in order of magnitude faster than Tcl-only version due to cashing of
+in future with the same feature set. C version in order of magnitude faster than Tcl-only version due to cashing of
 the parsed once argument definition.
 
 ## Installation
@@ -1196,4 +1196,6 @@ elements. Unless `-keep` or `-inline` are used, the caller variables for omitted
 
 Andy Goth <andrew.m.goth@gmail.com> - all code and most of documentation
 
-George Yashin <georgtree@gmail.com> - some documentation, test suite, C-implementation and new features
+George Yashin <georgtree@gmail.com> - some documentation, test suite and new features, C implementation
+
+Ashok P. Nadkarni <apnmbx-wits@yahoo.com> - fix of C implementation and valuable advices about the code architecture

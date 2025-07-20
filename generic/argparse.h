@@ -2,46 +2,40 @@
 #include <tcl.h>
 
 //** useful macroses
-#define DICT_GET_IF_EXISTS(interp, dictObj, keyObj, valPtr) \
+#define DICT_GET_IF_EXISTS(interp, dictObj, keyObj, valPtr)                                                            \
     (Tcl_DictObjGet((interp), (dictObj), (keyObj), (valPtr)) == TCL_OK && *(valPtr) != NULL)
 
-#define SAFE_DECR_REF_AND_NULL(objPtr) \
-    do { \
-        if ((objPtr) != NULL) { \
-            Tcl_DecrRefCount(objPtr); \
-            (objPtr) = NULL; \
-        } \
-    } while(0)
-
-#define SAFE_DECR_REF(objPtr) \
-    do { \
-        if ((objPtr) != NULL) { \
-            Tcl_DecrRefCount(objPtr); \
-        } \
-    } while(0)
-
-#define SAFE_FREE_GLOBAL_SWITCHES(ctx) \
-    do { \
-        if ((ctx) != NULL) { \
-            FreeGlobalSwitches(ctx); \
-        } \
-    } while(0)
-
-#define PRINT_REF_COUNT(obj) \
-    do { \
-        if (obj != NULL) { \
-            printf("Reference count of Tcl_Obj \"%s\": %ld\n", Tcl_GetString(obj), obj->refCount); \
-        } else { \
-            printf("Tcl_Obj is NULL\n"); \
-        } \
-        fflush(stdout); \
+#define SAFE_DECR_REF_AND_NULL(objPtr)                                                                                 \
+    do {                                                                                                               \
+        if ((objPtr) != NULL) {                                                                                        \
+            Tcl_DecrRefCount(objPtr);                                                                                  \
+            (objPtr) = NULL;                                                                                           \
+        }                                                                                                              \
     } while (0)
-//** misc element declaration
-static Tcl_Obj *misc_emptyStrObj;
-static Tcl_Obj *misc_presentSwitchObj;
-static Tcl_Obj *misc_validateMsgStrObj;
-static Tcl_Obj *misc_dashStrObj;
-static Tcl_Obj *misc_doubleDashStrObj;
+
+#define SAFE_DECR_REF(objPtr)                                                                                          \
+    do {                                                                                                               \
+        if ((objPtr) != NULL) {                                                                                        \
+            Tcl_DecrRefCount(objPtr);                                                                                  \
+        }                                                                                                              \
+    } while (0)
+
+#define SAFE_FREE_GLOBAL_SWITCHES(ctx)                                                                                 \
+    do {                                                                                                               \
+        if ((ctx) != NULL) {                                                                                           \
+            FreeGlobalSwitches(ctx);                                                                                   \
+        }                                                                                                              \
+    } while (0)
+
+#define PRINT_REF_COUNT(obj)                                                                                           \
+    do {                                                                                                               \
+        if (obj != NULL) {                                                                                             \
+            printf("Reference count of Tcl_Obj \"%s\": %ld\n", Tcl_GetString(obj), obj->refCount);                     \
+        } else {                                                                                                       \
+            printf("Tcl_Obj is NULL\n");                                                                               \
+        }                                                                                                              \
+        fflush(stdout);                                                                                                \
+    } while (0)
 
 //** arguments definition structure
 typedef struct {
@@ -57,8 +51,17 @@ typedef struct {
 //** A per-interpreter context for argparse.
 typedef struct {
     Tcl_HashTable argDefHashTable; // arguments definition hash table
+    Tcl_Obj *list_elementSwitches, *list_elswitchWithArgs, *list_allowedTypes, *list_templateSubstNames,
+        *list_helpGenSubstNames; // cashed list objects
+    Tcl_Obj *misc_emptyStrObj, *misc_presentSwitchObj, *misc_validateMsgStrObj, *misc_dashStrObj,
+        *misc_doubleDashStrObj; // cashed miscellanious objects
+    Tcl_Obj *elswitch_alias, *elswitch_argument, *elswitch_boolean, *elswitch_catchall, *elswitch_default,
+        *elswitch_enum, *elswitch_forbid, *elswitch_ignore, *elswitch_imply, *elswitch_keep, *elswitch_key,
+        *elswitch_level, *elswitch_optional, *elswitch_parameter, *elswitch_pass, *elswitch_reciprocal,
+        *elswitch_require, *elswitch_required, *elswitch_standalone, *elswitch_switch, *elswitch_upvar,
+        *elswitch_validate, *elswitch_value, *elswitch_type, *elswitch_allow, *elswitch_help, *elswitch_errormsg,
+        *elswitch_hsuppress; // cashed element switches objects
 } ArgparseInterpCtx;
-
 
 //** global switches declarations and definitions. Order MUST match globaSwitches[]
 enum GlobalSwitchId {
@@ -82,9 +85,10 @@ enum GlobalSwitchId {
     GLOBAL_SWITCH_HELPRET,
     GLOBAL_SWITCH_COUNT // total number of global switches
 };
-static const char *globalSwitches[] = {
-    "-boolean",   "-enum", "-equalarg",   "-exact",    "-inline",   "-keep", "-level",     "-long",  "-mixed",
-    "-normalize", "-pass", "-reciprocal", "-template", "-validate", "-help", "-helplevel", "-pfirst", "-helpret", NULL};
+static const char *globalSwitches[] = {"-boolean",   "-enum",       "-equalarg", "-exact",    "-inline",
+                                       "-keep",      "-level",      "-long",     "-mixed",    "-normalize",
+                                       "-pass",      "-reciprocal", "-template", "-validate", "-help",
+                                       "-helplevel", "-pfirst",     "-helpret",  NULL};
 typedef struct {
     int globalSwitches;                   // bitmask of which global switch are present
     Tcl_Obj *values[GLOBAL_SWITCH_COUNT]; // arguments for value-carrying global switches
@@ -105,23 +109,18 @@ static const char *elementSwitches[ELEMENT_SWITCH_COUNT] = {
     "-pass",     "-reciprocal", "-require", "-required", "-standalone", "-switch",   "-upvar",
     "-validate", "-value",      "-type",    "-allow",    "-help",       "-errormsg", "-hsuppress"};
 
-static Tcl_Obj *list_elementSwitches;
-static Tcl_Obj *list_elswitchWithArgs;
-static Tcl_Obj *list_allowedTypes;
-static Tcl_Obj *list_templateSubstNames;
-static Tcl_Obj *list_helpGenSubstNames;
 #define INIT_LIST(name, strings, count)                                                                                \
     do {                                                                                                               \
-        list_##name = Tcl_NewListObj(0, NULL);                                                                         \
+        (name) = Tcl_NewListObj(0, NULL);                                                                              \
         for (int i = 0; i < (count); ++i) {                                                                            \
-            Tcl_ListObjAppendElement(NULL, list_##name, Tcl_NewStringObj((strings)[i], -1));                           \
+            Tcl_ListObjAppendElement(NULL, (name), Tcl_NewStringObj((strings)[i], -1));                                \
         }                                                                                                              \
-        Tcl_IncrRefCount(list_##name);                                                                                 \
+        Tcl_IncrRefCount((name));                                                                                      \
     } while (0)
 #define FREE_LIST(name)                                                                                                \
     do {                                                                                                               \
-        Tcl_DecrRefCount(list_##name);                                                                                 \
-        list_##name = NULL;                                                                                            \
+        Tcl_DecrRefCount((name));                                                                                      \
+        (name) = NULL;                                                                                                 \
     } while (0)
 #define ELEMENT_SWITCH_COUNT_WARGS 14
 static const char *elementSwitchesWithArgsNames[ELEMENT_SWITCH_COUNT_WARGS] = {
@@ -136,47 +135,20 @@ static const char *templateSubstNames[TEMPLATE_SUBST_COUNT] = {"\\\\\\\\", "\\\\
 #define HELP_GEN_SUBST_COUNT 4
 static const char *helpGenSubstNames[HELP_GEN_SUBST_COUNT] = {",;", ";", ",.", "."};
 
-// Declare static keys
-static Tcl_Obj *elswitch_alias, *elswitch_argument, *elswitch_boolean, *elswitch_catchall, *elswitch_default,
-    *elswitch_enum, *elswitch_forbid, *elswitch_ignore, *elswitch_imply, *elswitch_keep, *elswitch_key, *elswitch_level,
-    *elswitch_optional, *elswitch_parameter, *elswitch_pass, *elswitch_reciprocal, *elswitch_require,
-    *elswitch_required, *elswitch_standalone, *elswitch_switch, *elswitch_upvar, *elswitch_validate, *elswitch_value,
-    *elswitch_type, *elswitch_allow, *elswitch_help, *elswitch_errormsg, *elswitch_hsuppress;
-
 // Initialization macro
-#define ELSWITCH(name)                                                                                                 \
+#define ELSWITCH(name, string)                                                                                         \
     do {                                                                                                               \
-        elswitch_##name = Tcl_NewStringObj(#name, -1);                                                                 \
-        Tcl_IncrRefCount(elswitch_##name);                                                                             \
+        (name) = Tcl_NewStringObj(#string, -1);                                                                        \
+        Tcl_IncrRefCount((name));                                                                                      \
     } while (0)
 
 // Free macro
 #define ELSWITCH_DECREF(name)                                                                                          \
     do {                                                                                                               \
-        Tcl_DecrRefCount(elswitch_##name);                                                                             \
-        elswitch_##name = NULL;                                                                                        \
+        Tcl_DecrRefCount((name));                                                                                      \
+        (name) = NULL;                                                                                                 \
     } while (0)
 
-//** static regexp patterns declaration
-static Tcl_Obj *regexp_switchShorthandPattern;
-static Tcl_Obj *regexp_switchAliasPattern;
-static Tcl_Obj *regexp_switchNamePattern;
-static Tcl_Obj *regexp_switchPattern;
-#define REGEXP(name, pattern)                                                                                          \
-    do {                                                                                                               \
-        regexp_##name = Tcl_NewStringObj(pattern, -1);                                                                 \
-        Tcl_IncrRefCount(regexp_##name);                                                                               \
-    } while (0)
-
-#define REGEXP_DECREF(name)                                                                                            \
-    do {                                                                                                               \
-        Tcl_DecrRefCount(regexp_##name);                                                                               \
-        regexp_##name = NULL;                                                                                          \
-    } while (0)
-static Tcl_RegExp regexpSwitch;
-static Tcl_RegExp regexpShorthand;
-static Tcl_RegExp regexpSwitchName;
-static Tcl_RegExp regexpSwitchAlias;
 //** static string arrays
 #define ELEMENT_SWITCH_COUNT_IMPLY_ARG 5
 static const char *elementSwitchesImplyElementArg[] = {"optional", "required", "catchall", "upvar", "type"};
@@ -214,14 +186,6 @@ static const char *elemSwConstraints[ELEMENT_SWITCH_COUNT_CONSTRAINTS] = {"requi
 extern DLLEXPORT int Argparse_c_Init(Tcl_Interp *interp);
 static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]);
 void FreeGlobalSwitches(GlobalSwitchesContext *ctx);
-void InitMiscObject(void);
-void FreeMiscObject(void);
-void InitElementSwitchKeys(void);
-void FreeElementSwitchKeys(void);
-void InitRegexpPatterns(Tcl_Interp *interp);
-void FreeRegexpPatterns(Tcl_Interp *interp);
-void InitLists(void);
-void FreeLists(void);
 int EvalPrefixMatch(Tcl_Interp *interp, Tcl_Obj *tableList, Tcl_Obj *matchObj, int useExact, int useMessage,
                     Tcl_Obj *messageObj, int wantErrorMessage, Tcl_Obj **resultObjPtr);
 int EvalRegsubFirstMatch(Tcl_Interp *interp, Tcl_RegExp regexp, Tcl_Obj *inputObj, Tcl_Obj *replacementObj,
@@ -230,13 +194,13 @@ int InList(Tcl_Interp *interp, Tcl_Obj *itemObj, Tcl_Obj *listObj);
 Tcl_Obj *ListRange(Tcl_Interp *interp, Tcl_Obj *listObj, Tcl_Size start, Tcl_Size end);
 int GetArgsFromCaller(Tcl_Interp *interp, int *argcPtr, Tcl_Obj ***argvPtr);
 int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *definition,
-                            ArgumentDefinition *argCtx);
+                            ArgumentDefinition *argCtx, ArgparseInterpCtx *interpCtx);
 static inline int DictKeyExists(Tcl_Interp *interp, Tcl_Obj *dictObj, Tcl_Obj *keyStr);
 int NestedDictKeyExists(Tcl_Interp *interp, Tcl_Obj *dictObj, Tcl_Obj *outerKey, Tcl_Obj *innerKey);
-Tcl_Obj *SplitString(Tcl_Interp *interp, Tcl_Obj *stringObj, Tcl_Obj *sepCharsObj);
+Tcl_Obj *SplitString(Tcl_Interp *interp, Tcl_Obj *stringObj, Tcl_Obj *sepCharsObj, ArgparseInterpCtx *interpCtx);
 int EvalStringMap(Tcl_Interp *interp, Tcl_Obj *mapListObj, Tcl_Obj *inputObj, Tcl_Obj **resultObjPtr);
-Tcl_Obj *BuildAliasJoinString(Tcl_Interp *interp, Tcl_Obj *optDict, Tcl_Obj *name);
-int CheckAliasesAreUnique(Tcl_Interp *interp, Tcl_Obj *aliasesDict, Tcl_Obj *optDict);
+Tcl_Obj *BuildAliasJoinString(Tcl_Interp *interp, Tcl_Obj *optDict, Tcl_Obj *name, ArgparseInterpCtx *interpCtx);
+int CheckAliasesAreUnique(Tcl_Interp *interp, Tcl_Obj *aliasesDict, Tcl_Obj *optDict, ArgparseInterpCtx *interpCtx);
 Tcl_Obj *BuildAllowedTypesSummary(Tcl_Interp *interp, Tcl_Obj *allowedTypes);
 int DictKeys(Tcl_Interp *interp, Tcl_Obj *dictObj, Tcl_Size *keyCountPtr, Tcl_Obj ***keyObjsPtr);
 Tcl_Obj *MergeTwoLists(Tcl_Interp *interp, Tcl_Obj *list1, Tcl_Obj *list2);
@@ -245,20 +209,21 @@ int UnsetNestedDictKey(Tcl_Interp *interp, Tcl_Obj *dictObj, Tcl_Obj *outerKey, 
 int SetNestedDictKey(Tcl_Interp *interp, Tcl_Obj *dictObj, Tcl_Obj *outerKey, Tcl_Obj *innerKey, Tcl_Obj *value);
 int GetNestedDictValue(Tcl_Interp *interp, Tcl_Obj *dictObj, Tcl_Obj *outerKey, Tcl_Obj *innerKey, Tcl_Obj **valuePtr);
 int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *nameObj, Tcl_Obj *optDictObj,
-                   Tcl_Obj *argsListObj, Tcl_Obj **resultPtr);
-int TypeChecker(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_Obj *argsListObj, Tcl_Obj **resultPtr);
+                   Tcl_Obj *argsListObj, ArgparseInterpCtx *interpCtx, Tcl_Obj **resultPtr);
+int TypeChecker(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_Obj *argsListObj,
+                ArgparseInterpCtx *interpCtx, Tcl_Obj **resultPtr);
 int DictLappend(Tcl_Interp *interp, Tcl_Obj *dictObjPtr, Tcl_Obj *keyObj, Tcl_Obj *valuesList);
 int DictLappendElem(Tcl_Interp *interp, Tcl_Obj *dictObjPtr, Tcl_Obj *keyObj, Tcl_Obj *valueObj);
 Tcl_Obj *BuildMissingSwitchesError(Tcl_Interp *interp, Tcl_Obj *missingList);
 Tcl_Obj *BuildMissingParameterError(Tcl_Interp *interp, Tcl_Obj *missingList);
 int DictIncr(Tcl_Interp *interp, Tcl_Obj *dictObjPtr, Tcl_Obj *keyObj, Tcl_Obj *countObj);
 Tcl_Obj *BuildBadSwitchError(Tcl_Interp *interp, Tcl_Obj *argObj, Tcl_Obj *switchesList);
-int EvalMatchRegexpGroups(Tcl_Interp *interp, Tcl_RegExp regexp, Tcl_Obj *textObj, Tcl_Obj **resultListPtr);
-static void CleanupStaticObjects(ClientData clientData, Tcl_Interp *interp);
+int EvalMatchRegexpGroups(Tcl_Interp *interp, Tcl_RegExp regexp, Tcl_Obj *textObj, ArgparseInterpCtx *interpCtx,
+                          Tcl_Obj **resultListPtr);
 static Tcl_Obj *GenerateGlobalSwitchesKey(const GlobalSwitchesContext *ctx);
-ArgumentDefinition *CreateAndCacheArgDef(Tcl_Interp *interp, ArgparseInterpCtx *, Tcl_Obj *definition, GlobalSwitchesContext *ctx,
-                                         const char *key);
-void CleanupAllArgumentDefinitions();
+ArgumentDefinition *CreateAndCacheArgDef(Tcl_Interp *interp, ArgparseInterpCtx *, Tcl_Obj *definition,
+                                         GlobalSwitchesContext *ctx, const char *key);
+static void CleanupAllArgumentDefinitions(ArgparseInterpCtx *argparseInterpCtx);
 ArgumentDefinition *DeepCopyArgumentDefinition(Tcl_Interp *interp, const ArgumentDefinition *src);
 Tcl_Obj *DuplicateDictWithNestedDicts(Tcl_Interp *interp, Tcl_Obj *dictObj);
 void FreeArgumentDefinition(ArgumentDefinition *argDef);
@@ -268,4 +233,4 @@ Tcl_Obj *EvaluateAdjust(Tcl_Interp *interp, Tcl_Obj *helpObj, int len);
 Tcl_Obj *EvaluateIndent(Tcl_Interp *interp, Tcl_Obj *stringObj, Tcl_Obj *spacesObj, Tcl_Obj *skipObj);
 Tcl_Obj *EvaluateStringToTitle(Tcl_Interp *interp, Tcl_Obj *stringObj, Tcl_Obj *firstIndexObj, Tcl_Obj *lastIndexObj);
 Tcl_Obj *BuildHelpMessage(Tcl_Interp *interp, GlobalSwitchesContext *ctx, ArgumentDefinition *argDefCtx,
-                          Tcl_Obj *helpLevel);
+                          Tcl_Obj *helpLevel, ArgparseInterpCtx *interpCtx);

@@ -2004,7 +2004,9 @@ testTemplate errormsgTest-3 {} {} {
 testTemplate onlySwitchNoArgsTest-1 {} {} {
     {-a= -defauldt 1}
 -b
--c} {-a -c} {bad option "-defauldt": must be -alias, -argument, -boolean, -catchall, -default, -enum, -forbid, -ignore, -imply, -keep, -key, -level, -optional, -parameter, -pass, -reciprocal, -require, -required, -standalone, -switch, -upvar, -validate, -value, -type, -allow, -help, -errormsg, or -hsuppress}
+-c} {-a -c} {bad option "-defauldt": must be -alias, -argument, -boolean, -catchall, -default, -enum, -forbid, -ignore,\
+-imply, -keep, -key, -level, -optional, -parameter, -pass, -reciprocal, -require, -required, -standalone, -switch,\
+-upvar, -validate, -value, -type, -allow, -help, -errormsg, or -hsuppress}
 
 ### Check the constraints of elements with shared keys
 testTemplate helpTest-2 {} {} {
@@ -2031,20 +2033,18 @@ pattern} {-exact -regexp 1 2} {-exact conflicts with -regexp}
 
 ### Some tests from other packages
 
-testTemplate helpTest-2 {} {-pfirst} {
+testTemplate 3rdPackagesTest-1 {} {-pfirst} {
     y
     {winsize -type integer}
     -x=} {{11 12 13 14 15 16 17} 3 -x {0 1 2 3 4 5 6 7 8 9 10}}\
         {x {0 1 2 3 4 5 6 7 8 9 10} winsize 3 y {11 12 13 14 15 16 17}}
-
-testTemplate helpTest-2 {} {-pfirst} {
+testTemplate 3rdPackagesTest-2 {} {-pfirst} {
     {-model= -required -help {Name of the model}}
     {-area= -help {Emitter scale factor}}
     {-areac= -help {Collector scale factor}}
     {-areab= -help {Base scale factor}}
     {-m= -help {Multiplier of area and perimeter}}
-    {-ic= -validate {[llength $arg]==2} -help {Initial conditions for vds and vgs, in form of two element\
-                                                       list}}
+    {-ic= -validate {[llength $arg]==2} -help {Initial conditions for vds and vgs, in form of two element list}}
     {-temp= -forbid {dtemp} -help {Device temperature}}
     {-dtemp= -forbid {temp} -help {Temperature offset}}
     {-ns= -help {Name of node connected to substrate pin}}
@@ -2054,18 +2054,16 @@ testTemplate helpTest-2 {} {-pfirst} {
     {nc -help {Name of node connected to collector pin}}
     {nb -help {Name of node connected to base pin}}
     {ne -help {Name of node connected to emitter pin}}}\
-        {1 netc netb nete -model bjtmod -ns nets -tj nettj -area 1e-3 -temp 25 -ic {1 2}}\
-        {nb netb ic {1 2} nc netc name 1 area 1e-3 ns nets model bjtmod temp 25 tj nettj off 0 ne nete}
-
-testTemplate helpTest-2 {} {-inline -help {Initialize object 'Dataset'}} {
+{1 netc netb nete -model bjtmod -ns nets -tj nettj -area 1e-3 -temp 25 -ic {1 2}}\
+{nb netb ic {1 2} nc netc name 1 area 1e-3 ns nets model bjtmod temp 25 tj nettj off 0 ne nete}
+testTemplate 3rdPackagesTest-3 {} {-inline -help {Initialize object 'Dataset'}} {
     {name -pass rest -help {Name of the trace}}
     {type -pass rest -help {Type of trace}}
     {len -pass rest -help {Total number of points}}
     {axis -help {Name of axis that is linked to trace}}
     {numtype -pass rest -optional -default real -help {Numerical type of trace}}}\
         {{v(m1#body diode)} voltage 51 complex} {arguments {rest {{v(m1#body diode)} voltage 51} axis complex}}
-
-testTemplate helpTest-2 {} {-inline -help {Initialize object 'Dataset'}} {
+testTemplate 3rdPackagesTest-4 {} {-inline -help {Initialize object 'Dataset'}} {
     {-name= -pass rest -help {Name of the trace}}
     {type -pass rest -help {Type of trace}}
     {len -pass rest -help {Total number of points}}
@@ -2074,12 +2072,22 @@ testTemplate helpTest-2 {} {-inline -help {Initialize object 'Dataset'}} {
         {-name {v(m1#body diode)} voltage 51 complex}\
         {arguments {rest {-name {v(m1#body diode)} voltage 51} axis complex}}
 
-test bug-17-1 "Crash on invalid definition list format" -body {
-    argparse \{ a
-} -result {error getting elements definition list} -returnCodes error
+### Tests for found bugs
+test bugTest-16 "Crash on multiple interpreters" -body {
+argparse {-a} {}
+interp create ip
+ip eval {package req argparse}
+ip eval {argparse {-a} {}}
+interp delete ip
+argparse {-a} {} } -result {} -returnCodes ok
 
-test bug-17-2 "Crash on invalid argument format" -body {
+test bugTest-17-1 "Crash on invalid definition list format" -body {
+    argparse \{ a
+} -result {unmatched open brace in list} -returnCodes error
+
+test bugTest-17-2 "Crash on invalid argument format" -body {
     argparse a \{
-} -result {argument is not a list} -returnCodes error
+} -result {unmatched open brace in list} -returnCodes error
+
 
 cleanupTests

@@ -1078,4 +1078,6 @@ elements. Unless `-keep` or `-inline` are used, the caller variables for omitted
 
 Andy Goth <andrew.m.goth@gmail.com> - all code and most of documentation
 
-George Yashin <georgtree@gmail.com> - some documentation, test suite and new features
+George Yashin <georgtree@gmail.com> - some documentation, test suite and new features, C implementation
+
+Ashok P. Nadkarni <apnmbx-wits@yahoo.com> - fix of C implementation and valuable advices about the code architecture
