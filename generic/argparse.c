@@ -6,8 +6,6 @@
 #include <string.h>
 #include <tcl.h>
 
-//** Global switches definition and machinery
-static Tcl_Obj *globalSwitchObjs[GLOBAL_SWITCH_COUNT] = {0};
 
 //***    SetGlobalSwitch function
 /*
@@ -72,67 +70,6 @@ void FreeGlobalSwitches(GlobalSwitchesContext *ctx) {
         }
     }
     ctx->globalSwitches = 0;
-}
-
-//***    InitGlobalSwitchesObjs function
-/*
- *----------------------------------------------------------------------------------------------------------------------
- *
- * InitGlobalSwitchesObjs --
- *
- *      Initializes the global switch objects by creating new Tcl_Obj instances for each global switch name. Each object
- *      is stored in the `globalSwitchObjs` array, and its reference count is incremented to ensure proper memory
- *       management.
- *
- * Parameters:
- *      None.
- *
- * Results:
- *      This function modifies the `globalSwitchObjs` array by creating and storing Tcl_Obj instances for each global
- *      switch.
- *
- * Side Effects:
- *      - Creates new Tcl_Obj instances for each global switch name and stores them in the `globalSwitchObjs` array.
- *      - Increments the reference count for each newly created Tcl_Obj to ensure proper memory management.
- *
- *----------------------------------------------------------------------------------------------------------------------
- */
-void InitGlobalSwitchesObjs(void) {
-    for (int i = 0; i < GLOBAL_SWITCH_COUNT; ++i) {
-        if (!globalSwitchObjs[i]) {
-            globalSwitchObjs[i] = Tcl_NewStringObj(globalSwitchesNames[i], -1);
-            Tcl_IncrRefCount(globalSwitchObjs[i]);
-        }
-    }
-}
-
-//***    MatchGlobalSwitchesObj function
-/*
- *----------------------------------------------------------------------------------------------------------------------
- *
- * MatchGlobalSwitchesObj --
- *
- *      Matches the provided Tcl_Obj object to one of the global switch objects and returns the corresponding index.
- *      If no match is found, the function returns -1.
- *
- * Parameters:
- *      Tcl_Obj *obj          - input: the Tcl_Obj representing the global switch to match
- *
- * Results:
- *      Returns the index of the matched global switch in the `globalSwitchObjs` array, or -1 if no match is found.
- *
- * Side Effects:
- *      None. The function only compares the provided `obj` with the existing global switch objects.
- *
- *----------------------------------------------------------------------------------------------------------------------
- */
-int MatchGlobalSwitchesObj(Tcl_Obj *obj) {
-    for (int i = 0; i < GLOBAL_SWITCH_COUNT; ++i) {
-        if (strcmp(Tcl_GetString(obj), Tcl_GetString(globalSwitchObjs[i])) == 0) {
-            return i;
-        }
-    }
-    return -1;
 }
 
 //** Initialization functions
@@ -338,7 +275,6 @@ void InitLists(void) {
     INIT_LIST(allowedTypes, allowedTypes, ELEMENT_SWITCH_COUNT_TYPES);
     INIT_LIST(templateSubstNames, templateSubstNames, TEMPLATE_SUBST_COUNT);
     INIT_LIST(helpGenSubstNames, helpGenSubstNames, HELP_GEN_SUBST_COUNT);
-    INIT_LIST(globalSwitches, globalSwitches, GLOBAL_SWITCH_COUNT);
     INIT_LIST(elementSwitches, elementSwitches, ELEMENT_SWITCH_COUNT);
 }
 /*
@@ -372,7 +308,6 @@ void FreeLists(void) {
     FREE_LIST(allowedTypes);
     FREE_LIST(templateSubstNames);
     FREE_LIST(helpGenSubstNames);
-    FREE_LIST(globalSwitches);
     FREE_LIST(elementSwitches);
 }
 
@@ -2867,6 +2802,7 @@ static void CleanupStaticObjects(ClientData clientData, Tcl_Interp *interp) {
  *
  * Parameters:
  *      Tcl_Interp *interp             - input: target interpreter
+ *      ArgparseInterpCtx *argparseInterpCtx - input: per-interpreter context containing the hash table
  *      Tcl_Obj *definition            - input: Tcl list object containing switch/parameter definitions
  *      GlobalSwitchesContext *ctx     - input: pointer to global parsing context
  *      const char *key                - input: key string used to cache the parsed result in the internal hash table
@@ -2878,16 +2814,16 @@ static void CleanupStaticObjects(ClientData clientData, Tcl_Interp *interp) {
  *
  * Side Effects:
  *      - Allocates and initializes a new `ArgumentDefinition` structure if not cached
- *      - Stores the result in `argDefHashTable` using the provided key
+ *      - Stores the result in `argDefHashTable` in the per-interpreter context using the provided key
  *      - On error, cleans up and removes the partially inserted hash entry
  *
  *----------------------------------------------------------------------------------------------------------------------
  */
-ArgumentDefinition *CreateAndCacheArgDef(Tcl_Interp *interp, Tcl_Obj *definition, GlobalSwitchesContext *ctx,
+ArgumentDefinition *CreateAndCacheArgDef(Tcl_Interp *interp, ArgparseInterpCtx *argparseInterpCtx, Tcl_Obj *definition, GlobalSwitchesContext *ctx,
                                          const char *key) {
     Tcl_HashEntry *entry;
     int isNew;
-    entry = Tcl_CreateHashEntry(&argDefHashTable, key, &isNew);
+    entry = Tcl_CreateHashEntry(&argparseInterpCtx->argDefHashTable, key, &isNew);
     if (!isNew) {
         // already cached
         return (ArgumentDefinition *)Tcl_GetHashValue(entry);
@@ -2919,7 +2855,7 @@ ArgumentDefinition *CreateAndCacheArgDef(Tcl_Interp *interp, Tcl_Obj *definition
  *
  * CleanupAllArgumentDefinitions --
  *
- *      Free all cached `ArgumentDefinition` structures stored in the internal hash table.
+ *      Free all cached `ArgumentDefinition` structures stored in the per-interpreter context.
  *      Intended to be called during interpreter finalization or library shutdown.
  *
  * Parameters:
@@ -2929,24 +2865,22 @@ ArgumentDefinition *CreateAndCacheArgDef(Tcl_Interp *interp, Tcl_Obj *definition
  *      None
  *
  * Side Effects:
- *      - Iterates over all entries in `argDefHashTable`  
+ *      - Iterates over all entries in `argDefHashTable` in the provided `ArgparseInterpCtx`
  *      - Calls `FreeArgumentDefinition` on each stored structure to release all associated memory and Tcl objects  
  *      - Deletes the hash table to fully release all resources
  *
  *----------------------------------------------------------------------------------------------------------------------
  */
-void CleanupAllArgumentDefinitions(void *clientData, Tcl_Interp *interp) {
-    (void)clientData;
-    (void)interp;
+static void CleanupAllArgumentDefinitions(ArgparseInterpCtx *argparseInterpCtx) {
     Tcl_HashSearch search;
-    Tcl_HashEntry *entry = Tcl_FirstHashEntry(&argDefHashTable, &search);
+    Tcl_HashEntry *entry = Tcl_FirstHashEntry(&argparseInterpCtx->argDefHashTable, &search);
     while (entry != NULL) {
         ArgumentDefinition *argDef = (ArgumentDefinition *)Tcl_GetHashValue(entry);
         // free Tcl objects and other cleanup inside argDef
         FreeArgumentDefinition(argDef);
         entry = Tcl_NextHashEntry(&search);
     }
-    Tcl_DeleteHashTable(&argDefHashTable);
+    Tcl_DeleteHashTable(&argparseInterpCtx->argDefHashTable);
 }
 
 //***    GenerateGlobalSwitchesKey function
@@ -2980,7 +2914,7 @@ static Tcl_Obj *GenerateGlobalSwitchesKey(const GlobalSwitchesContext *ctx) {
             Tcl_Obj *argObj = ctx->values[i];
             if (argObj != NULL) {
                 const char *argStr = Tcl_GetString(argObj);
-                Tcl_AppendPrintfToObj(keyObj, "%s=%s;", globalSwitchesNames[i], argStr);
+                Tcl_AppendPrintfToObj(keyObj, "%s=%s;", 1+globalSwitches[i], argStr);
             }
         }
     }
@@ -3039,6 +2973,53 @@ Tcl_Obj *DuplicateDictWithNestedDicts(Tcl_Interp *interp, Tcl_Obj *dictObj) {
     return newDict;
 }
 
+//** FreeArgparseInterpCtx
+/*
+ * FreeArgparseInterpCtx --
+ *
+ *     Frees the per-interpreter argparse context
+ *
+ * Parameters:
+ *     argparseInterpCtx - pointer to argparse context. Must not be NULL.
+ *
+ * Side-effects:
+ *     The memory for the context as well as its contained elements, such
+ *     as hash tables are freed.
+ */
+static void FreeArgparseInterpCtx(void *clientData) {
+    ArgparseInterpCtx *argparseInterpCtx = (ArgparseInterpCtx *)clientData;
+    CleanupAllArgumentDefinitions(argparseInterpCtx);
+    Tcl_Free(argparseInterpCtx);
+}
+
+//** InitArgparseInterpCtx function
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * InitArgparseInterpCtx --
+ *
+ *     Allocates and initializes the per-interpreter context used by argparse.
+ *     This is passed as the clientData parameter to argparse command implementation.
+ *
+ * Parameters:
+ *      Tcl_Interp *interp - input: target interpreter to initialize the extension within
+ *
+ * Results:
+ *     Returns pointer to initialized context. This is eventually freed by
+ *     FreeArgparseInterpCtx when the command is deleted. Returns NULL on failure.
+ */
+static ArgparseInterpCtx *InitArgparseInterpCtx(Tcl_Interp *interp) {
+    ArgparseInterpCtx *argparseInterpCtx = Tcl_AttemptAlloc(sizeof(*argparseInterpCtx));
+    if (argparseInterpCtx == NULL) {
+        if (interp) {
+            Tcl_SetResult(interp, "Could not allocate memory for argparse context", TCL_STATIC);
+        }
+        return NULL;
+    }
+    Tcl_InitHashTable(&argparseInterpCtx->argDefHashTable, TCL_STRING_KEYS);
+    return argparseInterpCtx;
+}
+
 //** Package initialization function
 /*
  *----------------------------------------------------------------------------------------------------------------------
@@ -3076,11 +3057,15 @@ extern DLLEXPORT int Argparse_Init(Tcl_Interp *interp) {
     InitElementSwitchKeys();
     InitRegexpPatterns(interp);
     InitLists();
-    Tcl_InitHashTable(&argDefHashTable, TCL_STRING_KEYS);
+
+    ArgparseInterpCtx *argparseInterpCtx = InitArgparseInterpCtx(interp);
+    if (argparseInterpCtx == NULL) {
+	return TCL_ERROR;
+    }
+
     /* Register commands */
-    Tcl_CreateObjCommand2(interp, "argparse", (Tcl_ObjCmdProc2 *)ArgparseCmdProc2, NULL, NULL);
+    Tcl_CreateObjCommand2(interp, "argparse", (Tcl_ObjCmdProc2 *)ArgparseCmdProc2, argparseInterpCtx, FreeArgparseInterpCtx);
     Tcl_CallWhenDeleted(interp, CleanupStaticObjects, NULL);
-    Tcl_CallWhenDeleted(interp, CleanupAllArgumentDefinitions, NULL);
     return TCL_OK;
 }
 
@@ -3118,97 +3103,103 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     Tcl_Obj *definition = NULL; // stores input definition list
     Tcl_Obj *argv = NULL;       // stores arguments to target procedure
     ArgumentDefinition *argDefCtx = NULL;
-    InitGlobalSwitchesObjs();
+    ArgparseInterpCtx *argparseInterpCtx = (ArgparseInterpCtx *)clientData;
 
-//***    Process arguments to argparse procedure
+    //***    Process arguments to argparse procedure
     Tcl_Size defListLen;
     Tcl_Obj **defListElems;
-    for (Tcl_Size i = 1; i < objc; ++i) {
-        Tcl_Obj *prefixResult = NULL;
-        Tcl_Obj *prefixRegSubResult = NULL;
-        int prefixCode = TCL_ERROR;
-        int regSubPrefixCode = TCL_ERROR;
-        prefixCode = EvalPrefixMatch(interp, list_globalSwitches, objv[i], 1, 1, elswitch_switch, 0, &prefixResult);
-        if (prefixCode == TCL_OK) {
-            regSubPrefixCode =
-                EvalRegsubFirstMatch(interp, regexpSwitch, prefixResult, misc_emptyStrObj, &prefixRegSubResult);
+    Tcl_Size i;
+    for (i = 1; i < objc; ++i) {
+        int globalSwitchId;
+        if (Tcl_GetIndexFromObj(NULL, objv[i], globalSwitches, "option", 0, &globalSwitchId)
+            != TCL_OK) {
+            break;
         }
-        SAFE_DECR_REF(prefixResult);
-        if ((prefixCode == TCL_OK) && (regSubPrefixCode == TCL_OK)) {
-            int globalSwitchId = MatchGlobalSwitchesObj(prefixRegSubResult);
-            SAFE_DECR_REF(prefixRegSubResult);
-            // handle flags that take arguments
-            if (GLOBAL_SWITCH_TAKES_ARG_MASK & (1 << globalSwitchId)) {
-                if (i + 1 >= objc) {
-                    Tcl_SetObjResult(interp,
-                                     Tcl_ObjPrintf("Missing argument for %s", globalSwitchesNames[globalSwitchId]));
-                    goto cleanupOnError;
-                }
-                SetGlobalSwitch(&ctx, globalSwitchId, objv[i + 1]);
-                i++; // skip value
-            } else {
-                SetGlobalSwitch(&ctx, globalSwitchId, NULL);
-            }
-        } else {
-            if (strcmp(Tcl_GetString(objv[i]), "--") == 0) {
-                i++;
-            }
-            switch (objc - i) {
-            case 0:
-                break;
-            case 1:
-                /* if args is ommited, pulled it from the caller args variable */
-                definition = objv[objc - 1];
-                argv = Tcl_GetVar2Ex(interp, "args", NULL, 0);
-                if (argv == NULL) {
-                    Tcl_SetObjResult(interp, Tcl_NewStringObj("Variable 'args' not found", -1));
-                    goto cleanupOnError;
-                }
-                break;
-            case 2:
-                definition = objv[objc - 2];
-                argv = objv[objc - 1];
-                break;
-            default:
-                Tcl_SetObjResult(interp, Tcl_NewStringObj("too many arguments", -1));
-                goto cleanupOnError;
-            };
-            if (objc - i == 0) {
-                break;
-            }
-            /* condition to exit the loop */
-            i = objc;
-            /* pre-process definition list */
-            if (Tcl_ListObjGetElements(interp, definition, &defListLen, &defListElems) != TCL_OK) {
-                Tcl_SetObjResult(interp, Tcl_NewStringObj("error getting elements definition list", -1));
+        // handle flags that take arguments
+        if (GLOBAL_SWITCH_TAKES_ARG_MASK & (1 << globalSwitchId)) {
+            if (i + 1 >= objc) {
+                Tcl_SetObjResult(interp,
+                                 Tcl_ObjPrintf("Missing argument for %s",
+                                               globalSwitches[globalSwitchId]));
                 goto cleanupOnError;
             }
-            Tcl_Obj *definitionTemp = Tcl_NewListObj(0, NULL);
-            int commentFlag = 0;
-            for (Tcl_Size j = 0; j < defListLen; ++j) {
-                Tcl_Size elemListLen;
-                Tcl_Obj **elemListElems;
-                if (Tcl_ListObjGetElements(interp, defListElems[j], &elemListLen, &elemListElems) != TCL_OK) {
-                    Tcl_SetObjResult(interp, Tcl_NewStringObj("error getting element definition list", -1));
-                    goto cleanupOnError;
-                }
-                if (strcmp(Tcl_GetString(elemListElems[0]), "#") == 0) {
-                    if (elemListLen == 1) {
-                        commentFlag = 1;
-                    }
-                } else if (commentFlag == 1) {
-                    commentFlag = 0;
-                } else {
-                    Tcl_ListObjAppendElement(interp, definitionTemp, defListElems[j]);
-                }
-            }
-            definition = definitionTemp;
+            SetGlobalSwitch(&ctx, globalSwitchId, objv[i + 1]);
+            i++; // skip value
+        }
+        else {
+            SetGlobalSwitch(&ctx, globalSwitchId, NULL);
         }
     }
-    if (definition == NULL) {
+    /* End of global options. */
+
+    if (i < objc && strcmp(Tcl_GetString(objv[i]), "--") == 0) {
+	/* Explicit end of global options marker. Skip it */
+        i++;
+    }
+    switch (objc - i) {
+    case 0:
         Tcl_SetObjResult(interp, Tcl_NewStringObj("missing required parameter: definition", -1));
         goto cleanupOnError;
+    case 1:
+        /* if args is omitted, pulled it from the caller args variable */
+        argv       = Tcl_GetVar2Ex(interp, "args", NULL, 0);
+        if (argv == NULL) {
+            Tcl_SetObjResult(interp,
+                             Tcl_NewStringObj("Variable 'args' not found", -1));
+            goto cleanupOnError;
+        }
+        break;
+    case 2:
+        argv       = objv[objc - 1];
+        break;
+    default:
+        Tcl_SetObjResult(interp, Tcl_NewStringObj("too many arguments", -1));
+        goto cleanupOnError;
+    };
+
+    /* Verify argv is a list before further processing - Bug #17 */
+    Tcl_Size lenArgv;
+    if (Tcl_ListObjLength(interp, argv, &lenArgv) != TCL_OK) {
+        Tcl_SetResult(interp, "argument is not a list", TCL_STATIC);
+        goto cleanupOnError;
     }
+
+    /* pre-process definition list */
+    if (Tcl_ListObjGetElements(interp, objv[i], &defListLen, &defListElems)
+        != TCL_OK) {
+        Tcl_SetObjResult(
+            interp,
+            Tcl_NewStringObj("error getting elements definition list", -1));
+        goto cleanupOnError;
+    }
+    definition = Tcl_NewListObj(defListLen, NULL); /* Preallocate storage */
+    int commentFlag         = 0;
+    for (Tcl_Size j = 0; j < defListLen; ++j) {
+        Tcl_Size elemListLen;
+        Tcl_Obj **elemListElems;
+        if (Tcl_ListObjGetElements(
+                interp, defListElems[j], &elemListLen, &elemListElems)
+            != TCL_OK) {
+            Tcl_SetObjResult(
+                interp,
+                Tcl_NewStringObj("error getting element definition list", -1));
+            goto cleanupOnError;
+        }
+	if (elemListLen == 0) {
+            Tcl_SetResult(interp, "element definition cannot be empty", TCL_STATIC);
+            goto cleanupOnError;
+        }
+        if (strcmp(Tcl_GetString(elemListElems[0]), "#") == 0) {
+            if (elemListLen == 1) {
+                commentFlag = 1;
+            }
+        } else if (commentFlag == 1) {
+            commentFlag = 0;
+        } else {
+            Tcl_ListObjAppendElement(interp, definition, defListElems[j]);
+        }
+    }
+
     if (HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_INLINE) && HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_KEEP)) {
         Tcl_SetObjResult(interp, Tcl_NewStringObj("-inline and -keep conflict", -1));
         goto cleanupOnError;
@@ -3222,11 +3213,11 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     const char *keyArgDefinition = Tcl_GetString(definition);
     const char *keyStr = Tcl_GetString(GenerateGlobalSwitchesKey(&ctx));
     keyArgDefinition = Tcl_GetString(Tcl_ObjPrintf("%s %s",keyArgDefinition, keyStr));
-    Tcl_HashEntry *entry = Tcl_FindHashEntry(&argDefHashTable, keyArgDefinition);
+    Tcl_HashEntry *entry = Tcl_FindHashEntry(&argparseInterpCtx->argDefHashTable, keyArgDefinition);
     ArgumentDefinition *cashedArgDefCtx = NULL;
     if (entry == NULL) {
         // no cashed definition
-        cashedArgDefCtx = CreateAndCacheArgDef(interp, definition, &ctx, keyArgDefinition);
+        cashedArgDefCtx = CreateAndCacheArgDef(interp, argparseInterpCtx, definition, &ctx, keyArgDefinition);
         if (!cashedArgDefCtx) {
             goto cleanupOnError;
         }
@@ -3456,9 +3447,8 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     }
 
 //***    Force required parameters to bypass switch logic
-    Tcl_Size lenArgv, end, start;
+    Tcl_Size end, start;
     Tcl_Obj *force = Tcl_DuplicateObj(argv);
-    Tcl_ListObjLength(interp, argv, &lenArgv);
     end = lenArgv - 1;
     start = 0;
     if (!HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_MIXED)) {

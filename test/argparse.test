@@ -2074,5 +2074,12 @@ testTemplate helpTest-2 {} {-inline -help {Initialize object 'Dataset'}} {
         {-name {v(m1#body diode)} voltage 51 complex}\
         {arguments {rest {-name {v(m1#body diode)} voltage 51} axis complex}}
 
+test bug-17-1 "Crash on invalid definition list format" -body {
+    argparse \{ a
+} -result {error getting elements definition list} -returnCodes error
+
+test bug-17-2 "Crash on invalid argument format" -body {
+    argparse a \{
+} -result {argument is not a list} -returnCodes error
 
 cleanupTests

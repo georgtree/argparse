@@ -54,10 +54,13 @@ typedef struct {
     Tcl_Obj *catchall;
 } ArgumentDefinition;
 
-//** arguments definition hash table
-static Tcl_HashTable argDefHashTable;
+//** A per-interpreter context for argparse.
+typedef struct {
+    Tcl_HashTable argDefHashTable; // arguments definition hash table
+} ArgparseInterpCtx;
 
-//** global switches declarations and definitions
+
+//** global switches declarations and definitions. Order MUST match globaSwitches[]
 enum GlobalSwitchId {
     GLOBAL_SWITCH_BOOLEAN = 0,
     GLOBAL_SWITCH_ENUM,
@@ -79,12 +82,9 @@ enum GlobalSwitchId {
     GLOBAL_SWITCH_HELPRET,
     GLOBAL_SWITCH_COUNT // total number of global switches
 };
-static const char *globalSwitches[GLOBAL_SWITCH_COUNT] = {
+static const char *globalSwitches[] = {
     "-boolean",   "-enum", "-equalarg",   "-exact",    "-inline",   "-keep", "-level",     "-long",  "-mixed",
-    "-normalize", "-pass", "-reciprocal", "-template", "-validate", "-help", "-helplevel", "-pfirst", "-helpret"};
-static const char *globalSwitchesNames[GLOBAL_SWITCH_COUNT] = {
-    "boolean",   "enum", "equalarg",   "exact",    "inline",   "keep", "level",     "long",  "mixed",
-    "normalize", "pass", "reciprocal", "template", "validate", "help", "helplevel", "pfirst", "helpret"};
+    "-normalize", "-pass", "-reciprocal", "-template", "-validate", "-help", "-helplevel", "-pfirst", "-helpret", NULL};
 typedef struct {
     int globalSwitches;                   // bitmask of which global switch are present
     Tcl_Obj *values[GLOBAL_SWITCH_COUNT]; // arguments for value-carrying global switches
@@ -110,7 +110,6 @@ static Tcl_Obj *list_elswitchWithArgs;
 static Tcl_Obj *list_allowedTypes;
 static Tcl_Obj *list_templateSubstNames;
 static Tcl_Obj *list_helpGenSubstNames;
-static Tcl_Obj *list_globalSwitches;
 #define INIT_LIST(name, strings, count)                                                                                \
     do {                                                                                                               \
         list_##name = Tcl_NewListObj(0, NULL);                                                                         \
@@ -214,12 +213,9 @@ static const char *elemSwConstraints[ELEMENT_SWITCH_COUNT_CONSTRAINTS] = {"requi
 
 extern DLLEXPORT int Argparse_c_Init(Tcl_Interp *interp);
 static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]);
-void SetGlobalSwitch(GlobalSwitchesContext *ctx, int globalSwitchId, Tcl_Obj *value);
 void FreeGlobalSwitches(GlobalSwitchesContext *ctx);
-void InitGlobalSwitchesObjs(void);
 void InitMiscObject(void);
 void FreeMiscObject(void);
-int MatchGlobalSwitchesObj(Tcl_Obj *obj);
 void InitElementSwitchKeys(void);
 void FreeElementSwitchKeys(void);
 void InitRegexpPatterns(Tcl_Interp *interp);
@@ -260,7 +256,7 @@ Tcl_Obj *BuildBadSwitchError(Tcl_Interp *interp, Tcl_Obj *argObj, Tcl_Obj *switc
 int EvalMatchRegexpGroups(Tcl_Interp *interp, Tcl_RegExp regexp, Tcl_Obj *textObj, Tcl_Obj **resultListPtr);
 static void CleanupStaticObjects(ClientData clientData, Tcl_Interp *interp);
 static Tcl_Obj *GenerateGlobalSwitchesKey(const GlobalSwitchesContext *ctx);
-ArgumentDefinition *CreateAndCacheArgDef(Tcl_Interp *interp, Tcl_Obj *definition, GlobalSwitchesContext *ctx,
+ArgumentDefinition *CreateAndCacheArgDef(Tcl_Interp *interp, ArgparseInterpCtx *, Tcl_Obj *definition, GlobalSwitchesContext *ctx,
                                          const char *key);
 void CleanupAllArgumentDefinitions();
 ArgumentDefinition *DeepCopyArgumentDefinition(Tcl_Interp *interp, const ArgumentDefinition *src);
