@@ -1935,6 +1935,116 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
         validateExists = 1;
     }
     Tcl_DictObjGet(interp, optDictObj, interpCtx->misc_validateMsgStrObj, &validateMsgObj);
+    Tcl_Size argc;
+    Tcl_Obj **argv;
+    Tcl_ListObjGetElements(interp, argsListObj, &argc, &argv);
+    for (Tcl_Size i = 0; i < argc; ++i) {
+        if (enumExists) {
+            Tcl_Obj *messageStr = Tcl_ObjPrintf("%s value", Tcl_GetString(nameObj));
+            Tcl_IncrRefCount(messageStr);
+            int useExact = 0;
+            if (HAS_GLOBAL_SWITCH(ctx, GLOBAL_SWITCH_EXACT)) {
+                useExact = 1;
+            }
+            Tcl_Obj *prefixResult = NULL;
+            int code = EvalPrefixMatch(interp, enumList, argv[i], useExact, 1, messageStr, 1, &prefixResult);
+            if (code != TCL_OK) {
+                Tcl_DecrRefCount(messageStr);
+                return TCL_ERROR;
+            }
+            Tcl_DecrRefCount(messageStr);
+        } else if (validateExists) {
+            Tcl_ObjSetVar2(interp, Tcl_NewStringObj("opt", -1), NULL, optDictObj, 0);
+            Tcl_ObjSetVar2(interp, Tcl_NewStringObj("name", -1), NULL, nameObj, 0);
+            Tcl_ObjSetVar2(interp, Tcl_NewStringObj("arg", -1), NULL, argv[i], 0);
+            int result = 0;
+            int code = Tcl_ExprBooleanObj(interp, validateCmd, &result);
+            if (code == TCL_ERROR || !result) {
+            
+                if (DICT_GET_IF_EXISTS(interp, optDictObj, interpCtx->elswitch_errormsg, &errormsgObj)) {
+                    Tcl_Obj *substErr = Tcl_DuplicateObj(errormsgObj);
+                    Tcl_IncrRefCount(substErr);
+                
+                    Tcl_Obj *substErrResult = Tcl_SubstObj(interp, substErr, TCL_SUBST_VARIABLES | TCL_SUBST_COMMANDS);
+                    Tcl_DecrRefCount(substErr);
+                    if (substErrResult != NULL) {
+                        Tcl_SetObjResult(interp, substErrResult);
+                        return TCL_ERROR;
+                    } else {
+                        Tcl_SetObjResult(interp, Tcl_GetObjResult(interp));
+                        return TCL_ERROR;
+                    }
+                }
+                Tcl_Obj *errMsg =
+                    Tcl_ObjPrintf("%s value \"%s\" fails %s", Tcl_GetString(nameObj), Tcl_GetString(argv[i]),
+                                  validateMsgObj ? Tcl_GetString(validateMsgObj) : "validation");
+                Tcl_UnsetVar(interp, "arg", 0);
+                Tcl_UnsetVar(interp, "name", 0);
+                Tcl_UnsetVar(interp, "opt", 0);
+                Tcl_SetObjResult(interp, errMsg);
+                return TCL_ERROR;
+            }
+            Tcl_UnsetVar(interp, "arg", 0);
+            Tcl_UnsetVar(interp, "name", 0);
+            Tcl_UnsetVar(interp, "opt", 0);
+        }
+    }
+    *resultPtr = Tcl_DuplicateObj(argsListObj);
+    return TCL_OK;
+}
+
+//***    ValidateHelperElem function
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * ValidateHelperElem --
+ *
+ *      Validates argument values for a given switch or parameter using either:
+ *      - an `-enum` list with optional prefix matching, or
+ *      - a `-validate` expression with variable substitution.
+ *
+ *      If neither `-enum` nor `-validate` is present, the input element is returned as-is.
+ *
+ * Parameters:
+ *      Tcl_Interp *interp             - input: target interpreter
+ *      GlobalSwitchesContext *ctx     - input: pointer to global switches context (used to determine prefix behavior)
+ *      Tcl_Obj *nameObj               - input: Tcl_Obj representing the name of the switch/parameter being validated
+ *      Tcl_Obj *optDictObj            - input: Tcl_Obj representing the dictionary containing the option definition
+ *      Tcl_Obj *argObj                - input: Tcl_Obj argument to validate
+ *      ArgparseInterpCtx *interpCtx   - input: interpreter context structure
+ *      Tcl_Obj **resultPtr            - output: pointer to the list of validated (and possibly substituted) values
+ *
+ * Results:
+ *      Code TCL_OK - validation passed; *resultPtr is set to a list of validated arguments  
+ *      Code TCL_ERROR - validation failed or a Tcl error occurred; result is stored in the interpreter result
+ *
+ * Side Effects:
+ *      - May call `EvalPrefixMatch()` if `-enum` is present  
+ *      - May evaluate a Tcl expression using `Tcl_ExprBooleanObj` for custom validation logic via `-validate`  
+ *      - Temporary Tcl variables `arg`, `name`, and `opt` are set/unset during validation  
+ *      - If `-errormsg` is defined, it is used as the error message with variable substitution (`Tcl_SubstObj`)  
+ *      - If `-validateMsg` is defined, it is included in the error message on failure
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
+int ValidateHelperElem(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *nameObj, Tcl_Obj *optDictObj,
+                   Tcl_Obj *argObj, ArgparseInterpCtx *interpCtx, Tcl_Obj **resultPtr) {
+    int enumExists = 0;
+    Tcl_Obj *enumList = NULL;
+    int validateExists = 0;
+    Tcl_Obj *validateCmd = NULL;
+    Tcl_Obj *errormsgObj = NULL;
+    Tcl_Obj *validateMsgObj = NULL;
+    if (Tcl_IsShared(nameObj)) {
+        nameObj = Tcl_DuplicateObj(nameObj);
+    }
+    if (DICT_GET_IF_EXISTS(interp, optDictObj, interpCtx->elswitch_enum, &enumList)) {
+        enumExists = 1;
+    }
+    if (DICT_GET_IF_EXISTS(interp, optDictObj, interpCtx->elswitch_validate, &validateCmd)) {
+        validateExists = 1;
+    }
+    Tcl_DictObjGet(interp, optDictObj, interpCtx->misc_validateMsgStrObj, &validateMsgObj);
     if (enumExists) {
         Tcl_Obj *messageStr = Tcl_ObjPrintf("%s value", Tcl_GetString(nameObj));
         Tcl_IncrRefCount(messageStr);
@@ -1943,7 +2053,7 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
             useExact = 1;
         }
         Tcl_Obj *prefixResult = NULL;
-        int code = EvalPrefixMatch(interp, enumList, argsListObj, useExact, 1, messageStr, 1, &prefixResult);
+        int code = EvalPrefixMatch(interp, enumList, argObj, useExact, 1, messageStr, 1, &prefixResult);
         if (code != TCL_OK) {
             Tcl_DecrRefCount(messageStr);
             return TCL_ERROR;
@@ -1954,7 +2064,7 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
     } else if (validateExists) {
         Tcl_ObjSetVar2(interp, Tcl_NewStringObj("opt", -1), NULL, optDictObj, 0);
         Tcl_ObjSetVar2(interp, Tcl_NewStringObj("name", -1), NULL, nameObj, 0);
-        Tcl_ObjSetVar2(interp, Tcl_NewStringObj("arg", -1), NULL, argsListObj, 0);
+        Tcl_ObjSetVar2(interp, Tcl_NewStringObj("arg", -1), NULL, argObj, 0);
         int result = 0;
         int code = Tcl_ExprBooleanObj(interp, validateCmd, &result);
         if (code == TCL_ERROR || !result) {
@@ -1974,7 +2084,7 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
                 }
             }
             Tcl_Obj *errMsg =
-                Tcl_ObjPrintf("%s value \"%s\" fails %s", Tcl_GetString(nameObj), Tcl_GetString(argsListObj),
+                Tcl_ObjPrintf("%s value \"%s\" fails %s", Tcl_GetString(nameObj), Tcl_GetString(argObj),
                               validateMsgObj ? Tcl_GetString(validateMsgObj) : "validation");
             Tcl_UnsetVar(interp, "arg", 0);
             Tcl_UnsetVar(interp, "name", 0);
@@ -1985,10 +2095,10 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
         Tcl_UnsetVar(interp, "arg", 0);
         Tcl_UnsetVar(interp, "name", 0);
         Tcl_UnsetVar(interp, "opt", 0);
-        *resultPtr = Tcl_DuplicateObj(argsListObj);
+        *resultPtr = Tcl_DuplicateObj(argObj);
         return TCL_OK;
     }
-    *resultPtr = Tcl_DuplicateObj(argsListObj);
+    *resultPtr = Tcl_DuplicateObj(argObj);
     return TCL_OK;
 }
 
@@ -2072,6 +2182,86 @@ int TypeChecker(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_O
     }
     if (resultPtr) {
         *resultPtr = argsListObj;
+    }
+    return TCL_OK;
+}
+
+//***    TypeCheckerElem function
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * TypeCheckerElem --
+ *
+ *      Validate a list of argument values against a specified type declared in the option dictionary.
+ *      Supports built-in types ("int", "double", "boolean", "digit") as well as extended Tcl `string is` types.
+ *
+ * Parameters:
+ *      Tcl_Interp *interp           - input: target interpreter
+ *      Tcl_Obj *nameObj             - input: pointer to Tcl_Obj representing the name of the argument or option
+ *      Tcl_Obj *optDictObj          - input: pointer to Tcl_Obj dictionary that may contain the `-type` key
+ *      Tcl_Obj *argObj              - input: pointer to Tcl_Obj argument value to validate
+ *      ArgparseInterpCtx *interpCtx - input: interpreter context structure
+ *      Tcl_Obj **resultPtr          - output: optional pointer to store the original `argObj` if validation passes
+ *
+ * Results:
+ *      Code TCL_OK - all values match the specified type, or no `-type` key is defined  
+ *      Code TCL_ERROR - a value does not match the declared type; sets interpreter result with an error message
+ *
+ * Side Effects:
+ *      - If `-type` is set and does not match a built-in handler, falls back to evaluating `string is <type> -strict`  
+ *      - Interpreter result is set with a descriptive error message on failure  
+ *      - Error code is set to `"TCL", "TYPE", "MISMATCH"` on type mismatch
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
+int TypeCheckerElem(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_Obj *argObj,
+                ArgparseInterpCtx *interpCtx, Tcl_Obj **resultPtr) {
+    Tcl_Obj *typeObj = NULL;
+    Tcl_DictObjGet(interp, optDictObj, interpCtx->elswitch_type, &typeObj);
+    if (typeObj != NULL) {
+        const char *typeStr = Tcl_GetString(typeObj);
+        int isValid = 0;
+        if (strcmp(typeStr, "integer") == 0) {
+            int dummy;
+            isValid = (Tcl_GetIntFromObj(interp, argObj, &dummy) == TCL_OK);
+        } else if (strcmp(typeStr, "double") == 0) {
+            double dummy;
+            isValid = (Tcl_GetDoubleFromObj(interp, argObj, &dummy) == TCL_OK);
+        } else if (strcmp(typeStr, "digit") == 0) {
+            isValid = Tcl_StringMatch(Tcl_GetString(argObj), "[0-9]*");
+        } else if (strcmp(typeStr, "boolean") == 0) {
+            int dummy;
+            isValid = (Tcl_GetBooleanFromObj(interp, argObj, &dummy) == TCL_OK);
+        } else {
+            // Fall back to string is type -strict (slower)
+            Tcl_Obj *cmd[5];
+            cmd[0] = Tcl_NewStringObj("string", -1);
+            cmd[1] = Tcl_NewStringObj("is", -1);
+            cmd[2] = typeObj;
+            cmd[3] = Tcl_NewStringObj("-strict", -1);
+            cmd[4] = argObj;
+            for (int j = 0; j < 5; ++j)
+                Tcl_IncrRefCount(cmd[j]);
+            if (Tcl_EvalObjv(interp, 5, cmd, 0) != TCL_OK) {
+                for (int j = 0; j < 5; ++j)
+                    Tcl_DecrRefCount(cmd[j]);
+                return TCL_ERROR;
+            }
+            Tcl_GetBooleanFromObj(interp, Tcl_GetObjResult(interp), &isValid);
+            fflush(stdout);
+            Tcl_ResetResult(interp);
+            for (int j = 0; j < 5; ++j)
+                Tcl_DecrRefCount(cmd[j]);
+        }
+        if (!isValid) {
+            Tcl_Obj *errMsg = Tcl_ObjPrintf("%s value \"%s\" is not of the type %s", Tcl_GetString(nameObj),
+                                            Tcl_GetString(argObj), typeStr);
+            Tcl_SetObjResult(interp, errMsg);
+            return TCL_ERROR;
+        }
+    }
+    if (resultPtr) {
+        *resultPtr = argObj;
     }
     return TCL_OK;
 }
@@ -3085,8 +3275,6 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                             Tcl_IncrRefCount(otherOpt);
                             DictLappendElem(interp, otherOpt, interpCtx->elswitch_forbid, name);
                             Tcl_DictObjPut(interp, argDefCtx->defDict, otherName, otherOpt);
-                            //printf("otherOpt: %s\n", Tcl_GetString(otherOpt));
-                            //fflush(stdout);
                             Tcl_DecrRefCount(otherOpt);
                         }
 //*****          Set default -value for shared keys
@@ -3446,14 +3634,14 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 Tcl_ListObjIndex(interp, argv, 0, &argLoc);
                 Tcl_IncrRefCount(elementDefDict);
                 Tcl_IncrRefCount(argLoc);
-                if (ValidateHelper(interp, &ctx, normal, elementDefDict, argLoc, interpCtx, &resultList)
+                if (ValidateHelperElem(interp, &ctx, normal, elementDefDict, argLoc, interpCtx, &resultList)
                     != TCL_OK) {
                     Tcl_DecrRefCount(elementDefDict);
                     Tcl_DecrRefCount(argLoc);
                     Tcl_DecrRefCount(normal);
                     goto cleanupOnError;
                 }
-                if (TypeChecker(interp, normal, elementDefDict, argLoc, interpCtx, &resultList) != TCL_OK) {
+                if (TypeCheckerElem(interp, normal, elementDefDict, argLoc, interpCtx, &resultList) != TCL_OK) {
                     Tcl_DecrRefCount(elementDefDict);
                     Tcl_DecrRefCount(argLoc);
                     Tcl_DecrRefCount(normal);
@@ -3789,12 +3977,12 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 Tcl_Obj *resultList = NULL;
                 Tcl_ListObjIndex(interp, params, indx, &parami);
                 Tcl_IncrRefCount(parami);
-                if (ValidateHelper(interp, &ctx, name, opt, parami, interpCtx, &resultList) != TCL_OK) {
+                if (ValidateHelperElem(interp, &ctx, name, opt, parami, interpCtx, &resultList) != TCL_OK) {
                     Tcl_DecrRefCount(parami);
                     goto cleanupOnError;
                 }
                 val = resultList;
-                if (TypeChecker(interp, name, opt, parami, interpCtx, &resultList) != TCL_OK) {
+                if (TypeCheckerElem(interp, name, opt, parami, interpCtx, &resultList) != TCL_OK) {
                     Tcl_DecrRefCount(parami);
                     goto cleanupOnError;
                 }

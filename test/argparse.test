@@ -957,6 +957,11 @@ testTemplate validateInlineTest-6 {} {} {
 -b=
 {c -validate {[string is integer $arg]}}} {-b 1 1 4.5} {c value "4.5" fails validation: [string is integer $arg]}
 
+testTemplate validateInlineTest-7 {} {} {
+{-a= -validate {[string is double $arg]} -catchall}
+-b=
+{-c= -validate {[string is integer $arg]}}} {-b 2 -c 4 -a 1 2 3} {a {1 2 3} b 2 c 4}
+
 
 ### Check global -enum option
 testTemplate enumTest-1 {} {-enum [dict create check1 {i o p} check2 {k m o}]} {
@@ -1495,6 +1500,21 @@ testTemplate typeTest-8 {} {} {
                  -errormsg {Number of terms -nterms must be more than zero}\
                  -help {Number of terms of interpolation polynom}}} {-a y -b False -nterms 10.5}\
         {-nterms value "10.5" is not of the type integer}
+
+testTemplate typeTest-9 {} {} {
+{-a= -type double -catchall}
+-b=
+{-c= -type integer}} {-b 2 -c 4 -a 1 2 3} {a {1 2 3} b 2 c 4}
+
+testTemplate typeTest-10 {} {} {
+{-a= -type double -catchall}
+-b=
+{-c= -type dict}} {-b 2 -c {a n u k} -a 1 2 3} {a {1 2 3} b 2 c {a n u k}}
+
+testTemplate typeTest-11 {} {} {
+{-a= -type double -catchall}
+-b=
+{-c= -type dict}} {-b 2 -c {a n u} -a 1 2 3} {-c value "a n u" is not of the type dict}
 
 ### Check -allow in definitions 
 testTemplate allowTest-1 {} {} {
