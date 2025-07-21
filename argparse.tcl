@@ -718,7 +718,7 @@ proc ::argparse {args} {
             } elseif {$argv ne {}} {
                 # The switch was given the expected argument.
                 set argv0 [@ [{*}$validateHelper $normal [dict get $def $name] [@ $argv 0]] 0]
-                set argv0 [@ [{*}$typeChecker $normal [dict get $def $name] [@ $argv 0]] 0]
+                set argv0 [@ [{*}$typeChecker $normal [dict get $def $name] $argv0] 0]
                 if {[info exists key]} {
                     if {[dict exists $def $name optional]} {
                         dict set result $key [list {} $argv0]
@@ -898,7 +898,7 @@ proc ::argparse {args} {
         if {[dict exists $alloc $name]} {
             if {![dict exists $opt catchall] && $name ne {}} {
                 set val [@ [{*}$validateHelper $name $opt [@ $params $i]] 0]
-                set val [@ [{*}$typeChecker $name $opt [@ $params $i]] 0]
+                set val [@ [{*}$typeChecker $name $opt $val] 0]
                 if {[dict exists $opt pass]} {
                     if {([string index $val 0] eq {-}) && ![dict exists $result [dict get $opt pass]]} {
                         dict lappend result [dict get $opt pass] --

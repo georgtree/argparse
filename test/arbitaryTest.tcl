@@ -37,9 +37,13 @@ proc testTemplate {testName descr arguments definitionsStr inputStr refStr} {
 }
 
 
-testTemplate typeTest-8 {} {} {
-{-a= -type alpha}
-{-b= -type boolean}
-{-nterms= -default 3 -type integer -validate {$arg > 0}\
-                 }} {-a y -b False -nterms 10.5} {a y b False c 10.5}
+
+
+
+
+testTemplate typeTest-10 {} {} {
+{-a= -type double -catchall}
+-b=
+{-c= -type dict}} {-b 2 -c {a n u k} -a 1 2 3} {a {1 2 3} b 2 c {a n u k}}
+
 

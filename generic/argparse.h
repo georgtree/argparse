@@ -209,13 +209,9 @@ int UnsetNestedDictKey(Tcl_Interp *interp, Tcl_Obj *dictObj, Tcl_Obj *outerKey, 
 int SetNestedDictKey(Tcl_Interp *interp, Tcl_Obj *dictObj, Tcl_Obj *outerKey, Tcl_Obj *innerKey, Tcl_Obj *value);
 int GetNestedDictValue(Tcl_Interp *interp, Tcl_Obj *dictObj, Tcl_Obj *outerKey, Tcl_Obj *innerKey, Tcl_Obj **valuePtr);
 int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *nameObj, Tcl_Obj *optDictObj,
-                   Tcl_Obj *argsListObj, ArgparseInterpCtx *interpCtx, Tcl_Obj **resultPtr);
-int ValidateHelperElem(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *nameObj, Tcl_Obj *optDictObj,
-                   Tcl_Obj *argObj, ArgparseInterpCtx *interpCtx, Tcl_Obj **resultPtr);
-int TypeChecker(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_Obj *argsListObj,
-                ArgparseInterpCtx *interpCtx, Tcl_Obj **resultPtr);
-int TypeCheckerElem(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_Obj *argObj,
-                ArgparseInterpCtx *interpCtx, Tcl_Obj **resultPtr);
+                   Tcl_Obj *argObj, ArgparseInterpCtx *interpCtx, int listFlag, Tcl_Obj **resultPtr);
+int TypeChecker(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_Obj *argObj,
+                ArgparseInterpCtx *interpCtx, int listFlag, Tcl_Obj **resultPtr);
 int DictLappend(Tcl_Interp *interp, Tcl_Obj *dictObjPtr, Tcl_Obj *keyObj, Tcl_Obj *valuesList);
 int DictLappendElem(Tcl_Interp *interp, Tcl_Obj *dictObjPtr, Tcl_Obj *keyObj, Tcl_Obj *valueObj);
 Tcl_Obj *BuildMissingSwitchesError(Tcl_Interp *interp, Tcl_Obj *missingList);

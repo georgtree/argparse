@@ -1002,7 +1002,7 @@ testTemplate enumTest-7 {} {-exact -enum [dict create check1 {i ort p} check2 {k
 testTemplate enumTest-8 {} {-enum [dict create check1 {i ort p} check2 {k m o}]} {
 {-a= -enum check1}
 -b=
-{-c= -enum check2}} {-a o -b 2 -c m} {a o b 2 c m}
+{-c= -enum check2}} {-a o -b 2 -c m} {a ort b 2 c m}
 
 ### Check inline -enum option
 testTemplate enumInlineTest-1 {} {} {
@@ -1034,6 +1034,31 @@ testTemplate enumInlineTest-6 {} {} {
 {a -enum {i o p}}
 -b=
 {c -enum {k m o}}} {-b 1 o p} {bad c value "p": must be k, m, or o}
+
+testTemplate enumInlineTest-7 {} {} {
+{-a= -enum {inp o p}}
+-b=
+{-c= -enum {k m o}}} {-b 1 -a i -c m} {a inp b 1 c m}
+
+testTemplate enumInlineTest-8 {} {-exact} {
+{-a= -enum {inp o p}}
+-b=
+{-c= -enum {k m o}}} {-b 1 -a i -c m} {bad -a value "i": must be inp, o, or p}
+
+testTemplate enumInlineTest-9 {} {} {
+{-a= -enum {inp o p} -catchall}
+-b=
+{-c= -enum {k m o}}} {-b 1 -c m -a i o p} {a {inp o p} b 1 c m}
+
+testTemplate enumInlineTest-10 {} {} {
+{a -enum {inp o p}}
+-b=
+{-c= -enum {k m o}}} {-b 1 -c m i} {a inp b 1 c m}
+
+testTemplate enumInlineTest-11 {} {} {
+{a -enum {inp o p} -catchall}
+-b=
+{-c= -enum {k m o}}} {-b 1 -c m i o p} {a {inp o p} b 1 c m}
 
 ### Check -upvar option
 test upvarTest-1 {} -body {
