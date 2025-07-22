@@ -191,7 +191,6 @@ int EvalRegsubFirstMatch(Tcl_Interp *interp, Tcl_RegExp regexp, Tcl_Obj *inputOb
                          Tcl_Obj **resultObjPtr);
 int InList(Tcl_Interp *interp, Tcl_Obj *itemObj, Tcl_Obj *listObj);
 Tcl_Obj *ListRange(Tcl_Interp *interp, Tcl_Obj *listObj, Tcl_Size start, Tcl_Size end);
-int GetArgsFromCaller(Tcl_Interp *interp, int *argcPtr, Tcl_Obj ***argvPtr);
 int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *definition,
                             ArgumentDefinition *argCtx, ArgparseInterpCtx *interpCtx);
 static inline int DictKeyExists(Tcl_Interp *interp, Tcl_Obj *dictObj, Tcl_Obj *keyStr);
@@ -233,3 +232,4 @@ Tcl_Obj *BuildHelpMessage(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Argume
                           Tcl_Obj *helpLevel, ArgparseInterpCtx *interpCtx);
 int PrefixMatch(Tcl_Interp *interp, const char **tableList, Tcl_Obj *matchObj, int useExact, int useMessage,
                     char *messageObj, int wantErrorMessage, Tcl_Obj **resultObjPtr);
+int InListStringMatch(Tcl_Interp *interp, Tcl_Obj *itemObj, Tcl_Obj *listObj);

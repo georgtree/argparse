@@ -691,7 +691,44 @@ int InList(Tcl_Interp *interp, Tcl_Obj *itemObj, Tcl_Obj *listObj) {
     const char *itemStr = Tcl_GetString(itemObj);
     for (Tcl_Size i = 0; i < listLen; ++i) {
         const char *elemStr = Tcl_GetString(elemPtrs[i]);
-        if (strcmp(itemStr, elemStr) == 0) {
+        if (!strcmp(itemStr, elemStr)) {
+            result = 1;
+            break;
+        }
+    }
+    return result;
+}
+
+//***    InListStringMatch function
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * InListStringMatch --
+ *
+ *      Check whether a given string item exists in a Tcl list by performing a string comparison.
+ *
+ * Parameters:
+ *      Tcl_Interp *interp        - input: target interpreter
+ *      Tcl_Obj *itemObj          - input: pointer to Tcl_Obj holding the string to search for
+ *      Tcl_Obj *listObj          - input: pointer to Tcl_Obj representing a list of string elements
+ *
+ * Results:
+ *      Returns 1 if itemObj matches any element in listObj (using Tcl_StringMatch()), otherwise returns 0
+ *
+ * Side Effects:
+ *      None
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
+int InListStringMatch(Tcl_Interp *interp, Tcl_Obj *itemObj, Tcl_Obj *listObj) {
+    Tcl_Obj **elemPtrs;
+    Tcl_Size listLen;
+    int result = 0;
+    Tcl_ListObjGetElements(interp, listObj, &listLen, &elemPtrs);
+    const char *itemStr = Tcl_GetString(itemObj);
+    for (Tcl_Size i = 0; i < listLen; ++i) {
+        const char *elemStr = Tcl_GetString(elemPtrs[i]);
+        if (Tcl_StringMatch(itemStr, elemStr)) {
             result = 1;
             break;
         }
@@ -1222,7 +1259,7 @@ Tcl_Obj *BuildAliasJoinString(Tcl_Interp *interp, Tcl_Obj *optDict, Tcl_Obj *nam
     return resultObj;
 }
 
-//***    BuildAliasJoinString function
+//***    BuildAllowedTypesSummary function
 /*
  *----------------------------------------------------------------------------------------------------------------------
  *
@@ -1742,7 +1779,7 @@ Tcl_Obj *BuildHelpMessage(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Argume
         if (DictKeyExists(interp, opt, interpCtx->elswitch_imply)) {
             Tcl_ListObjAppendElement(interp, combined, Tcl_NewStringObj("Expects two arguments.", -1));
         }
-        if (strcmp("switch", Tcl_GetString(type)) == 0) {
+        if (!strcmp("switch", Tcl_GetString(type))) {
             Tcl_Size combinedLen;
             Tcl_ListObjLength(interp, combined, &combinedLen);
             if (combinedLen > 0) {
@@ -2069,15 +2106,15 @@ int TypeChecker(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_O
             Tcl_ListObjGetElements(interp, argObj, &argc, &argv);
             for (Tcl_Size i = 0; i < argc; ++i) {
                 int isValid = 0;
-                if (strcmp(typeStr, "integer") == 0) {
+                if (!strcmp(typeStr, "integer")) {
                     int dummy;
                     isValid = (Tcl_GetIntFromObj(interp, argv[i], &dummy) == TCL_OK);
-                } else if (strcmp(typeStr, "double") == 0) {
+                } else if (!strcmp(typeStr, "double")) {
                     double dummy;
                     isValid = (Tcl_GetDoubleFromObj(interp, argv[i], &dummy) == TCL_OK);
-                } else if (strcmp(typeStr, "digit") == 0) {
+                } else if (!strcmp(typeStr, "digit")) {
                     isValid = Tcl_StringMatch(Tcl_GetString(argv[i]), "[0-9]*");
-                } else if (strcmp(typeStr, "boolean") == 0) {
+                } else if (!strcmp(typeStr, "boolean")) {
                     int dummy;
                     isValid = (Tcl_GetBooleanFromObj(interp, argv[i], &dummy) == TCL_OK);
                 } else {
@@ -2109,15 +2146,15 @@ int TypeChecker(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_O
             }
         } else {
             int isValid = 0;
-            if (strcmp(typeStr, "integer") == 0) {
+            if (!strcmp(typeStr, "integer")) {
                 int dummy;
                 isValid = (Tcl_GetIntFromObj(interp, argObj, &dummy) == TCL_OK);
-            } else if (strcmp(typeStr, "double") == 0) {
+            } else if (!strcmp(typeStr, "double")) {
                 double dummy;
                 isValid = (Tcl_GetDoubleFromObj(interp, argObj, &dummy) == TCL_OK);
-            } else if (strcmp(typeStr, "digit") == 0) {
+            } else if (!strcmp(typeStr, "digit")) {
                 isValid = Tcl_StringMatch(Tcl_GetString(argObj), "[0-9]*");
-            } else if (strcmp(typeStr, "boolean") == 0) {
+            } else if (!strcmp(typeStr, "boolean")) {
                 int dummy;
                 isValid = (Tcl_GetBooleanFromObj(interp, argObj, &dummy) == TCL_OK);
             } else {
@@ -2290,15 +2327,15 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
             Tcl_Obj **flagsListElems;
             Tcl_ListObjGetElements(interp, flagsList, &flagsListLen, &flagsListElems);
             for (Tcl_Size k = 0; k < flagsListLen; ++k) {
-                if (strcmp(Tcl_GetString(flagsListElems[k]), "=") == 0) {
+                if (!strcmp(Tcl_GetString(flagsListElems[k]), "=")) {
                     Tcl_DictObjPut(interp, optDict, interpCtx->elswitch_argument, interpCtx->misc_emptyStrObj);
-                } else if (strcmp(Tcl_GetString(flagsListElems[k]), "?") == 0) {
+                } else if (!strcmp(Tcl_GetString(flagsListElems[k]), "?")) {
                     Tcl_DictObjPut(interp, optDict, interpCtx->elswitch_optional, interpCtx->misc_emptyStrObj);
-                } else if (strcmp(Tcl_GetString(flagsListElems[k]), "!") == 0) {
+                } else if (!strcmp(Tcl_GetString(flagsListElems[k]), "!")) {
                     Tcl_DictObjPut(interp, optDict, interpCtx->elswitch_required, interpCtx->misc_emptyStrObj);
-                } else if (strcmp(Tcl_GetString(flagsListElems[k]), "*") == 0) {
+                } else if (!strcmp(Tcl_GetString(flagsListElems[k]), "*")) {
                     Tcl_DictObjPut(interp, optDict, interpCtx->elswitch_catchall, interpCtx->misc_emptyStrObj);
-                } else if (strcmp(Tcl_GetString(flagsListElems[k]), "^") == 0) {
+                } else if (!strcmp(Tcl_GetString(flagsListElems[k]), "^")) {
                     Tcl_DictObjPut(interp, optDict, interpCtx->elswitch_upvar, interpCtx->misc_emptyStrObj);
                 }
             }
@@ -2714,7 +2751,7 @@ Tcl_Obj *DuplicateDictWithNestedDicts(Tcl_Interp *interp, Tcl_Obj *dictObj) {
         Tcl_Obj *val;
         if (Tcl_DictObjGet(interp, newDict, key, &val) == TCL_OK && val != NULL) {
             const Tcl_ObjType *typePtr = val->typePtr;
-            if (typePtr != NULL && strcmp(typePtr->name, "dict") == 0) {
+            if (typePtr != NULL && !strcmp(typePtr->name, "dict")) {
                 Tcl_Obj *dupVal = DuplicateDictWithNestedDicts(interp, val);
                 Tcl_DictObjPut(interp, newDict, key, dupVal);
                 Tcl_DecrRefCount(dupVal);
@@ -2951,7 +2988,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     }
     /* End of global options. */
 
-    if (i < objc && strcmp(Tcl_GetString(objv[i]), "--") == 0) {
+    if (i < objc && !strcmp(Tcl_GetString(objv[i]), "--")) {
 	/* Explicit end of global options marker. Skip it */
         i++;
     }
@@ -2996,7 +3033,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
             Tcl_SetResult(interp, "element definition cannot be empty", TCL_STATIC);
             goto cleanupOnError;
         }
-        if (strcmp(Tcl_GetString(elemListElems[0]), "#") == 0) {
+        if (!strcmp(Tcl_GetString(elemListElems[0]), "#")) {
             if (elemListLen == 1) {
                 commentFlag = 1;
             }
@@ -3103,9 +3140,9 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 if (Tcl_DictObjGet(interp, argDefCtx->defDict, otherName, &otherOpt) != TCL_OK || otherOpt == NULL) {
                     continue;
                 }
-                if ((strcmp(Tcl_GetString(name), Tcl_GetString(otherName)) != 0) &&
+                if (!Tcl_StringMatch(Tcl_GetString(name), Tcl_GetString(otherName)) &&
                     DICT_GET_IF_EXISTS(interp, otherOpt, interpCtx->elswitch_key, &otherOptKey)) {
-                    if (strcmp(Tcl_GetString(optKey), Tcl_GetString(otherOptKey)) == 0) {
+                    if (Tcl_StringMatch(Tcl_GetString(optKey), Tcl_GetString(otherOptKey))) {
 //*****          Limit when shared keys may be used
                         if (DictKeyExists(interp, opt, interpCtx->elswitch_parameter)) {
                             Tcl_Obj *msg = Tcl_DuplicateObj(name);
@@ -3141,7 +3178,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                         int nameInForbidList = 0;
                         Tcl_Obj *otherOptForbidList = NULL;
                         if (DICT_GET_IF_EXISTS(interp, otherOpt, interpCtx->elswitch_forbid, &otherOptForbidList)) {
-                            nameInForbidList = InList(interp, name, otherOptForbidList);
+                            nameInForbidList = InListStringMatch(interp, name, otherOptForbidList);
                         }
                         if (!DictKeyExists(interp, otherOpt, interpCtx->elswitch_forbid) || !nameInForbidList) {
                             Tcl_Obj *otherOpt = NULL;
@@ -3336,7 +3373,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 Tcl_ListObjIndex(interp, matchList, 1, &name);
                 Tcl_ListObjIndex(interp, matchList, 2, &equal);
                 Tcl_ListObjIndex(interp, matchList, 3, &val);
-            } else if (strcmp(Tcl_GetString(arg), "--") == 0) {
+            } else if (!strcmp(Tcl_GetString(arg), "--")) {
                 params = argv;
                 Tcl_DecrRefCount(arg);
                 break;
@@ -3430,7 +3467,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
 //*****          Keep track of which elements are present
             Tcl_DictObjPutKeyList(interp, argDefCtx->defDict, 2, (Tcl_Obj *[]){name, interpCtx->misc_presentSwitchObj},
                                   interpCtx->misc_emptyStrObj);
-            if (strcmp(Tcl_GetString(equal), "=") == 0) {
+            if (!strcmp(Tcl_GetString(equal), "=")) {
                 Tcl_Obj *elems[1] = {val};
                 if (Tcl_IsShared(argv)) {
                     argv = Tcl_DuplicateObj(argv);
@@ -3482,7 +3519,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 break;
             } else if (!NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_argument)) {
                 // The switch expects no arguments.
-                if (strcmp(Tcl_GetString(equal), "=") == 0) {
+                if (!strcmp(Tcl_GetString(equal), "=")) {
                     Tcl_Obj *msg = Tcl_DuplicateObj(normal);
                     Tcl_AppendStringsToObj(msg, " doesn't allow an argument", NULL);
                     Tcl_SetObjResult(interp, msg);
@@ -3542,7 +3579,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                         objv[0] = normal;
                         objv[1] = resultList;
                         DictLappend(interp, resultDict, passLoc, Tcl_NewListObj(2, objv));
-                    } else if (strcmp(Tcl_GetString(equal), "=") == 0) {
+                    } else if (!strcmp(Tcl_GetString(equal), "=")) {
                         DictLappendElem(interp, resultDict, passLoc, arg);
                     } else {
                         Tcl_Obj *objv[2];
@@ -3793,10 +3830,10 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 Tcl_ListObjGetElements(interp, presentedNames, &presentedNamesListLen, &presentedNamesListElems);
                 for (Tcl_Size j = 0; j < presentedNamesListLen; ++j) {
                     Tcl_Obj *presentedName = presentedNamesListElems[j];
-                    if (strcmp(Tcl_GetString(presentedName), Tcl_GetString(name)) == 0) {
+                    if (Tcl_StringMatch(Tcl_GetString(presentedName), Tcl_GetString(name))) {
                         continue;
                     }
-                    if (!InList(interp, presentedName, allowedNames)) {
+                    if (!InListStringMatch(interp, presentedName, allowedNames)) {
                         Tcl_Obj *msg = Tcl_DuplicateObj(name);
                         Tcl_AppendStringsToObj(msg, " doesn't allow ", Tcl_GetString(presentedName), NULL);
                         Tcl_SetObjResult(interp, msg);
