@@ -204,8 +204,6 @@ Tcl_Obj *BuildAllowedTypesSummary(Tcl_Interp *interp, Tcl_Obj *allowedTypes);
 int DictKeys(Tcl_Interp *interp, Tcl_Obj *dictObj, Tcl_Size *keyCountPtr, Tcl_Obj ***keyObjsPtr);
 Tcl_Obj *MergeTwoLists(Tcl_Interp *interp, Tcl_Obj *list1, Tcl_Obj *list2);
 int EvalLsort(Tcl_Interp *interp, Tcl_Obj *listObj, Tcl_Obj **resultObjPtr);
-int UnsetNestedDictKey(Tcl_Interp *interp, Tcl_Obj *dictObj, Tcl_Obj *outerKey, Tcl_Obj *innerKey);
-int SetNestedDictKey(Tcl_Interp *interp, Tcl_Obj *dictObj, Tcl_Obj *outerKey, Tcl_Obj *innerKey, Tcl_Obj *value);
 int GetNestedDictValue(Tcl_Interp *interp, Tcl_Obj *dictObj, Tcl_Obj *outerKey, Tcl_Obj *innerKey, Tcl_Obj **valuePtr);
 int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *nameObj, Tcl_Obj *optDictObj,
                    Tcl_Obj *argObj, ArgparseInterpCtx *interpCtx, int listFlag, Tcl_Obj **resultPtr);

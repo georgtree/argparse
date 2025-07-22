@@ -949,88 +949,6 @@ int GetNestedDictValue(Tcl_Interp *interp, Tcl_Obj *dictObj, Tcl_Obj *outerKey, 
     return TCL_OK;
 }
 
-//***    UnsetNestedDictKey function
-/*
- *----------------------------------------------------------------------------------------------------------------------
- *
- * UnsetNestedDictKey --
- *
- *      Remove a key from a nested dictionary structure (dictionary-of-dictionaries).
- *
- * Parameters:
- *      Tcl_Interp *interp         - input: target interpreter
- *      Tcl_Obj *dictObj           - input: pointer to Tcl_Obj representing the outer dictionary
- *      Tcl_Obj *outerKey          - input: pointer to Tcl_Obj representing the key for the sub-dictionary
- *      Tcl_Obj *innerKey          - input: pointer to Tcl_Obj representing the key to remove from the sub-dictionary
- *
- * Results:
- *      Code TCL_OK - always returned, regardless of whether the keys existed
- *
- * Side Effects:
- *      If the sub-dictionary or outer dictionary is shared, it is duplicated before modification  
- *      The innerKey is removed from the sub-dictionary, and the updated sub-dictionary is re-inserted into dictObj
- *
- *----------------------------------------------------------------------------------------------------------------------
- */
-int UnsetNestedDictKey(Tcl_Interp *interp, Tcl_Obj *dictObj, Tcl_Obj *outerKey, Tcl_Obj *innerKey) {
-    Tcl_Obj *nestedDict = NULL;
-    Tcl_DictObjGet(interp, dictObj, outerKey, &nestedDict);
-    if (nestedDict == NULL) {
-        return TCL_OK;
-    }
-    if (Tcl_IsShared(nestedDict)) {
-        nestedDict = Tcl_DuplicateObj(nestedDict);
-    }
-    Tcl_DictObjRemove(interp, nestedDict, innerKey);
-    if (Tcl_IsShared(dictObj)) {
-        dictObj = Tcl_DuplicateObj(dictObj);
-    }
-    Tcl_DictObjPut(interp, dictObj, outerKey, nestedDict);
-    return TCL_OK;
-}
-
-//***    SetNestedDictKey function
-/*
- *----------------------------------------------------------------------------------------------------------------------
- *
- * SetNestedDictKey --
- *
- *      Set a value in a nested dictionary structure (dictionary-of-dictionaries), creating intermediate dictionaries
- *      as needed.
- *
- * Parameters:
- *      Tcl_Interp *interp         - input: target interpreter
- *      Tcl_Obj *dictObj           - input: pointer to Tcl_Obj representing the outer dictionary
- *      Tcl_Obj *outerKey          - input: pointer to Tcl_Obj representing the key for the sub-dictionary
- *      Tcl_Obj *innerKey          - input: pointer to Tcl_Obj representing the key to set within the sub-dictionary
- *      Tcl_Obj *value             - input: pointer to Tcl_Obj holding the value to store
- *
- * Results:
- *      Code TCL_OK - value was successfully set
- *
- * Side Effects:
- *      If the sub-dictionary or outer dictionary is shared, it is duplicated before modification  
- *      A new sub-dictionary is created if the outerKey does not exist  
- *      The modified sub-dictionary is re-inserted into the outer dictionary under outerKey
- *
- *----------------------------------------------------------------------------------------------------------------------
- */
-int SetNestedDictKey(Tcl_Interp *interp, Tcl_Obj *dictObj, Tcl_Obj *outerKey, Tcl_Obj *innerKey, Tcl_Obj *value) {
-    Tcl_Obj *nestedDict = NULL;
-    Tcl_DictObjGet(interp, dictObj, outerKey, &nestedDict);
-    if (nestedDict == NULL) {
-        nestedDict = Tcl_NewDictObj();
-    } else if (Tcl_IsShared(nestedDict)) {
-        nestedDict = Tcl_DuplicateObj(nestedDict);
-    }
-    Tcl_DictObjPut(interp, nestedDict, innerKey, value);
-    if (Tcl_IsShared(dictObj)) {
-        dictObj = Tcl_DuplicateObj(dictObj);
-    }
-    Tcl_DictObjPut(interp, dictObj, outerKey, nestedDict);
-    return TCL_OK;
-}
-
 //***    DictLappend function
 /*
  *----------------------------------------------------------------------------------------------------------------------
@@ -3493,20 +3411,25 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 DictKeys(interp, argDefCtx->defDict, &keyCount, &keyObjs);
                 for (Tcl_Size idx = 0; idx < keyCount; ++idx) {
                     Tcl_Obj *other = keyObjs[idx];
-                    UnsetNestedDictKey(interp, argDefCtx->defDict, other, interpCtx->elswitch_required);
-                    UnsetNestedDictKey(interp, argDefCtx->defDict, other, interpCtx->elswitch_require);
-                    UnsetNestedDictKey(interp, argDefCtx->defDict, other, interpCtx->elswitch_forbid);
-                    UnsetNestedDictKey(interp, argDefCtx->defDict, other, interpCtx->elswitch_allow);
+                    Tcl_DictObjRemoveKeyList(interp, argDefCtx->defDict, 2,
+                                             (Tcl_Obj *[]){other, interpCtx->elswitch_required});
+                    Tcl_DictObjRemoveKeyList(interp, argDefCtx->defDict, 2,
+                                             (Tcl_Obj *[]){other, interpCtx->elswitch_require});
+                    Tcl_DictObjRemoveKeyList(interp, argDefCtx->defDict, 2,
+                                             (Tcl_Obj *[]){other, interpCtx->elswitch_forbid});
+                    Tcl_DictObjRemoveKeyList(interp, argDefCtx->defDict, 2,
+                                             (Tcl_Obj *[]){other, interpCtx->elswitch_allow});
                     if (NestedDictKeyExists(interp, argDefCtx->defDict, other, interpCtx->elswitch_parameter)) {
-                        SetNestedDictKey(interp, argDefCtx->defDict, other, interpCtx->elswitch_optional,
-                                         interpCtx->misc_emptyStrObj);
+                        Tcl_DictObjPutKeyList(interp, argDefCtx->defDict, 2,
+                                              (Tcl_Obj *[]){other, interpCtx->elswitch_optional},
+                                              interpCtx->misc_emptyStrObj);
                     }
                 }
                 free(keyObjs);
             }
 //*****          Keep track of which elements are present
-            SetNestedDictKey(interp, argDefCtx->defDict, name, interpCtx->misc_presentSwitchObj,
-                             interpCtx->misc_emptyStrObj);
+            Tcl_DictObjPutKeyList(interp, argDefCtx->defDict, 2, (Tcl_Obj *[]){name, interpCtx->misc_presentSwitchObj},
+                                  interpCtx->misc_emptyStrObj);
             if (strcmp(Tcl_GetString(equal), "=") == 0) {
                 Tcl_Obj *elems[1] = {val};
                 if (Tcl_IsShared(argv)) {
@@ -3660,7 +3583,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                     argv = Tcl_DuplicateObj(argv);
                 }
                 Tcl_ListObjReplace(interp, argv, 0, 0, valueLen, valueElems);
-                UnsetNestedDictKey(interp, argDefCtx->defDict, name, interpCtx->elswitch_imply);
+                Tcl_DictObjRemoveKeyList(interp, argDefCtx->defDict, 2, (Tcl_Obj *[]){name, interpCtx->elswitch_imply});
             }
         }
 //*****          Build list of missing required switches
@@ -3722,8 +3645,9 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
             if (count > 0) {
                 Tcl_DictObjPut(interp, allocDict, name, Tcl_NewWideIntObj(1));
                 Tcl_DictObjRemove(interp, argDefCtx->omittedDict, name);
-                SetNestedDictKey(interp, argDefCtx->defDict, name, interpCtx->misc_presentSwitchObj,
-                                 interpCtx->misc_emptyStrObj);
+                Tcl_DictObjPutKeyList(interp, argDefCtx->defDict, 2,
+                                      (Tcl_Obj *[]){name, interpCtx->misc_presentSwitchObj},
+                                      interpCtx->misc_emptyStrObj);
                 count--;
             } else {
                 Tcl_ListObjAppendElement(interp, missingList, name);
@@ -3745,8 +3669,9 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 !NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_catchall)) {
                 Tcl_DictObjPut(interp, allocDict, name, Tcl_NewWideIntObj(1));
                 Tcl_DictObjRemove(interp, argDefCtx->omittedDict, name);
-                SetNestedDictKey(interp, argDefCtx->defDict, name, interpCtx->misc_presentSwitchObj,
-                                 interpCtx->misc_emptyStrObj);
+                Tcl_DictObjPutKeyList(interp, argDefCtx->defDict, 2,
+                                      (Tcl_Obj *[]){name, interpCtx->misc_presentSwitchObj},
+                                      interpCtx->misc_emptyStrObj);
                 if (--count == 0) {
                     break;
                 }
