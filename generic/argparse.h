@@ -51,8 +51,7 @@ typedef struct {
 //** A per-interpreter context for argparse.
 typedef struct {
     Tcl_HashTable argDefHashTable; // arguments definition hash table
-    Tcl_Obj *list_elswitchWithArgs, *list_allowedTypes, *list_templateSubstNames,
-        *list_helpGenSubstNames; // cashed list objects
+    Tcl_Obj *list_allowedTypes, *list_templateSubstNames, *list_helpGenSubstNames; // cashed list objects
     Tcl_Obj *misc_emptyStrObj, *misc_presentSwitchObj, *misc_validateMsgStrObj, *misc_dashStrObj,
         *misc_doubleDashStrObj; // cashed miscellanious objects
     Tcl_Obj *elswitch_alias, *elswitch_argument, *elswitch_boolean, *elswitch_catchall, *elswitch_default,
@@ -123,13 +122,13 @@ static const char *elementSwitches[] = {
         (name) = NULL;                                                                                                 \
     } while (0)
 #define ELEMENT_SWITCH_COUNT_WARGS 14
-static const char *elementSwitchesWithArgsNames[ELEMENT_SWITCH_COUNT_WARGS] = {
+static const char *elementSwitchesWithArgsNames[] = {
     "alias",   "default",  "enum",  "forbid", "imply", "key",  "pass",
-    "require", "validate", "value", "type",   "allow", "help", "errormsg"};
+    "require", "validate", "value", "type",   "allow", "help", "errormsg", NULL};
 #define ELEMENT_SWITCH_COUNT_TYPES 19
-static const char *allowedTypes[ELEMENT_SWITCH_COUNT_TYPES] = {
+static const char *allowedTypes[] = {
     "alnum", "alpha", "ascii", "boolean", "control", "dict",  "digit",       "double",   "graph", "integer",
-    "list",  "lower", "print", "punct",   "space",   "upper", "wideinteger", "wordchar", "xdigit"};
+    "list",  "lower", "print", "punct",   "space",   "upper", "wideinteger", "wordchar", "xdigit", NULL};
 #define TEMPLATE_SUBST_COUNT 5
 static const char *templateSubstNames[TEMPLATE_SUBST_COUNT] = {"\\\\\\\\", "\\\\", "\\\\%", "%", "%"};
 #define HELP_GEN_SUBST_COUNT 4

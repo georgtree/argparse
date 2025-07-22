@@ -325,10 +325,10 @@ int PrefixMatch(Tcl_Interp *interp, const char **tableList, Tcl_Obj *matchObj, i
     if (code == TCL_OK) {
         if (resultObjPtr != NULL) {
             *resultObjPtr = Tcl_NewStringObj(tableList[index], -1);
-            Tcl_ResetResult(interp);
         }
+        Tcl_ResetResult(interp);
     } else {
-        if (wantErrorMessage) {
+        if (wantErrorMessage && (resultObjPtr != NULL)) {
             *resultObjPtr = Tcl_GetObjResult(interp);
         } else {
             Tcl_ResetResult(interp);
@@ -2314,8 +2314,7 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
             const char *str = Tcl_GetStringFromObj(prefixResult, &len);
             SAFE_DECR_REF_AND_NULL(prefixResult);
             switchName = Tcl_NewStringObj(str + 1, len - 1);
-            /* should I repeat it every time, maybe find something more efficient ? */
-            if (!InList(interp, switchName, interpCtx->list_elswitchWithArgs)) {
+            if (PrefixMatch(interp, elementSwitchesWithArgsNames, switchName, 1, 0, NULL, 0, NULL) == TCL_ERROR) {
 //****       Process switches without arguments
                 Tcl_DictObjPut(interp, optDict, switchName, interpCtx->misc_emptyStrObj);
             } else if (j == (elemListLen - 1)) {
@@ -2609,7 +2608,7 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
 //*****          Check for allowed arguments to -type
         Tcl_Obj *typeVal = NULL;
         if (DICT_GET_IF_EXISTS(interp, optDict, interpCtx->elswitch_type, &typeVal)) {
-            if (!InList(interp, typeVal, interpCtx->list_allowedTypes)) {
+            if (PrefixMatch(interp, allowedTypes, typeVal, 1, 0, NULL, 0, NULL) == TCL_ERROR) {
                 Tcl_Obj *msg = Tcl_DuplicateObj(interpCtx->elswitch_type);
                 Tcl_AppendStringsToObj(
                     msg, " ", Tcl_GetString(typeVal), " is not in the list of allowed types, must be ",
@@ -2824,7 +2823,6 @@ Tcl_Obj *DuplicateDictWithNestedDicts(Tcl_Interp *interp, Tcl_Obj *dictObj) {
 static void FreeArgparseInterpCtx(void *clientData) {
     ArgparseInterpCtx *interpCtx = (ArgparseInterpCtx *)clientData;
     CleanupAllArgumentDefinitions(interpCtx);
-    FREE_LIST(interpCtx->list_elswitchWithArgs);
     FREE_LIST(interpCtx->list_allowedTypes);
     FREE_LIST(interpCtx->list_templateSubstNames);
     FREE_LIST(interpCtx->list_helpGenSubstNames);
@@ -2889,7 +2887,6 @@ static ArgparseInterpCtx *InitArgparseInterpCtx(Tcl_Interp *interp) {
         return NULL;
     }
     Tcl_InitHashTable(&interpCtx->argDefHashTable, TCL_STRING_KEYS);
-    INIT_LIST(interpCtx->list_elswitchWithArgs, elementSwitchesWithArgsNames, ELEMENT_SWITCH_COUNT_WARGS);
     INIT_LIST(interpCtx->list_allowedTypes, allowedTypes, ELEMENT_SWITCH_COUNT_TYPES);
     INIT_LIST(interpCtx->list_templateSubstNames, templateSubstNames, TEMPLATE_SUBST_COUNT);
     INIT_LIST(interpCtx->list_helpGenSubstNames, helpGenSubstNames, HELP_GEN_SUBST_COUNT);
