@@ -283,6 +283,60 @@ int EvalPrefixMatch(Tcl_Interp *interp, Tcl_Obj *tableList, Tcl_Obj *matchObj, i
     return code;
 }
 
+//***    EvalPrefixMatch function
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * PrefixMatch --
+ *
+ *      Perform a prefix match against a list of strings using Tcl_GetIndexFromObj, optionally including flags and
+ *      custom error messages. On success, returns the matched string as a Tcl_Obj.
+ *
+ * Parameters:
+ *      Tcl_Interp *interp            - input: target interpreter
+ *      const char **tableList        - input: NULL-terminated array of valid string prefixes to match against
+ *      Tcl_Obj *matchObj             - input: pointer to Tcl_Obj holding the string to match
+ *      int useExact                  - input: if non-zero, require exact match via TCL_EXACT flag
+ *      int useMessage                - input: if non-zero and messageObj is non-NULL, use messageObj as error message
+ *      char *messageObj              - input: optional custom error message (ignored if useMessage is 0 or NULL)
+ *      int wantErrorMessage          - input: if non-zero, store error message in *resultObjPtr on failure
+ *      Tcl_Obj **resultObjPtr        - output: double pointer to store result (matched string) or error message
+ *
+ * Results:
+ *      Code TCL_OK - stores Tcl_Obj with matching string from tableList in *resultObjPtr (ref count incremented)
+ *      Code TCL_ERROR and wantErrorMessage == 1 - stores pointer to error message in *resultObjPtr (no ref count change)
+ *      Code TCL_ERROR and wantErrorMessage == 0 - clears interpreter result; *resultObjPtr remains unchanged
+ *
+ * Side Effects:
+ *      Reference count of the returned result object is incremented on success
+ *      Interpreter result is reset on success or when no error message is returned
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
+int PrefixMatch(Tcl_Interp *interp, const char **tableList, Tcl_Obj *matchObj, int useExact, int useMessage,
+                    char *messageObj, int wantErrorMessage, Tcl_Obj **resultObjPtr) {
+    int code;
+    int flags = 0;
+    if (useExact) {
+        flags = flags | TCL_EXACT;
+    }
+    int index;
+    code = Tcl_GetIndexFromObj(interp, matchObj, tableList, messageObj, flags, &index);
+    if (code == TCL_OK) {
+        if (resultObjPtr != NULL) {
+            *resultObjPtr = Tcl_NewStringObj(tableList[index], -1);
+            Tcl_ResetResult(interp);
+        }
+    } else {
+        if (wantErrorMessage) {
+            *resultObjPtr = Tcl_GetObjResult(interp);
+        } else {
+            Tcl_ResetResult(interp);
+        }
+    }
+    return code;
+}
+
 //***    EvalRegsubFirstMatch function
 /*
  *----------------------------------------------------------------------------------------------------------------------
@@ -2252,8 +2306,7 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
         }
         Tcl_Obj *optDict = Tcl_NewDictObj();
         for (Tcl_Size j = 1; j < elemListLen; ++j) {
-            if (EvalPrefixMatch(interp, interpCtx->list_elementSwitches, elemListElems[j], 1, 0,
-                                interpCtx->misc_emptyStrObj, 1, &prefixResult) == TCL_ERROR) {
+            if (PrefixMatch(interp, elementSwitches, elemListElems[j], 1, 1, "option", 1, &prefixResult) == TCL_ERROR) {
                 Tcl_SetObjResult(interp, prefixResult);
                 return TCL_ERROR;
             }
@@ -2570,7 +2623,6 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
 //****       Prepare to identify omitted elements
         Tcl_DictObjPut(interp, argCtx->omittedDict, name, interpCtx->misc_emptyStrObj);
     }
-
     return TCL_OK;
 }
 
@@ -2772,7 +2824,6 @@ Tcl_Obj *DuplicateDictWithNestedDicts(Tcl_Interp *interp, Tcl_Obj *dictObj) {
 static void FreeArgparseInterpCtx(void *clientData) {
     ArgparseInterpCtx *interpCtx = (ArgparseInterpCtx *)clientData;
     CleanupAllArgumentDefinitions(interpCtx);
-    FREE_LIST(interpCtx->list_elementSwitches);
     FREE_LIST(interpCtx->list_elswitchWithArgs);
     FREE_LIST(interpCtx->list_allowedTypes);
     FREE_LIST(interpCtx->list_templateSubstNames);
@@ -2838,7 +2889,6 @@ static ArgparseInterpCtx *InitArgparseInterpCtx(Tcl_Interp *interp) {
         return NULL;
     }
     Tcl_InitHashTable(&interpCtx->argDefHashTable, TCL_STRING_KEYS);
-    INIT_LIST(interpCtx->list_elementSwitches, elementSwitches, ELEMENT_SWITCH_COUNT);
     INIT_LIST(interpCtx->list_elswitchWithArgs, elementSwitchesWithArgsNames, ELEMENT_SWITCH_COUNT_WARGS);
     INIT_LIST(interpCtx->list_allowedTypes, allowedTypes, ELEMENT_SWITCH_COUNT_TYPES);
     INIT_LIST(interpCtx->list_templateSubstNames, templateSubstNames, TEMPLATE_SUBST_COUNT);

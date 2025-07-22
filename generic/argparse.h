@@ -51,7 +51,7 @@ typedef struct {
 //** A per-interpreter context for argparse.
 typedef struct {
     Tcl_HashTable argDefHashTable; // arguments definition hash table
-    Tcl_Obj *list_elementSwitches, *list_elswitchWithArgs, *list_allowedTypes, *list_templateSubstNames,
+    Tcl_Obj *list_elswitchWithArgs, *list_allowedTypes, *list_templateSubstNames,
         *list_helpGenSubstNames; // cashed list objects
     Tcl_Obj *misc_emptyStrObj, *misc_presentSwitchObj, *misc_validateMsgStrObj, *misc_dashStrObj,
         *misc_doubleDashStrObj; // cashed miscellanious objects
@@ -103,11 +103,11 @@ typedef struct {
 
 //** element switches declarations and definitions
 #define ELEMENT_SWITCH_COUNT 28
-static const char *elementSwitches[ELEMENT_SWITCH_COUNT] = {
+static const char *elementSwitches[] = {
     "-alias",    "-argument",   "-boolean", "-catchall", "-default",    "-enum",     "-forbid",
     "-ignore",   "-imply",      "-keep",    "-key",      "-level",      "-optional", "-parameter",
     "-pass",     "-reciprocal", "-require", "-required", "-standalone", "-switch",   "-upvar",
-    "-validate", "-value",      "-type",    "-allow",    "-help",       "-errormsg", "-hsuppress"};
+    "-validate", "-value",      "-type",    "-allow",    "-help",       "-errormsg", "-hsuppress", NULL};
 
 #define INIT_LIST(name, strings, count)                                                                                \
     do {                                                                                                               \
@@ -234,3 +234,5 @@ Tcl_Obj *EvaluateIndent(Tcl_Interp *interp, Tcl_Obj *stringObj, Tcl_Obj *spacesO
 Tcl_Obj *EvaluateStringToTitle(Tcl_Interp *interp, Tcl_Obj *stringObj, Tcl_Obj *firstIndexObj, Tcl_Obj *lastIndexObj);
 Tcl_Obj *BuildHelpMessage(Tcl_Interp *interp, GlobalSwitchesContext *ctx, ArgumentDefinition *argDefCtx,
                           Tcl_Obj *helpLevel, ArgparseInterpCtx *interpCtx);
+int PrefixMatch(Tcl_Interp *interp, const char **tableList, Tcl_Obj *matchObj, int useExact, int useMessage,
+                    char *messageObj, int wantErrorMessage, Tcl_Obj **resultObjPtr);
