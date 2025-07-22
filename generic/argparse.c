@@ -2501,7 +2501,8 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
             for (Tcl_Size f = 0; f < aliasValListLen; ++f) {
                 Tcl_DictObjPut(interp, argCtx->aliasesDict, aliasValListElems[f], name);
             }
-            Tcl_ListObjAppendElement(interp, argCtx->switchesList, BuildAliasJoinString(interp, optDict, name, interpCtx));
+            Tcl_ListObjAppendElement(interp, argCtx->switchesList,
+                                     BuildAliasJoinString(interp, optDict, name, interpCtx));
         }
 //*****          Check for collision between alias and other switch name
         Tcl_Obj *switchValCollision = NULL;
@@ -3102,7 +3103,8 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
         }
 //****       Create reciprocal requirements
         Tcl_Obj *otherList = NULL;
-        if ((HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_RECIPROCAL) || DictKeyExists(interp, opt, interpCtx->elswitch_reciprocal)) &&
+        if ((HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_RECIPROCAL) ||
+             DictKeyExists(interp, opt, interpCtx->elswitch_reciprocal)) &&
             DICT_GET_IF_EXISTS(interp, opt, interpCtx->elswitch_require, &otherList)) {
             Tcl_Size otherListLen;
             Tcl_Obj **otherListElems;
@@ -4001,7 +4003,8 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 Tcl_DictObjGet(interp, argDefCtx->defDict, name, &opt);
                 Tcl_Obj *keyLoc = NULL;
                 if (DICT_GET_IF_EXISTS(interp, opt, interpCtx->elswitch_key, &keyLoc)) {
-                    if (!DictKeyExists(interp, opt, interpCtx->elswitch_keep) && !DictKeyExists(interp, resultDict, keyLoc)) {
+                    if (!DictKeyExists(interp, opt, interpCtx->elswitch_keep) &&
+                        !DictKeyExists(interp, resultDict, keyLoc)) {
                         Tcl_UnsetVar(interp, Tcl_GetString(keyLoc), 0);
                     }
                 }
