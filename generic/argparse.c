@@ -3237,11 +3237,10 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 Tcl_SetReturnOptions(interp, optionsDict);
                 return TCL_RETURN;
             } else {
-                Tcl_Channel stdoutChan = Tcl_GetStdChannel(TCL_STDOUT);
-                if (stdoutChan != NULL) {
-                    Tcl_WriteChars(stdoutChan, Tcl_GetString(finalDescrList), -1);
-                    Tcl_Flush(stdoutChan);
-                }
+                Tcl_Obj *cmd[2];
+                cmd[0] = Tcl_NewStringObj("puts", -1);
+                cmd[1] = finalDescrList;
+                Tcl_EvalObjv(interp, 2, cmd, 0);
                 Tcl_ResetResult(interp);
                 Tcl_Obj *optionsDict = Tcl_NewDictObj();
                 Tcl_DictObjPut(interp, optionsDict, Tcl_NewStringObj("-level", -1), helpLevel);
