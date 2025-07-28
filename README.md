@@ -237,6 +237,7 @@ The following example definition may conceivably be used by a command that store
 ```
 
 The example of such procedure is [source](https://stackoverflow.com/a/38436286/21306711):
+
 ```tcl
 proc genNums {args} {
     argparse {
@@ -347,9 +348,9 @@ When `-switch` and `-optional` are both used, `-catchall`, `-default`, and `-upv
 Parameter is the mandatory [element](#element) that is provided without any preceding flags before name, and it's
 position in the list of [definitions](#definition) is the same as it must be passed to `argparse` procedure.
 
-In definition list it is also could be explicitly stated with `-parameter` [element switch](#element-switch). Parameters 
-can be made optional with `-optional`. `-catchall` also makes parameters optional, unless `-required` is used, in which 
-case at least one argument must be assigned to the parameter. Otherwise, using `-required` with `-parameter` has no 
+In definition list it is also could be explicitly stated with `-parameter` [element switch](#element-switch). Parameters
+can be made optional with `-optional`. `-catchall` also makes parameters optional, unless `-required` is used, in which
+case at least one argument must be assigned to the parameter. Otherwise, using `-required` with `-parameter` has no
 effect.
 
 ### Value
@@ -457,7 +458,7 @@ Comment is the [element](#element) started with `#` at the start of definition i
 |:---------------------------|:----------------------------------------------------------------------------------------|
 | `-switch`                  | Element is a switch; conflicts with `-parameter`                                        |
 | `-parameter`               | Element is a parameter; conflicts with `-switch`                                        |
-| `-alias aliasName`         | Alias name(s); requires `-switch`                                                       |
+| `-alias aliasName`         | Alias names; requires `-switch`                                                          |
 | `-ignore`                  | Element is omitted from result; conflicts with `-key` and `-pass`                       |
 | `-key keyName`             | Override key name; not affected by `-template`                                          |
 | `-pass keyName`            | Pass through to result key; not affected by `-template`                                 |
@@ -574,6 +575,7 @@ with `-argument` (or `=` [shorthand](#shorthand-flag)). Conflicts with `-upvar`,
 `-switch`, `-optional` and `type` is forbidden.
 
 As an example, we can use previously proposed procedure:
+
 ```tcl
 proc genNums {args} {
     argparse {
@@ -612,8 +614,10 @@ element. For example, the previously defined procedure could be rewritted with c
 ```tcl
 proc exponentiation {args} {
     argparse {
-        {-b!= -validate {[string is double $arg]} -errormsg {Value of switch '$name' must be double, '$arg' was provided}}
-        {-n!= -validate {[string is double $arg]} -errormsg {Value of switch '$name' must be double, '$arg' was provided}}
+        {-b!= -validate {[string is double $arg]} -errormsg {Value of switch '$name' must be double,\
+                                                                '$arg' was provided}}
+        {-n!= -validate {[string is double $arg]} -errormsg {Value of switch '$name' must be double,\
+                                                                '$arg' was provided}}
     }
     return [expr {$b**$n}]
 }
@@ -630,6 +634,7 @@ Value of switch '-n' must be double, '4t' was provided
 If the presence of an [element](#element) should be forbidden in combination with certain other elements, use the
 `-forbid` [switch](#element-switch) followed by a list of element names. In next example, we can forbid using
 arguments that logically incompatible:
+
 ```tcl
 proc sheduleEvent {args} {
     set arguments [argparse -inline\
@@ -665,13 +670,16 @@ One of the switches `-allday`, `-duration` or `-endtime` must be presented, so a
 argument processing.
 
 Normal operation:
+
 ```tcl
 sheduleEvent -duration 01:30 20-12-2024 13:30
 ```
 ```text
 ==> duration 01:30 date 20-12-2024 time 13:30
 ```
+
 Error is issued in case of providing conflicting switches:
+
 ```tcl
 sheduleEvent -allday -duration 01:30 20-12-2024 13:30
 ```
@@ -679,8 +687,6 @@ sheduleEvent -allday -duration 01:30 20-12-2024 13:30
 -allday conflicts with -duration
 ```
 
-
-`-forbid` conflicts with `-allow` element switch.
 
 ## Allow
 
@@ -707,13 +713,16 @@ proc sheduleEvent {args} {
 ```
 
 Normal operation:
+
 ```tcl
 sheduleEvent -duration 01:30 20-12-2024 13:30
 ```
 ```text
 ==> duration 01:30 date 20-12-2024 time 13:30
 ```
+
 Error is issued in case of providing conflicting switches:
+
 ```tcl
 sheduleEvent -allday -duration 01:30 20-12-2024 13:30
 ```
@@ -727,6 +736,7 @@ allday doesn't allow duration
 Swtich with name `-reciprocal` is presented both as [global switch](#global-switch) and
 [element switch](#element-switch). In global case all [elements](#element) with `-require` switch are reciprocal to
 elements with names in argument to `-require` switch. Let's consider this definition:
+
 ```tcl
 argparse -reciprocal {
     {-a= -require {b c}}
@@ -737,6 +747,7 @@ argparse -reciprocal {
 
 With `-reciprocal` global switch, the `-b` and `-c` switches also require `-a` switch, because `-a` switch requires
 them, so, it is equivalent to:
+
 ```tcl
 argparse {
     {-a= -require {b c}}
@@ -764,6 +775,7 @@ proc implyTest {args} {
 ```
 
 If we provide an additional argument to `-b`, it will be assigned to `-c` [key](#key):
+
 ```tcl
 implyTest -a 1 -b 2 3
 ```
@@ -772,6 +784,7 @@ implyTest -a 1 -b 2 3
 ```
 
 If additional argument is not provided, the error is raised:
+
 ```tcl
 implyTest -a 1 -b 2
 ```
@@ -781,6 +794,7 @@ implyTest -a 1 -b 2
 
 
 And if `-b` switch with argument is not provided at all, `-c` is also considered omitted:
+
 ```tcl
 implyTest -a 1
 ```
@@ -832,6 +846,7 @@ The most important usage is to use template to create array where names of eleme
 substitution mark `%` symbol is used.
 
 As an example let's use our previous procedure:
+
 ```tcl
 proc genNums {args} {
     argparse -template vars(%) {
@@ -889,12 +904,29 @@ proc genNums {args} {
 }
 genNums -help
 ```
+```text
+Procedure generates sequence of numbers.. Can accepts unambiguous prefixes
+instead of switches names. Accepts switches only before parameters.
+    Switches:
+        -from - Expects argument. Provides start of sequence. Default value is
+            1. Type double.
+        -to - Expects argument. Provides end of sequence. Default value is 10.
+            Type double.
+        -step - Expects argument. Provides step between adjacent numbers of
+            sequence. Default value is 1. Type double.
+        -prec - Expects argument. Provides precision of numbers in the sequence.
+            Default value is 1. Type double.
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.
+```
 
 Generated message contains information important for the user of the command, not all information that is in definition
 of elements. Individual description for each parameter can be added as and argument to [element switch](#element-switch)
 `-help`.
 
 Let's use another procedure, this time with switches and parameters presented:
+
 ```tcl
 proc sheduleEvent {args} {
     set arguments [argparse -help {Procedure shedules event at cetain date. At least one of the switches must be\
@@ -913,6 +945,24 @@ proc sheduleEvent {args} {
     return $arguments
 }
 sheduleEvent -help
+```
+```text
+Procedure shedules event at cetain date. At least one of the switches must be
+provided: -allday, -duration or -endtime. Can accepts unambiguous prefixes
+instead of switches names. Accepts switches only before parameters.
+    Switches:
+        -allday - Set event duration for the rest of the day. Allows date or
+            time.
+        -duration - Expects argument. Set event duration in format HH:MM. Allows
+            date or time.
+        -endtime - Expects argument. Set end time of event in format HH:MM.
+            Allows date or time.
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.
+    Parameters:
+        date - Provides date in format DD-MM-YY.
+        time - Provides time in format HH:MM.
 ```
 
 ## Argument Processing Sequence
@@ -936,6 +986,7 @@ second, to optional, non-catchall parameters; and last to catchall parameters. F
 allocated number of arguments.
 
 Let's look at normal operation in the next example:
+
 ```tcl
 proc argProcSeq {args} {
     set arguments [argparse -inline {
@@ -955,6 +1006,7 @@ argProcSeq -c -a 1 2
 
 First switches are processed, and there one argument left and it is assigned to required parameter `r`. If we provided
 another additional argument, it will be assigned to optional parameter `e`:
+
 ```tcl
 argProcSeq -c -a 1 2 3
 ```
@@ -963,6 +1015,7 @@ argProcSeq -c -a 1 2 3
 ```
 
 More complicated example:
+
 ```tcl
 proc argProcSeq {args} {
     set arguments [argparse -inline {
@@ -983,6 +1036,7 @@ argProcSeq -c -a 1 2 3
 
 In that case the last two arguments is assigned to *two* required parameters. If we provide two arguments after switch
 `-a`, then again they are assigned to required parameters, but because `-a` require argument, the error is thrown:
+
 ```tcl
 argProcSeq -c -a 1 2
 ```
@@ -992,6 +1046,7 @@ argProcSeq -c -a 1 2
 
 
 If we provide four arguments after `-a`:
+
 ```tcl
 argProcSeq -c -a 1 2 3 4
 ```
@@ -1004,6 +1059,7 @@ are there - they are assigned to two required parameters, **but** if three param
 also gets the value in *order in definition*.
 
 There is a special case when argument to parameter looks like a switch:
+
 ```tcl
 argProcSeq -c -a 1 -2 3 4
 ```
@@ -1014,6 +1070,7 @@ bad switch "-2": must be -a, -b, or -c
 
 The error is appeared because after counting required parameters (two required), last two arguments are assigned to
 that parameters, and the -2 looks like a switch, so argparse tries to parse it as a switch. To fix that we can use `--`:
+
 ```tcl
 argProcSeq -c -a 1 -- -2 3 4
 ```
@@ -1022,6 +1079,7 @@ argProcSeq -c -a 1 -- -2 3 4
 ```
 
 If one of the last two switches appears with `-`, all is processed as it should:
+
 ```tcl
 argProcSeq -c -a 1 -- 2 -3 4
 ```
@@ -1034,12 +1092,13 @@ argProcSeq -c -a 1 -- 2 -3 4
 If `-mixed` is not used and `-pfirst` is used, the required parameters are counted, then that number of arguments at the
 **start** of the argument list are treated as parameters even if they begin with `-`.
 
-The global switch `-pfirst` allows to assign first `n` arguments to `n` **required** parameters irrespectively of how these
-arguments looks like. Then switches and optional parameters are processed. 
+The global switch `-pfirst` allows to assign first `n` arguments to `n` **required** parameters irrespectively of how
+these arguments looks like. Then switches and optional parameters are processed.
 
 But, even if number arguments are enough to assign to both required and optional parameters, required parameters are 
 assigned first - it is different to how it works when parameters arguments are provided after switches. These two
 examples demonstrating that:
+
 ```tcl
 proc argProcSeq {args} {
     set arguments [argparse -inline -pfirst {
@@ -1066,6 +1125,7 @@ argProcSeq 1 2 3 -c -a 1
 ```
 
 Also, the remaining parameters could be provided after switches:
+
 ```tcl
 argProcSeq 1 2 -c -a 1 3
 ```
@@ -1074,6 +1134,7 @@ argProcSeq 1 2 -c -a 1 3
 ```
 
 But it doesn't work in case of parameter argument looking like a switch:
+
 ```tcl
 argProcSeq 1 2 -c -a 1 -3
 ```
@@ -1083,6 +1144,7 @@ bad switch "-3": must be -a, -b, or -c
 
 
 In that case we can use the same trick with `--` termination of switch processing:
+
 ```tcl
 argProcSeq 1 2 -c -a 1 -- -3
 ```
@@ -1090,7 +1152,8 @@ argProcSeq 1 2 -c -a 1 -- -3
 ==> c {} a 1 d 1 f 2 e -3
 ```
 
-Also there is a special treatment of `-catchall` parameter;
+Also there is a special treatment of `-catchall` parameter:
+
 ```tcl
 proc argProcSeq {args} {
     set arguments [argparse -inline -pfirst {
@@ -1112,8 +1175,6 @@ argProcSeq 1 2 -c -a 1 3 4
 
 Catchall parameters are treated after required and optional parameters.
 
-`-pfirst` is in conflict with `-mixed`.
-
 ### Processing with mixed
 
 When the `-mixed` switch is used, switch processing continues after encountering arguments that start with `-` or
@@ -1121,6 +1182,7 @@ When the `-mixed` switch is used, switch processing continues after encountering
 special `--` switch terminates switch processing and forces all remaining arguments to be parameters.
 
 Let's see in example:
+
 ```tcl
 proc argProcSeq {args} {
     set arguments [argparse -inline -mixed {
@@ -1144,6 +1206,7 @@ The result is different from the last example from [chapter](#processing-with-pa
 case the process is going as usual, but can be interrupted by providing switch with possible arguments.
 
 The processing could be altered multiple times:
+
 ```tcl
 proc argProcSeq {args} {
     set arguments [argparse -inline -mixed {
@@ -1165,6 +1228,7 @@ argProcSeq 1 -c 2 -a 1 3 4
 
 Result is exact the same as in the previous example. Problems started when parameter looks like a switch, in that case
 only `--` can force the rest of arguments considered as parameters arguments:
+
 ```tcl
 argProcSeq 1 -c -2 -a 1 3 4
 ```
