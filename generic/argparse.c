@@ -212,78 +212,9 @@ void FreeArgumentDefinition(ArgumentDefinition *argDef) {
         Tcl_DecrRefCount(argDef->catchall);
     free(argDef);
 }
-//** Functions that evaluates Tcl commands
-//***    EvalPrefixMatch function
-/*
- *----------------------------------------------------------------------------------------------------------------------
- *
- * EvalPrefixMatch --
- *
- *      Call the Tcl `tcl::prefix match` command with optional flags and arguments to perform a prefix match.
- *
- * Parameters:
- *      Tcl_Interp *interp            - input: target interpreter
- *      Tcl_Obj *tableList            - input: pointer to Tcl_Obj with list of valid prefixes to match against
- *      Tcl_Obj *matchObj             - input: pointer to Tcl_Obj holding the string to match
- *      int useExact                  - input: if non-zero, include the `-exact` option in the command
- *      int useMessage                - input: if non-zero and messageObj is non-NULL, include `-message` option
- *      Tcl_Obj *messageObj           - input: optional message string for the `-message` flag; ignored if NULL
- *      int wantErrorMessage          - input: if non-zero, store the error message in *resultObjPtr on failure
- *      Tcl_Obj **resultObjPtr        - output: double pointer to store the result of the prefix match or error message
- *
- * Results:
- *      Code TCL_OK - stores pointer to Tcl_Obj holding the matching result in *resultObjPtr (reference count 
- *                    incremented)
- *      Code TCL_ERROR and wantErrorMessage == 1 - stores pointer to error message in *resultObjPtr (no ref count change)
- *      Code TCL_ERROR and wantErrorMessage == 0 - clears interpreter result; *resultObjPtr remains unchanged
- *
- * Side Effects:
- *      Reference count of the result object is incremented on success  
- *      All temporary Tcl_Obj arguments are created and properly reference-managed  
- *      Interpreter result is reset unless returning an error message
- *
- *----------------------------------------------------------------------------------------------------------------------
- */
-int EvalPrefixMatch(Tcl_Interp *interp, Tcl_Obj *tableList, Tcl_Obj *matchObj, int useExact, int useMessage,
-                    Tcl_Obj *messageObj, int wantErrorMessage, Tcl_Obj **resultObjPtr) {
-    Tcl_Obj *objv[8];
-    int objc = 0;
-    int code;
-    objv[objc++] = Tcl_NewStringObj("tcl::prefix", -1);
-    objv[objc++] = Tcl_NewStringObj("match", -1);
-    if (useMessage && messageObj != NULL) {
-        objv[objc++] = Tcl_NewStringObj("-message", -1);
-        objv[objc++] = messageObj;
-    }
-    if (useExact) {
-        objv[objc++] = Tcl_NewStringObj("-exact", -1);
-    }
-    objv[objc++] = tableList;
-    objv[objc++] = matchObj;
-    for (int i = 0; i < objc; i++) {
-        Tcl_IncrRefCount(objv[i]);
-    }
-    code = Tcl_EvalObjv(interp, objc, objv, 0);
-    if (code == TCL_OK) {
-        if (resultObjPtr != NULL) {
-            *resultObjPtr = Tcl_GetObjResult(interp);
-            Tcl_IncrRefCount(*resultObjPtr);
-            Tcl_ResetResult(interp);
-        }
-    } else {
-        if (wantErrorMessage && resultObjPtr != NULL) {
-            *resultObjPtr = Tcl_GetObjResult(interp);
-        } else {
-            Tcl_ResetResult(interp);
-        }
-    }
-    for (int i = 0; i < objc; i++) {
-        Tcl_DecrRefCount(objv[i]);
-    }
-    return code;
-}
 
-//***    EvalPrefixMatch function
+//** Functions that evaluates Tcl commands
+//***    PrefixMatch function
 /*
  *----------------------------------------------------------------------------------------------------------------------
  *
@@ -1919,7 +1850,6 @@ Tcl_Obj *BuildHelpMessage(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Argume
  *      Code TCL_ERROR - validation failed or a Tcl error occurred; result is stored in the interpreter result
  *
  * Side Effects:
- *      - May call `EvalPrefixMatch()` if `-enum` is present  
  *      - May evaluate a Tcl expression using `Tcl_ExprBooleanObj` for custom validation logic via `-validate`  
  *      - Temporary Tcl variables `arg`, `name`, and `opt` are set/unset during validation  
  *      - If `-errormsg` is defined, it is used as the error message with variable substitution (`Tcl_SubstObj`)  
@@ -1936,11 +1866,20 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
     Tcl_Obj *errormsgObj = NULL;
     Tcl_Obj *validateMsgObj = NULL;
     Tcl_Obj *enumPrefixListObj = NULL;
+    const char **table = NULL;
     if (Tcl_IsShared(nameObj)) {
         nameObj = Tcl_DuplicateObj(nameObj);
     }
     if (DICT_GET_IF_EXISTS(interp, optDictObj, interpCtx->elswitch_enum, &enumList)) {
         enumExists = 1;
+        Tcl_Size enumListLen;
+        Tcl_Obj **enumListElems;
+        Tcl_ListObjGetElements(interp, enumList, &enumListLen, &enumListElems);
+        table = ckalloc((enumListLen + 1) * sizeof(char *));
+        for (Tcl_Size i = 0; i < enumListLen; ++i) {
+            table[i] = Tcl_GetString(enumListElems[i]);
+        }
+        table[enumListLen] = NULL;
     }
     if (DICT_GET_IF_EXISTS(interp, optDictObj, interpCtx->elswitch_validate, &validateCmd)) {
         validateExists = 1;
@@ -1957,18 +1896,19 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
             if (enumExists) {
                 Tcl_Obj *messageStr = Tcl_ObjPrintf("%s value", Tcl_GetString(nameObj));
                 Tcl_IncrRefCount(messageStr);
-                int useExact = 0;
+                int flags = TCL_INDEX_TEMP_TABLE;
                 if (HAS_GLOBAL_SWITCH(ctx, GLOBAL_SWITCH_EXACT)) {
-                    useExact = 1;
+                    flags = flags | TCL_EXACT;
                 }
-                Tcl_Obj *prefixResult = NULL;
-                int code = EvalPrefixMatch(interp, enumList, argv[i], useExact, 1, messageStr, 1, &prefixResult);
+                int index;
+                int code = Tcl_GetIndexFromObj(interp, argv[i], table, Tcl_GetString(messageStr), flags, &index);
                 if (code != TCL_OK) {
                     Tcl_DecrRefCount(messageStr);
+                    ckfree(table);
                     return TCL_ERROR;
                 }
                 Tcl_DecrRefCount(messageStr);
-                Tcl_ListObjAppendElement(interp, enumPrefixListObj, prefixResult);
+                Tcl_ListObjAppendElement(interp, enumPrefixListObj, Tcl_NewStringObj(table[index], -1));
             } else if (validateExists) {
                 Tcl_ObjSetVar2(interp, Tcl_NewStringObj("opt", -1), NULL, optDictObj, 0);
                 Tcl_ObjSetVar2(interp, Tcl_NewStringObj("name", -1), NULL, nameObj, 0);
@@ -2009,18 +1949,20 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
         if (enumExists) {
             Tcl_Obj *messageStr = Tcl_ObjPrintf("%s value", Tcl_GetString(nameObj));
             Tcl_IncrRefCount(messageStr);
-            int useExact = 0;
+            int flags = TCL_INDEX_TEMP_TABLE;
             if (HAS_GLOBAL_SWITCH(ctx, GLOBAL_SWITCH_EXACT)) {
-                useExact = 1;
+                flags = flags | TCL_EXACT;
             }
-            Tcl_Obj *prefixResult = NULL;
-            int code = EvalPrefixMatch(interp, enumList, argObj, useExact, 1, messageStr, 1, &prefixResult);
+            int index;
+            int code = Tcl_GetIndexFromObj(interp, argObj, table, Tcl_GetString(messageStr), flags, &index);
             if (code != TCL_OK) {
                 Tcl_DecrRefCount(messageStr);
+                ckfree(table);
                 return TCL_ERROR;
             }
             Tcl_DecrRefCount(messageStr);
-            *resultPtr = prefixResult;
+            *resultPtr = Tcl_NewStringObj(table[index], -1);
+            ckfree(table);
             return TCL_OK;
         } else if (validateExists) {
             Tcl_ObjSetVar2(interp, Tcl_NewStringObj("opt", -1), NULL, optDictObj, 0);
@@ -2059,6 +2001,7 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
     }
     if (enumExists && listFlag) {
         *resultPtr = enumPrefixListObj;
+        ckfree(table);
     } else {
         *resultPtr = argObj;
     }
@@ -2226,7 +2169,6 @@ int TypeChecker(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_O
  *          - Auto-inference of certain switches (e.g., `-argument` implied by `-optional`)
  *          - Conflicts between global options like `-inline` and element-specific options like `-keep`
  *          - Checks for duplicate names, aliases, and upvar collisions
- *      - Uses prefix matching for element switches via `EvalPrefixMatch`
  *      - Expands enums and validators from global references if enabled (via `-enum` or `-validate`)
  *      - Rewrites `-boolean` into `-default 0 -value 1`
  *      - Applies substitution templates for implicit `-key` names using `-template`
@@ -3406,34 +3348,41 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
 //*****          Perform switch name lookup
             Tcl_DictSearch search;
             Tcl_Obj *key = NULL, *data = NULL;
-            Tcl_Obj *matchList1 = Tcl_NewListObj(0, NULL);
             int done;
+            int count = 0;
+            int capacity = 8;
+            const char **table = ckalloc(capacity * sizeof(char *));
             Tcl_DictObjFirst(interp, argDefCtx->defDict, &search, &key, &data, &done);
             while (!done) {
                 if (DictKeyExists(interp, data, interpCtx->elswitch_switch)) {
-                    Tcl_ListObjAppendElement(interp, matchList1, key);
-                } else {
-                    Tcl_DictObjNext(&search, &key, &data, &done);
-                    continue;
+                    if (count >= capacity) {
+                        capacity *= 2;
+                        table = ckrealloc((void *)table, capacity * sizeof(char *));
+                    }
+                    table[count++] = Tcl_GetString(key);
                 }
                 Tcl_DictObjNext(&search, &key, &data, &done);
             }
             Tcl_DictObjDone(&search);
-            Tcl_Obj *prefixName = NULL;
-            int prefixCode =
-                EvalPrefixMatch(interp, matchList1, name, 0, 1, Tcl_NewStringObj("switch", -1), 0, &prefixName);
+            if (count >= capacity) {
+                table = ckrealloc((void *)table, (capacity + 1) * sizeof(char *));
+            }
+            table[count] = NULL;
+            const char *const *tablePtr = table;
+            int index;
+            int prefixCode = Tcl_GetIndexFromObj(interp, name, tablePtr, "switch", TCL_INDEX_TEMP_TABLE, &index);
+            Tcl_ResetResult(interp);
+            ckfree(table);
             if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_switch)) {
                 // Exact match.  No additional lookup needed
-                SAFE_DECR_REF(prefixName);
             } else if (!HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_EXACT) && prefixCode == TCL_OK) {
                 // Use the switch whose prefix unambiguously matches
-                name = prefixName;
+                name = Tcl_NewStringObj(tablePtr[index], -1);
                 normal = Tcl_DuplicateObj(interpCtx->misc_dashStrObj);
                 Tcl_AppendStringsToObj(normal, Tcl_GetString(name), NULL);
             } else if (DictKeyExists(interp, argDefCtx->defDict, interpCtx->misc_emptyStrObj)) {
                 // Use default pass-through if defined
                 name = interpCtx->misc_emptyStrObj;
-                SAFE_DECR_REF(prefixName);
             } else {
                 // Fail if this is an invalid switch
                 Tcl_Obj *result = NULL;
@@ -4034,7 +3983,6 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     FreeGlobalSwitches(&ctx);
     FreeArgumentDefinition(argDefCtx);
     return TCL_OK;
-
 
 cleanupOnError:
     SAFE_DECR_REF(definition);

@@ -185,8 +185,6 @@ static const char *elemSwConstraints[ELEMENT_SWITCH_COUNT_CONSTRAINTS] = {"requi
 extern DLLEXPORT int Argparse_c_Init(Tcl_Interp *interp);
 static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]);
 void FreeGlobalSwitches(GlobalSwitchesContext *ctx);
-int EvalPrefixMatch(Tcl_Interp *interp, Tcl_Obj *tableList, Tcl_Obj *matchObj, int useExact, int useMessage,
-                    Tcl_Obj *messageObj, int wantErrorMessage, Tcl_Obj **resultObjPtr);
 int EvalRegsubFirstMatch(Tcl_Interp *interp, Tcl_RegExp regexp, Tcl_Obj *inputObj, Tcl_Obj *replacementObj,
                          Tcl_Obj **resultObjPtr);
 int InList(Tcl_Interp *interp, Tcl_Obj *itemObj, Tcl_Obj *listObj);
