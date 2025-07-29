@@ -152,7 +152,7 @@ ArgumentDefinition *DeepCopyArgumentDefinition(Tcl_Interp *interp, const Argumen
     if (src == NULL)
         return NULL;
 
-    ArgumentDefinition *copy = malloc(sizeof(ArgumentDefinition));
+    ArgumentDefinition *copy = Tcl_AttemptAlloc(sizeof(ArgumentDefinition));
     if (copy == NULL)
         return NULL; // malloc failure
     copy->defDict = DuplicateDictWithNestedDicts(interp, src->defDict);
@@ -210,7 +210,7 @@ void FreeArgumentDefinition(ArgumentDefinition *argDef) {
         Tcl_DecrRefCount(argDef->omittedDict);
     if (argDef->catchall)
         Tcl_DecrRefCount(argDef->catchall);
-    free(argDef);
+    Tcl_Free(argDef);
 }
 
 //** Functions that evaluates Tcl commands
@@ -1082,23 +1082,23 @@ int DictKeys(Tcl_Interp *interp, Tcl_Obj *dictObj, Tcl_Size *keyCountPtr, Tcl_Ob
     int done;
     Tcl_Size capacity = 16;
     Tcl_Size count = 0;
-    Tcl_Obj **keys = (Tcl_Obj **)malloc(capacity * sizeof(Tcl_Obj *));
+    Tcl_Obj **keys = (Tcl_Obj **)Tcl_Alloc(capacity * sizeof(Tcl_Obj *));
     if (keys == NULL) {
         Tcl_SetResult(interp, "out of memory", TCL_STATIC);
         return TCL_ERROR;
     }
     if (Tcl_DictObjFirst(interp, dictObj, &search, &key, &value, &done) != TCL_OK) {
-        free(keys);
+        Tcl_Free(keys);
         return TCL_ERROR;
     }
     while (!done) {
         if (count == capacity) {
             // grow the array
             capacity *= 2;
-            Tcl_Obj **newKeys = (Tcl_Obj **)realloc(keys, capacity * sizeof(Tcl_Obj *));
+            Tcl_Obj **newKeys = (Tcl_Obj **)Tcl_Realloc(keys, capacity * sizeof(Tcl_Obj *));
             if (newKeys == NULL) {
                 Tcl_DictObjDone(&search);
-                free(keys);
+                Tcl_Free(keys);
                 Tcl_SetResult(interp, "out of memory", TCL_STATIC);
                 return TCL_ERROR;
             }
@@ -1875,7 +1875,7 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
         Tcl_Size enumListLen;
         Tcl_Obj **enumListElems;
         Tcl_ListObjGetElements(interp, enumList, &enumListLen, &enumListElems);
-        table = ckalloc((enumListLen + 1) * sizeof(char *));
+        table = Tcl_Alloc((enumListLen + 1) * sizeof(char *));
         for (Tcl_Size i = 0; i < enumListLen; ++i) {
             table[i] = Tcl_GetString(enumListElems[i]);
         }
@@ -1904,7 +1904,7 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
                 int code = Tcl_GetIndexFromObj(interp, argv[i], table, Tcl_GetString(messageStr), flags, &index);
                 if (code != TCL_OK) {
                     Tcl_DecrRefCount(messageStr);
-                    ckfree(table);
+                    Tcl_Free(table);
                     return TCL_ERROR;
                 }
                 Tcl_DecrRefCount(messageStr);
@@ -1957,12 +1957,12 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
             int code = Tcl_GetIndexFromObj(interp, argObj, table, Tcl_GetString(messageStr), flags, &index);
             if (code != TCL_OK) {
                 Tcl_DecrRefCount(messageStr);
-                ckfree(table);
+                Tcl_Free(table);
                 return TCL_ERROR;
             }
             Tcl_DecrRefCount(messageStr);
             *resultPtr = Tcl_NewStringObj(table[index], -1);
-            ckfree(table);
+            Tcl_Free(table);
             return TCL_OK;
         } else if (validateExists) {
             Tcl_ObjSetVar2(interp, Tcl_NewStringObj("opt", -1), NULL, optDictObj, 0);
@@ -2001,7 +2001,7 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
     }
     if (enumExists && listFlag) {
         *resultPtr = enumPrefixListObj;
-        ckfree(table);
+        Tcl_Free(table);
     } else {
         *resultPtr = argObj;
     }
@@ -2561,7 +2561,7 @@ ArgumentDefinition *CreateAndCacheArgDef(Tcl_Interp *interp, ArgparseInterpCtx *
         return (ArgumentDefinition *)Tcl_GetHashValue(entry);
     }
     // Allocate and init
-    ArgumentDefinition *argDef = malloc(sizeof(ArgumentDefinition));
+    ArgumentDefinition *argDef = Tcl_Alloc(sizeof(ArgumentDefinition));
     if (!argDef) {
         Tcl_SetResult(interp, "Failed to allocate memory for ArgumentDefinition", TCL_STATIC);
         Tcl_DeleteHashEntry(entry);
@@ -2701,7 +2701,7 @@ Tcl_Obj *DuplicateDictWithNestedDicts(Tcl_Interp *interp, Tcl_Obj *dictObj) {
             }
         }
     }
-    free(keys);
+    Tcl_Free(keys);
     return newDict;
 }
 
@@ -3037,7 +3037,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                         Tcl_AppendStringsToObj(msg, " -", Tcl_GetString(constraint),
                                                " references undefined element: ", Tcl_GetString(otherName), NULL);
                         Tcl_SetObjResult(interp, msg);
-                        free(keyObjs);
+                        Tcl_Free(keyObjs);
                         goto cleanupOnError;
                     }
                 }
@@ -3093,21 +3093,21 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                             Tcl_AppendStringsToObj(msg, " cannot be a parameter because it shares a key with ",
                                                    Tcl_GetString(otherName), NULL);
                             Tcl_SetObjResult(interp, msg);
-                            free(keyObjs);
+                            Tcl_Free(keyObjs);
                             goto cleanupOnError;
                         } else if (DictKeyExists(interp, opt, interpCtx->elswitch_argument)) {
                             Tcl_Obj *msg = Tcl_DuplicateObj(name);
                             Tcl_AppendStringsToObj(msg, " cannot use -argument because it shares a key with ",
                                                    Tcl_GetString(otherName), NULL);
                             Tcl_SetObjResult(interp, msg);
-                            free(keyObjs);
+                            Tcl_Free(keyObjs);
                             goto cleanupOnError;
                         } else if (DictKeyExists(interp, opt, interpCtx->elswitch_catchall)) {
                             Tcl_Obj *msg = Tcl_DuplicateObj(name);
                             Tcl_AppendStringsToObj(msg, " cannot use -catchall because it shares a key with ",
                                                    Tcl_GetString(otherName), NULL);
                             Tcl_SetObjResult(interp, msg);
-                            free(keyObjs);
+                            Tcl_Free(keyObjs);
                             goto cleanupOnError;
                         } else if (DictKeyExists(interp, opt, interpCtx->elswitch_default) &&
                                    DictKeyExists(interp, otherOpt, interpCtx->elswitch_default)) {
@@ -3115,7 +3115,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                             Tcl_AppendStringsToObj(msg, " and ", Tcl_GetString(otherName),
                                                    " cannot both use -default because they share a key", NULL);
                             Tcl_SetObjResult(interp, msg);
-                            free(keyObjs);
+                            Tcl_Free(keyObjs);
                             goto cleanupOnError;
                         }
 //*****          Create forbid constraints on shared keys
@@ -3152,7 +3152,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
             }
         }
     }
-    free(keyObjs);
+    Tcl_Free(keyObjs);
 //****       Build help string
     if (HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_HELP)) {
         if (Tcl_PkgRequire(interp, "textutil::adjust", "0", 0) == NULL) {
@@ -3351,13 +3351,13 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
             int done;
             int count = 0;
             int capacity = 8;
-            const char **table = ckalloc(capacity * sizeof(char *));
+            const char **table = Tcl_Alloc(capacity * sizeof(char *));
             Tcl_DictObjFirst(interp, argDefCtx->defDict, &search, &key, &data, &done);
             while (!done) {
                 if (DictKeyExists(interp, data, interpCtx->elswitch_switch)) {
                     if (count >= capacity) {
                         capacity *= 2;
-                        table = ckrealloc((void *)table, capacity * sizeof(char *));
+                        table = Tcl_Realloc((void *)table, capacity * sizeof(char *));
                     }
                     table[count++] = Tcl_GetString(key);
                 }
@@ -3365,14 +3365,14 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
             }
             Tcl_DictObjDone(&search);
             if (count >= capacity) {
-                table = ckrealloc((void *)table, (capacity + 1) * sizeof(char *));
+                table = Tcl_Realloc((void *)table, (capacity + 1) * sizeof(char *));
             }
             table[count] = NULL;
             const char *const *tablePtr = table;
             int index;
             int prefixCode = Tcl_GetIndexFromObj(interp, name, tablePtr, "switch", TCL_INDEX_TEMP_TABLE, &index);
             Tcl_ResetResult(interp);
-            ckfree(table);
+            Tcl_Free(table);
             if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_switch)) {
                 // Exact match.  No additional lookup needed
             } else if (!HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_EXACT) && prefixCode == TCL_OK) {
@@ -3412,7 +3412,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                                               interpCtx->misc_emptyStrObj);
                     }
                 }
-                free(keyObjs);
+                Tcl_Free(keyObjs);
             }
 //*****          Keep track of which elements are present
             Tcl_DictObjPutKeyList(interp, argDefCtx->defDict, 2, (Tcl_Obj *[]){name, interpCtx->misc_presentSwitchObj},
