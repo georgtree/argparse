@@ -136,6 +136,7 @@ GDB = gdb
 VALGRIND = valgrind
 VALGRINDARGS = --tool=memcheck --num-callers=8 --leak-resolution=high \
 		  --leak-check=yes --show-reachable=yes -v
+CALLGRINDARGS = --tool=callgrind
 .SUFFIXES: .c .$(OBJEXT)
 endif
 
@@ -203,6 +204,14 @@ gdb-test: binaries libraries
 valgrind: binaries libraries
 	$(TCLSH_ENV) $(PKG_ENV) $(VALGRIND) $(VALGRINDARGS) $(TCLSH_PROG) \
 	    `@CYGPATH@ $(srcdir)/test/all.tcl` $(TESTFLAGS)
+
+callgrind: binaries libraries
+	$(TCLSH_ENV) $(PKG_ENV) $(VALGRIND) $(CALLGRINDARGS) $(TCLSH_PROG) \
+	    `@CYGPATH@ $(srcdir)/test/all.tcl` $(TESTFLAGS)
+
+callgrindperf: binaries libraries
+	$(TCLSH_ENV) $(PKG_ENV) $(VALGRIND) $(CALLGRINDARGS) $(TCLSH_PROG) \
+	    `@CYGPATH@ $(srcdir)/test/performance_test.tcl` $(TESTFLAGS)
 
 valgrindshell: binaries libraries
 	$(TCLSH_ENV) $(PKG_ENV) $(VALGRIND) $(VALGRINDARGS) $(TCLSH_PROG) $(SCRIPT)

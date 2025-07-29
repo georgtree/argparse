@@ -690,7 +690,7 @@ int InListStringMatch(Tcl_Interp *interp, Tcl_Obj *itemObj, Tcl_Obj *listObj) {
  *----------------------------------------------------------------------------------------------------------------------
  */
 Tcl_Obj *MergeTwoLists(Tcl_Interp *interp, Tcl_Obj *list1, Tcl_Obj *list2) {
-    Tcl_Obj *result = Tcl_NewListObj(0, NULL); // Resulting flat list
+    Tcl_Obj *result = Tcl_NewListObj(0, NULL);
     Tcl_Obj **elems;
     Tcl_Size len;
     Tcl_ListObjGetElements(interp, list1, &len, &elems);
@@ -959,7 +959,6 @@ int DictLappend(Tcl_Interp *interp, Tcl_Obj *dictObjPtr, Tcl_Obj *keyObj, Tcl_Ob
     for (Tcl_Size i = 0; i < listLen; i++) {
         Tcl_ListObjAppendElement(interp, existingList, elements[i]);
     }
-    
     Tcl_DictObjPut(interp, dictObjPtr, keyObj, existingList);
     return TCL_OK;
 }
@@ -2857,10 +2856,6 @@ extern DLLEXPORT int Argparse_Init(Tcl_Interp *interp) {
     if (Tcl_InitStubs(interp, "8.6-10.0", 0) == NULL) {
         return TCL_ERROR;
     }
-    /* Provide the current package */
-    if (Tcl_PkgProvideEx(interp, PACKAGE_NAME, PACKAGE_VERSION, NULL) != TCL_OK) {
-        return TCL_ERROR;
-    }
     /* Initialize interpreter context */
     ArgparseInterpCtx *interpCtx = InitArgparseInterpCtx(interp);
     if (interpCtx == NULL) {
@@ -2868,6 +2863,10 @@ extern DLLEXPORT int Argparse_Init(Tcl_Interp *interp) {
     }
     /* Register commands */
     Tcl_CreateObjCommand2(interp, "argparse", (Tcl_ObjCmdProc2 *)ArgparseCmdProc2, interpCtx, FreeArgparseInterpCtx);
+    /* Provide the current package */
+    if (Tcl_PkgProvideEx(interp, PACKAGE_NAME, PACKAGE_VERSION, NULL) != TCL_OK) {
+        return TCL_ERROR;
+    }
     return TCL_OK;
 }
 
@@ -2986,7 +2985,6 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
             Tcl_ListObjAppendElement(interp, definition, defListElems[j]);
         }
     }
-
     if (HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_INLINE) && HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_KEEP)) {
         Tcl_SetObjResult(interp, Tcl_NewStringObj("-inline and -keep conflict", -1));
         goto cleanupOnError;
