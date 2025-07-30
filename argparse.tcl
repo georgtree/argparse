@@ -7,7 +7,7 @@
 # See the file "LICENSE" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 package require Tcl 8.6-
-package provide argparse 0.60
+package provide argparse 0.61
 interp alias {} @ {} lindex
 interp alias {} = {} expr
 # argparse --
@@ -430,13 +430,6 @@ proc ::argparse {args} {
                     } elseif {[dict exists $opt boolean]} {
                         lappend elementDescr boolean,
                     }
-                    if {[dict exists $opt argument]} {
-                        if {[dict exists $opt optional]} {
-                            lappend elementDescr expects optional argument
-                        } else {
-                            lappend elementDescr expects argument                          
-                        }
-                    }
                     set type switch
                 } else {
                     if {[dict exists $opt optional]} {
@@ -489,10 +482,18 @@ proc ::argparse {args} {
                     lappend combined {Expects two arguments.}
                 }
                 if {$type eq {switch}} {
+                    set switchStr -$name
+                    if {[dict exists $opt argument]} {
+                        if {[dict exists $opt optional]} {
+                            append switchStr " ?value?"
+                        } else {
+                            append switchStr " value"
+                        }
+                    }
                     if {[info exists combined]} {
-                        set combined "-$name - [join $combined { }]"
+                        set combined "$switchStr - [join $combined { }]"
                     } else {
-                        set combined -$name
+                        set combined $switchStr
                     }
                     lappend descriptionSwitches [indent [indent [adjust $combined -length 72] $4spaces 1] $8spaces]
                 } else {

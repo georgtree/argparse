@@ -908,14 +908,13 @@ genNums -help
 Procedure generates sequence of numbers.. Can accepts unambiguous prefixes
 instead of switches names. Accepts switches only before parameters.
     Switches:
-        -from - Expects argument. Provides start of sequence. Default value is
-            1. Type double.
-        -to - Expects argument. Provides end of sequence. Default value is 10.
-            Type double.
-        -step - Expects argument. Provides step between adjacent numbers of
-            sequence. Default value is 1. Type double.
-        -prec - Expects argument. Provides precision of numbers in the sequence.
+        -from value - Provides start of sequence. Default value is 1. Type
+            double.
+        -to value - Provides end of sequence. Default value is 10. Type double.
+        -step value - Provides step between adjacent numbers of sequence.
             Default value is 1. Type double.
+        -prec value - Provides precision of numbers in the sequence. Default
+            value is 1. Type double.
         -help - Help switch, when provided, forces ignoring all other switches
             and parameters, prints the help message to stdout, and returns up to 2
             levels above the current level.
@@ -953,10 +952,10 @@ instead of switches names. Accepts switches only before parameters.
     Switches:
         -allday - Set event duration for the rest of the day. Allows date or
             time.
-        -duration - Expects argument. Set event duration in format HH:MM. Allows
-            date or time.
-        -endtime - Expects argument. Set end time of event in format HH:MM.
-            Allows date or time.
+        -duration value - Set event duration in format HH:MM. Allows date or
+            time.
+        -endtime value - Set end time of event in format HH:MM. Allows date or
+            time.
         -help - Help switch, when provided, forces ignoring all other switches
             and parameters, prints the help message to stdout, and returns up to 2
             levels above the current level.

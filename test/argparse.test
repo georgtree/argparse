@@ -1648,17 +1648,17 @@ testTemplate helpTest-1 {} {-help {Description of procedure} -helpret} {
 {-l -catchall}} {-help} {Description of procedure. Can accepts unambiguous prefixes instead of switches
 names. Accepts switches only before parameters.
     Switches:
-        -a - Required, expects argument. Description 1. Type double.
+        -a value - Required. Description 1. Type double.
         -b - Description 2. Requires h. Forbids e.
-        -h - Expects argument. Description 3. Requires a or b. Aliases are hjk,
-            por or res. Expects two arguments.
-        -c - Expects optional argument. Description 4. Requires a, b or c.
-        -d - Required, expects optional argument. Description 5.
-        -ty - Expects argument. Description 5. Links caller variable.
+        -h value - Description 3. Requires a or b. Aliases are hjk, por or res.
+            Expects two arguments.
+        -c ?value? - Description 4. Requires a, b or c.
+        -d ?value? - Required. Description 5.
+        -ty value - Description 5. Links caller variable.
         -e - Boolean. Description 3.
-        -k - Expects argument.
-        -poy - Expects argument. Value must be one of: a, 2, t or 6.
-        -l - Expects argument. Collects unassigned arguments.
+        -k value
+        -poy value - Value must be one of: a, 2, t or 6.
+        -l value - Collects unassigned arguments.
         -help - Help switch, when provided, forces ignoring all other switches
             and parameters, prints the help message to stdout, and returns up to 2
             levels above the current level.
@@ -1696,7 +1696,7 @@ names. Accepts switches only before parameters.
         -all
         -inline
         -not
-        -start - Expects argument.
+        -start value
         -ascii - Forbids dictionary, integer, nocase or real.
         -dictionary - Forbids ascii, integer, nocase or real.
         -integer - Forbids ascii, dictionary, nocase or real.
@@ -1705,7 +1705,7 @@ names. Accepts switches only before parameters.
         -increasing - Requires sorted. Forbids decreasing.
         -decreasing - Requires sorted. Forbids increasing.
         -bisect - Forbids all or not. Expects two arguments.
-        -index - Expects argument.
+        -index value
         -subindices - Requires index.
         -help - Help switch, when provided, forces ignoring all other switches
             and parameters, prints the help message to stdout, and returns up to 2
@@ -1723,14 +1723,13 @@ testTemplate helpTest-3 {} {-help {Procedure generates sequence of numbers} -hel
 } {-help} {Procedure generates sequence of numbers. Can accepts unambiguous prefixes
 instead of switches names. Accepts switches only before parameters.
     Switches:
-        -from - Expects argument. Provides start of sequence. Default value is
-            1. Type double.
-        -to - Expects argument. Provides end of sequence. Default value is 10.
-            Type double.
-        -step - Expects argument. Provides step between adjacent numbers of
-            sequence. Default value is 1. Type double.
-        -prec - Expects argument. Provides precision of numbers in the sequence.
+        -from value - Provides start of sequence. Default value is 1. Type
+            double.
+        -to value - Provides end of sequence. Default value is 10. Type double.
+        -step value - Provides step between adjacent numbers of sequence.
             Default value is 1. Type double.
+        -prec value - Provides precision of numbers in the sequence. Default
+            value is 1. Type double.
         -help - Help switch, when provided, forces ignoring all other switches
             and parameters, prints the help message to stdout, and returns up to 2
             levels above the current level.}
@@ -1744,13 +1743,13 @@ testTemplate helpTest-4 {} {-help {} -helpret} {
 } {-help} {Can accepts unambiguous prefixes instead of switches names. Accepts switches
 only before parameters.
     Switches:
-        -from - Expects argument. Provides start of sequence. Default value is
-            1. Type double.
-        -to - Expects argument. Default value is 10. Type double.
-        -step - Expects argument. Provides step between adjacent numbers of
-            sequence. Default value is 1. Aliases are st or rt. Type double.
-        -prec - Expects argument. Provides precision of numbers in the sequence.
-            Default value is 1. Alias is pre. Type double.
+        -from value - Provides start of sequence. Default value is 1. Type
+            double.
+        -to value - Default value is 10. Type double.
+        -step value - Provides step between adjacent numbers of sequence.
+            Default value is 1. Aliases are st or rt. Type double.
+        -prec value - Provides precision of numbers in the sequence. Default
+            value is 1. Alias is pre. Type double.
         -help - Help switch, when provided, forces ignoring all other switches
             and parameters, prints the help message to stdout, and returns up to 2
             levels above the current level.}
@@ -1767,8 +1766,8 @@ testTemplate helpTest-5 {} {-help {} -helpret -inline\
 only before parameters.
     Switches:
         -allday - Allows date or time.
-        -duration - Expects argument. Allows date or time.
-        -endtime - Expects argument. Allows date or time.
+        -duration value - Allows date or time.
+        -endtime value - Allows date or time.
         -help - Help switch, when provided, forces ignoring all other switches
             and parameters, prints the help message to stdout, and returns up to 2
             levels above the current level.
@@ -1788,8 +1787,8 @@ testTemplate helpTest-6 {} {-helplevel 3 -help {} -helpret -inline\
 only before parameters.
     Switches:
         -allday - Allows date or time.
-        -duration - Expects argument. Allows date or time.
-        -endtime - Expects argument. Allows date or time.
+        -duration value - Allows date or time.
+        -endtime value - Allows date or time.
         -help - Help switch, when provided, forces ignoring all other switches
             and parameters, prints the help message to stdout, and returns up to 3
             levels above the current level.
@@ -1809,8 +1808,8 @@ testTemplate helpTest-7 {} {-help {} -helpret -inline -pfirst\
 must appear before switches.
     Switches:
         -allday - Allows date or time.
-        -duration - Expects argument. Allows date or time.
-        -endtime - Expects argument. Allows date or time.
+        -duration value - Allows date or time.
+        -endtime value - Allows date or time.
         -help - Help switch, when provided, forces ignoring all other switches
             and parameters, prints the help message to stdout, and returns up to 2
             levels above the current level.
@@ -1830,8 +1829,8 @@ testTemplate helpTest-8 {} {-help {} -helpret -inline -pfirst\
 must appear before switches.
     Switches:
         -allday - Allows date or time.
-        -duration - Expects argument. Allows date or time.
-        -endtime - Expects argument. Allows date or time.
+        -duration value - Allows date or time.
+        -endtime value - Allows date or time.
         -help - Help switch, when provided, forces ignoring all other switches
             and parameters, prints the help message to stdout, and returns up to 2
             levels above the current level.
@@ -1850,7 +1849,7 @@ testTemplate helpTest-9 {} {-help {} -helpret -inline -pfirst\
 must appear before switches.
     Switches:
         -allday - Allows date or time.
-        -endtime - Expects argument. Allows date or time.
+        -endtime value - Allows date or time.
         -help - Help switch, when provided, forces ignoring all other switches
             and parameters, prints the help message to stdout, and returns up to 2
             levels above the current level.

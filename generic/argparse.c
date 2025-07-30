@@ -1597,16 +1597,6 @@ Tcl_Obj *BuildHelpMessage(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Argume
             } else if (DictKeyExists(interp, opt, interpCtx->elswitch_boolean)) {
                 Tcl_ListObjAppendElement(interp, elementDescr, Tcl_NewStringObj("boolean,", -1));
             }
-            if (DictKeyExists(interp, opt, interpCtx->elswitch_argument)) {
-                if (DictKeyExists(interp, opt, interpCtx->elswitch_optional)) {
-                    Tcl_ListObjAppendElement(interp, elementDescr, Tcl_NewStringObj("expects", -1));
-                    Tcl_ListObjAppendElement(interp, elementDescr, Tcl_NewStringObj("optional", -1));
-                    Tcl_ListObjAppendElement(interp, elementDescr, Tcl_NewStringObj("argument", -1));
-                } else {
-                    Tcl_ListObjAppendElement(interp, elementDescr, Tcl_NewStringObj("expects", -1));
-                    Tcl_ListObjAppendElement(interp, elementDescr, Tcl_NewStringObj("argument", -1));
-                }
-            }
             type = Tcl_NewStringObj("switch", -1);
         } else {
             if (DictKeyExists(interp, opt, interpCtx->elswitch_optional)) {
@@ -1710,25 +1700,31 @@ Tcl_Obj *BuildHelpMessage(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Argume
             Tcl_ListObjAppendElement(interp, combined, Tcl_NewStringObj("Expects two arguments.", -1));
         }
         if (!strcmp("switch", Tcl_GetString(type))) {
+            Tcl_Obj *switchStr = Tcl_DuplicateObj(interpCtx->misc_dashStrObj);
+            Tcl_AppendObjToObj(switchStr, name);
+            if (DictKeyExists(interp, opt, interpCtx->elswitch_argument)) {
+                if (DictKeyExists(interp, opt, interpCtx->elswitch_optional)) {
+                    Tcl_AppendObjToObj(switchStr, Tcl_NewStringObj(" ?value?", -1));
+                } else {
+                    Tcl_AppendObjToObj(switchStr, Tcl_NewStringObj(" value", -1));
+                }
+            }
             Tcl_Size combinedLen;
             Tcl_ListObjLength(interp, combined, &combinedLen);
             if (combinedLen > 0) {
                 Tcl_Obj *combinedStr = Tcl_NewListObj(0, NULL);
-                Tcl_ListObjAppendElement(interp, combinedStr, Tcl_DuplicateObj(interpCtx->misc_dashStrObj));
-                Tcl_ListObjAppendElement(interp, combinedStr, name);
+                Tcl_ListObjAppendElement(interp, combinedStr, switchStr);
                 Tcl_ListObjAppendElement(interp, combinedStr, Tcl_NewStringObj(" - ", -1));
                 Tcl_ListObjAppendElement(interp, combinedStr, JoinListWithSeparator(interp, combined, " "));
                 combined = JoinWithEmptySeparator(interp, combinedStr);
             } else {
                 Tcl_Obj *combinedStr = Tcl_NewListObj(0, NULL);
-                Tcl_ListObjAppendElement(interp, combinedStr, Tcl_DuplicateObj(interpCtx->misc_dashStrObj));
-                Tcl_ListObjAppendElement(interp, combinedStr, name);
+                Tcl_ListObjAppendElement(interp, combinedStr, switchStr);
                 combined = JoinWithEmptySeparator(interp, combinedStr);
             }
             Tcl_Obj *descrSwitchesStr = NULL;
             descrSwitchesStr = EvaluateAdjust(interp, combined, 72);
             descrSwitchesStr = EvaluateIndent(interp, descrSwitchesStr, Tcl_NewStringObj("    ", -1), Tcl_NewIntObj(1));
-
             descrSwitchesStr =
                 EvaluateIndent(interp, descrSwitchesStr, Tcl_NewStringObj("        ", -1), Tcl_NewIntObj(0));
 
