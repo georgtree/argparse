@@ -100,7 +100,8 @@ Tcl commands requiring more advanced argument parsing than provided by the stand
 accept `args` (i.e. any number of arguments), then can call `argparse` to perform the real argument parsing.
 
 In addition to Tcl command argument parsing, `argparse` is suitable for command line argument parsing, operating on the
-value of the `::argv` global variable.
+value of the `::argv` global variable. To use it with `argparse`, you should provide `argv` as an argument to procedure
+after definition.
 
 `argparse` may be applied to a variety of special purposes beyond standard argument parsing. For example, `argparse` can
 parse custom variadic data structures formatted as lists of switches and/or parameters of a highly dynamic nature.
