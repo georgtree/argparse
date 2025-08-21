@@ -249,7 +249,7 @@ int PrefixMatch(Tcl_Interp *interp, const char **tableList, Tcl_Obj *matchObj, i
     int code;
     int flags = 0;
     if (useExact) {
-        flags = flags | TCL_EXACT;
+        flags = TCL_EXACT;
     }
     int index;
     code = Tcl_GetIndexFromObj(interp, matchObj, tableList, messageObj, flags, &index);
@@ -2054,6 +2054,7 @@ int TypeChecker(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_O
                     isValid = Tcl_StringMatch(Tcl_GetString(argv[i]), "[0-9]*");
                 } else if (!strcmp(typeStr, "boolean")) {
                     int dummy;
+                    /* cppcheck-suppress invalidLifetime -- Tcl_GetBooleanFromObj does not retain pointer */
                     isValid = (Tcl_GetBooleanFromObj(interp, argv[i], &dummy) == TCL_OK);
                 } else {
                     // Fall back to string is type -strict (slower)
@@ -2094,6 +2095,7 @@ int TypeChecker(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_O
                 isValid = Tcl_StringMatch(Tcl_GetString(argObj), "[0-9]*");
             } else if (!strcmp(typeStr, "boolean")) {
                 int dummy;
+                /* cppcheck-suppress invalidLifetime -- Tcl_GetBooleanFromObj does not retain pointer */
                 isValid = (Tcl_GetBooleanFromObj(interp, argObj, &dummy) == TCL_OK);
             } else {
                 // Fall back to string is type -strict (slower)
@@ -2178,9 +2180,7 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
     Tcl_RegExp regexpSwitchAlias =
         Tcl_GetRegExpFromObj(interp, Tcl_NewStringObj("^\\w[\\w-]*( \\w[\\w-]*)*$", -1), TCL_REG_ADVANCED);
     Tcl_Obj *prefixResult = NULL;
-    if (argCtx->catchall != NULL) {
-        argCtx->catchall = NULL;
-    }
+    argCtx->catchall = NULL;
 //****       Read element definition switches
     Tcl_Size defListLen;
     Tcl_Obj **defListElems;
@@ -2995,7 +2995,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     const char *keyStr = Tcl_GetString(GenerateGlobalSwitchesKey(&ctx));
     keyArgDefinition = Tcl_GetString(Tcl_ObjPrintf("%s %s",keyArgDefinition, keyStr));
     Tcl_HashEntry *entry = Tcl_FindHashEntry(&interpCtx->argDefHashTable, keyArgDefinition);
-    ArgumentDefinition *cashedArgDefCtx = NULL;
+    const ArgumentDefinition *cashedArgDefCtx = NULL;
     if (entry == NULL) {
         // no cashed definition
         cashedArgDefCtx = CreateAndCacheArgDef(interp, interpCtx, definition, &ctx, keyArgDefinition);
@@ -3004,7 +3004,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
         }
     } else {
         // use cashed definition
-        cashedArgDefCtx = (ArgumentDefinition *)Tcl_GetHashValue(entry);
+        cashedArgDefCtx = (const ArgumentDefinition *)Tcl_GetHashValue(entry);
     }
     argDefCtx = DeepCopyArgumentDefinition(interp, cashedArgDefCtx);
 
@@ -3017,8 +3017,8 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
         Tcl_Obj *opt = NULL;
         Tcl_DictObjGet(interp, argDefCtx->defDict, name, &opt);
 //****       Verify constraint references
-        for (int i = 0; i < ELEMENT_SWITCH_COUNT_CONSTRAINTS; ++i) {
-            Tcl_Obj *constraint = Tcl_NewStringObj(elemSwConstraints[i], -1);
+        for (int k = 0; k < ELEMENT_SWITCH_COUNT_CONSTRAINTS; ++k) {
+            Tcl_Obj *constraint = Tcl_NewStringObj(elemSwConstraints[k], -1);
             Tcl_Obj *otherNameList = NULL;
             if (DICT_GET_IF_EXISTS(interp, opt, constraint, &otherNameList)) {
                 Tcl_Size otherNameListLen;
@@ -3119,17 +3119,17 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                             nameInForbidList = InListStringMatch(interp, name, otherOptForbidList);
                         }
                         if (!DictKeyExists(interp, otherOpt, interpCtx->elswitch_forbid) || !nameInForbidList) {
-                            Tcl_Obj *otherOpt = NULL;
-                            Tcl_DictObjGet(interp, argDefCtx->defDict, otherName, &otherOpt);
-                            if (otherOpt == NULL) {
-                                otherOpt = Tcl_NewDictObj();
+                            Tcl_Obj *otherOptLoc = NULL;
+                            Tcl_DictObjGet(interp, argDefCtx->defDict, otherName, &otherOptLoc);
+                            if (otherOptLoc == NULL) {
+                                otherOptLoc = Tcl_NewDictObj();
                             } else {
-                                otherOpt = Tcl_DuplicateObj(otherOpt);
+                                otherOptLoc = Tcl_DuplicateObj(otherOptLoc);
                             }
-                            Tcl_IncrRefCount(otherOpt);
-                            DictLappendElem(interp, otherOpt, interpCtx->elswitch_forbid, name);
-                            Tcl_DictObjPut(interp, argDefCtx->defDict, otherName, otherOpt);
-                            Tcl_DecrRefCount(otherOpt);
+                            Tcl_IncrRefCount(otherOptLoc);
+                            DictLappendElem(interp, otherOptLoc, interpCtx->elswitch_forbid, name);
+                            Tcl_DictObjPut(interp, argDefCtx->defDict, otherName, otherOptLoc);
+                            Tcl_DecrRefCount(otherOptLoc);
                         }
 //*****          Set default -value for shared keys
                         if (!DictKeyExists(interp, opt, interpCtx->elswitch_value)) {
@@ -3387,11 +3387,11 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
             }
 //*****          If the switch is standalone, ignore all constraints
             if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_standalone)) {
-                Tcl_Obj **keyObjs;
-                Tcl_Size keyCount;
-                DictKeys(interp, argDefCtx->defDict, &keyCount, &keyObjs);
-                for (Tcl_Size idx = 0; idx < keyCount; ++idx) {
-                    Tcl_Obj *other = keyObjs[idx];
+                Tcl_Obj **keyObjsLoc;
+                Tcl_Size keyCountLoc;
+                DictKeys(interp, argDefCtx->defDict, &keyCountLoc, &keyObjsLoc);
+                for (Tcl_Size idx = 0; idx < keyCountLoc; ++idx) {
+                    Tcl_Obj *other = keyObjsLoc[idx];
                     Tcl_DictObjRemoveKeyList(interp, argDefCtx->defDict, 2,
                                              (Tcl_Obj *[]){other, interpCtx->elswitch_required});
                     Tcl_DictObjRemoveKeyList(interp, argDefCtx->defDict, 2,
@@ -3406,7 +3406,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                                               interpCtx->misc_emptyStrObj);
                     }
                 }
-                Tcl_Free(keyObjs);
+                Tcl_Free(keyObjsLoc);
             }
 //*****          Keep track of which elements are present
             Tcl_DictObjPutKeyList(interp, argDefCtx->defDict, 2, (Tcl_Obj *[]){name, interpCtx->misc_presentSwitchObj},
@@ -3518,18 +3518,18 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                     }
                 }
                 if (passLoc != NULL) {
-                    if (HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_NORMALIZE)) {
-                        Tcl_Obj *objv[2];
-                        objv[0] = normal;
-                        objv[1] = resultList;
-                        DictLappend(interp, resultDict, passLoc, Tcl_NewListObj(2, objv));
+                    if (HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_NORMALIZE)) { 
+                        Tcl_Obj *objvLoc[2];
+                        objvLoc[0] = normal;
+                        objvLoc[1] = resultList;
+                        DictLappend(interp, resultDict, passLoc, Tcl_NewListObj(2, objvLoc));
                     } else if (!strcmp(Tcl_GetString(equal), "=")) {
                         DictLappendElem(interp, resultDict, passLoc, arg);
                     } else {
-                        Tcl_Obj *objv[2];
-                        objv[0] = arg;
-                        objv[1] = argLoc;
-                        DictLappend(interp, resultDict, passLoc, Tcl_NewListObj(2, objv));
+                        Tcl_Obj *objvLoc[2];
+                        objvLoc[0] = arg;
+                        objvLoc[1] = argLoc;
+                        DictLappend(interp, resultDict, passLoc, Tcl_NewListObj(2, objvLoc));
                     }
                 }
                 argv = ListRange(interp, argv, 1, end);
@@ -3793,111 +3793,111 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
 //***    If normalization is enabled, explicitly store into the pass-through keys
     // all omitted switches that have a pass-through key, accept an argument, and have a default value
     if (HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_NORMALIZE)) {
-        Tcl_DictSearch search;
-        Tcl_Obj *name = NULL, *opt = NULL;
-        int done;
-        Tcl_DictObjFirst(interp, argDefCtx->defDict, &search, &name, &opt, &done);
-        while (!done) {
-            Tcl_Obj *switchLoc = NULL;
-            Tcl_Obj *passLoc = NULL;
-            Tcl_Obj *argLoc = NULL;
-            Tcl_Obj *defaultLoc = NULL;
-            Tcl_Obj *nameLoc = NULL;
-            if (DICT_GET_IF_EXISTS(interp, opt, interpCtx->elswitch_switch, &switchLoc) && 
-                DICT_GET_IF_EXISTS(interp, opt, interpCtx->elswitch_pass, &passLoc) &&
-                DICT_GET_IF_EXISTS(interp, opt, interpCtx->elswitch_argument, &argLoc) &&
-                DICT_GET_IF_EXISTS(interp, opt, interpCtx->elswitch_default, &defaultLoc) &&
-                DICT_GET_IF_EXISTS(interp, argDefCtx->omittedDict, name, &nameLoc)) {
-                nameLoc = Tcl_DuplicateObj(interpCtx->misc_dashStrObj);
-                Tcl_AppendStringsToObj(nameLoc, Tcl_GetString(name), NULL);
-                Tcl_Obj *objv[2];
-                objv[0] = nameLoc;
-                objv[1] = defaultLoc;
-                DictLappend(interp, resultDict, passLoc, Tcl_NewListObj(2, objv));
+        Tcl_DictSearch searchLoc;
+        Tcl_Obj *nameLoc = NULL, *optLoc = NULL;
+        int doneLoc;
+        Tcl_DictObjFirst(interp, argDefCtx->defDict, &searchLoc, &nameLoc, &optLoc, &doneLoc);
+        while (!doneLoc) {
+            Tcl_Obj *switchLocLoc = NULL;
+            Tcl_Obj *passLocLoc = NULL;
+            Tcl_Obj *argLocLoc = NULL;
+            Tcl_Obj *defaultLocLoc = NULL;
+            Tcl_Obj *nameLocLoc = NULL;
+            if (DICT_GET_IF_EXISTS(interp, optLoc, interpCtx->elswitch_switch, &switchLocLoc) && 
+                DICT_GET_IF_EXISTS(interp, optLoc, interpCtx->elswitch_pass, &passLocLoc) &&
+                DICT_GET_IF_EXISTS(interp, optLoc, interpCtx->elswitch_argument, &argLocLoc) &&
+                DICT_GET_IF_EXISTS(interp, optLoc, interpCtx->elswitch_default, &defaultLocLoc) &&
+                DICT_GET_IF_EXISTS(interp, argDefCtx->omittedDict, nameLoc, &nameLocLoc)) {
+                nameLocLoc = Tcl_DuplicateObj(interpCtx->misc_dashStrObj);
+                Tcl_AppendStringsToObj(nameLocLoc, Tcl_GetString(nameLoc), NULL);
+                Tcl_Obj *objvLoc[2];
+                objvLoc[0] = nameLocLoc;
+                objvLoc[1] = defaultLocLoc;
+                DictLappend(interp, resultDict, passLocLoc, Tcl_NewListObj(2, objvLoc));
             }
-            Tcl_DictObjNext(&search, &name, &opt, &done);
+            Tcl_DictObjNext(&searchLoc, &nameLoc, &optLoc, &doneLoc);
         }
-        Tcl_DictObjDone(&search);
+        Tcl_DictObjDone(&searchLoc);
     }
 //***    Validate parameters and store in result dict
     Tcl_ListObjGetElements(interp, argDefCtx->orderList, &orderListLen, &orderListElems);
     Tcl_Size indx = 0;
     for (Tcl_Size j = 0; j < orderListLen; ++j) {
-        Tcl_Obj *name = orderListElems[j];
-        Tcl_Obj *opt = NULL;
-        Tcl_DictObjGet(interp, argDefCtx->defDict, name, &opt);
+        Tcl_Obj *nameLoc = orderListElems[j];
+        Tcl_Obj *optLoc = NULL;
+        Tcl_DictObjGet(interp, argDefCtx->defDict, nameLoc, &optLoc);
         Tcl_Obj *passLoc = NULL;
         Tcl_Obj *defaultLoc = NULL;
-        if (DictKeyExists(interp, allocDict, name)) {
+        if (DictKeyExists(interp, allocDict, nameLoc)) {
             Tcl_Obj *val = NULL;
             Tcl_Size nameLen;
-            Tcl_ListObjLength(interp, name, &nameLen);
-            if (!DictKeyExists(interp, opt, interpCtx->elswitch_catchall) && (nameLen > 0)) {
+            Tcl_ListObjLength(interp, nameLoc, &nameLen);
+            if (!DictKeyExists(interp, optLoc, interpCtx->elswitch_catchall) && (nameLen > 0)) {
                 Tcl_Obj *parami = NULL;
                 Tcl_Obj *resultList = NULL;
                 Tcl_ListObjIndex(interp, params, indx, &parami);
                 Tcl_IncrRefCount(parami);
-                if (ValidateHelper(interp, &ctx, name, opt, parami, interpCtx, 0, &resultList) != TCL_OK) {
+                if (ValidateHelper(interp, &ctx, nameLoc, optLoc, parami, interpCtx, 0, &resultList) != TCL_OK) {
                     Tcl_DecrRefCount(parami);
                     goto cleanupOnError;
                 }
                 val = resultList;
-                if (TypeChecker(interp, name, opt, val, interpCtx, 0, &resultList) != TCL_OK) {
+                if (TypeChecker(interp, nameLoc, optLoc, val, interpCtx, 0, &resultList) != TCL_OK) {
                     Tcl_DecrRefCount(parami);
                     goto cleanupOnError;
                 }
                 val = resultList;
-                Tcl_Obj *passLoc = NULL;
-                if (DICT_GET_IF_EXISTS(interp, opt, interpCtx->elswitch_pass, &passLoc)) {
-                    char *str = Tcl_GetString(val);
-                    if ((str[0] == '-') && !DictKeyExists(interp, resultDict, passLoc)) {
-                        DictLappendElem(interp, resultDict, passLoc, interpCtx->misc_doubleDashStrObj);
+                Tcl_Obj *passLocLoc = NULL;
+                if (DICT_GET_IF_EXISTS(interp, optLoc, interpCtx->elswitch_pass, &passLocLoc)) {
+                    const char *str = Tcl_GetString(val);
+                    if ((str[0] == '-') && !DictKeyExists(interp, resultDict, passLocLoc)) {
+                        DictLappendElem(interp, resultDict, passLocLoc, interpCtx->misc_doubleDashStrObj);
                     }
                     
-                    DictLappendElem(interp, resultDict, passLoc, val);
+                    DictLappendElem(interp, resultDict, passLocLoc, val);
                 }
                 indx++;
                 Tcl_DecrRefCount(parami);
             } else {
                 Tcl_Obj *allocValLoc = NULL;
-                Tcl_DictObjGet(interp, allocDict, name, &allocValLoc);
+                Tcl_DictObjGet(interp, allocDict, nameLoc, &allocValLoc);
                 Tcl_WideInt step;
                 Tcl_GetWideIntFromObj(interp, allocValLoc, &step);
                 val = ListRange(interp, params, indx, indx + step - 1);
                 if (nameLen > 0) {
                     Tcl_Obj *resultList = NULL;
-                    if (ValidateHelper(interp, &ctx, name, opt, val, interpCtx, 1, &resultList) != TCL_OK) {
+                    if (ValidateHelper(interp, &ctx, nameLoc, optLoc, val, interpCtx, 1, &resultList) != TCL_OK) {
                         Tcl_DecrRefCount(val);
                         goto cleanupOnError;
                     }
                     val = resultList;
-                    if (TypeChecker(interp, name, opt, val, interpCtx, 1, &resultList) != TCL_OK) {
+                    if (TypeChecker(interp, nameLoc, optLoc, val, interpCtx, 1, &resultList) != TCL_OK) {
                         Tcl_DecrRefCount(val);
                         goto cleanupOnError;
                     }
                     val = resultList;
                 }
-                if (DictKeyExists(interp, opt, interpCtx->elswitch_pass)) {
+                if (DictKeyExists(interp, optLoc, interpCtx->elswitch_pass)) {
                     Tcl_Obj *val0 = NULL;
                     Tcl_ListObjIndex(interp, val, 0, &val0);
-                    Tcl_Obj *passLoc = NULL;
-                    Tcl_DictObjGet(interp, opt, interpCtx->elswitch_pass, &passLoc);
-                    char *str = Tcl_GetString(val0);
-                    if ((str[0] == '-') && !DictKeyExists(interp, resultDict, passLoc)) {
-                        DictLappendElem(interp, resultDict, passLoc, interpCtx->misc_doubleDashStrObj);
+                    Tcl_Obj *passLocLoc = NULL;
+                    Tcl_DictObjGet(interp, optLoc, interpCtx->elswitch_pass, &passLocLoc);
+                    const char *str = Tcl_GetString(val0);
+                    if ((str[0] == '-') && !DictKeyExists(interp, resultDict, passLocLoc)) {
+                        DictLappendElem(interp, resultDict, passLocLoc, interpCtx->misc_doubleDashStrObj);
                     }
-                    DictLappend(interp, resultDict, passLoc, val);
+                    DictLappend(interp, resultDict, passLocLoc, val);
                 }
                 indx = indx + step;
             }
             Tcl_Obj *keyLoc = NULL;
-            if (DICT_GET_IF_EXISTS(interp, opt, interpCtx->elswitch_key, &keyLoc)) {
+            if (DICT_GET_IF_EXISTS(interp, optLoc, interpCtx->elswitch_key, &keyLoc)) {
                 Tcl_DictObjPut(interp, resultDict, keyLoc, val);
             }
         } else if (HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_NORMALIZE) &&
-                   DICT_GET_IF_EXISTS(interp, opt, interpCtx->elswitch_default, &defaultLoc) &&
-                   DICT_GET_IF_EXISTS(interp, opt, interpCtx->elswitch_pass, &passLoc)) {
-            char *str = Tcl_GetString(defaultLoc);
+                   DICT_GET_IF_EXISTS(interp, optLoc, interpCtx->elswitch_default, &defaultLoc) &&
+                   DICT_GET_IF_EXISTS(interp, optLoc, interpCtx->elswitch_pass, &passLoc)) {
+            const char *str = Tcl_GetString(defaultLoc);
             if ((str[0] == '-') && !DictKeyExists(interp, resultDict, passLoc)) {
                 DictLappendElem(interp, resultDict, passLoc, interpCtx->misc_doubleDashStrObj);
             }
@@ -3936,30 +3936,30 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     } else {
 //****       Unless -keep was used, unset caller variables for omitted elements
         if (!HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_KEEP)) {
-            Tcl_DictSearch search;
-            Tcl_Obj *name = NULL, *val = NULL;
-            int done;
-            Tcl_DictObjFirst(interp, argDefCtx->omittedDict, &search, &name, &val, &done);
-            while (!done) {
-                Tcl_Obj *opt = NULL;
-                Tcl_DictObjGet(interp, argDefCtx->defDict, name, &opt);
+            Tcl_DictSearch searchLoc;
+            Tcl_Obj *nameLoc = NULL, *val = NULL;
+            int doneLoc;
+            Tcl_DictObjFirst(interp, argDefCtx->omittedDict, &searchLoc, &nameLoc, &val, &doneLoc);
+            while (!doneLoc) {
+                Tcl_Obj *optLoc = NULL;
+                Tcl_DictObjGet(interp, argDefCtx->defDict, nameLoc, &optLoc);
                 Tcl_Obj *keyLoc = NULL;
-                if (DICT_GET_IF_EXISTS(interp, opt, interpCtx->elswitch_key, &keyLoc)) {
-                    if (!DictKeyExists(interp, opt, interpCtx->elswitch_keep) &&
+                if (DICT_GET_IF_EXISTS(interp, optLoc, interpCtx->elswitch_key, &keyLoc)) {
+                    if (!DictKeyExists(interp, optLoc, interpCtx->elswitch_keep) &&
                         !DictKeyExists(interp, resultDict, keyLoc)) {
                         Tcl_UnsetVar(interp, Tcl_GetString(keyLoc), 0);
                     }
                 }
-                Tcl_DictObjNext(&search, &name, &val, &done);
+                Tcl_DictObjNext(&searchLoc, &nameLoc, &val, &doneLoc);
             }
-            Tcl_DictObjDone(&search);
+            Tcl_DictObjDone(&searchLoc);
         }
 //****       Process results
-        Tcl_DictSearch search;
+        Tcl_DictSearch searchLoc;
         Tcl_Obj *key = NULL, *val = NULL;
-        int done;
-        Tcl_DictObjFirst(interp, resultDict, &search, &key, &val, &done);
-        while (!done) {
+        int doneLoc;
+        Tcl_DictObjFirst(interp, resultDict, &searchLoc, &key, &val, &doneLoc);
+        while (!doneLoc) {
             Tcl_Obj *upvarKeyLoc = NULL;
             if (DICT_GET_IF_EXISTS(interp, argDefCtx->upvarsDict, key, &upvarKeyLoc)) {
                 Tcl_Obj *levelLoc = NULL;
@@ -3970,9 +3970,9 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
             } else {
                 Tcl_ObjSetVar2(interp, key, NULL, val, 0);
             }
-            Tcl_DictObjNext(&search, &key, &val, &done);
+            Tcl_DictObjNext(&searchLoc, &key, &val, &doneLoc);
         }
-        Tcl_DictObjDone(&search);
+        Tcl_DictObjDone(&searchLoc);
     }
     FreeGlobalSwitches(&ctx);
     FreeArgumentDefinition(argDefCtx);
