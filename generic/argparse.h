@@ -1,5 +1,9 @@
-
+#include <stdint.h>
 #include <tcl.h>
+
+typedef uint32_t bitmask_t;
+#define BIT(n) ((bitmask_t)1u << (unsigned)(n))
+#define BITMASK_OF(id) ((bitmask_t)1u << (unsigned)(id))
 
 //** useful macroses
 #define DICT_GET_IF_EXISTS(interp, dictObj, keyObj, valPtr)                                                            \
@@ -89,15 +93,14 @@ static const char *globalSwitches[] = {"-boolean",   "-enum",       "-equalarg",
                                        "-pass",      "-reciprocal", "-template", "-validate", "-help",
                                        "-helplevel", "-pfirst",     "-helpret",  NULL};
 typedef struct {
-    int globalSwitches;                   // bitmask of which global switch are present
+    bitmask_t globalSwitches;             // bitmask of which global switch are present
     Tcl_Obj *values[GLOBAL_SWITCH_COUNT]; // arguments for value-carrying global switches
 } GlobalSwitchesContext;
 // global switches that require arguments
 #define GLOBAL_SWITCH_TAKES_ARG_MASK                                                                                   \
-    ((1 << GLOBAL_SWITCH_ENUM) | (1 << GLOBAL_SWITCH_LEVEL) | (1 << GLOBAL_SWITCH_PASS) |                              \
-     (1 << GLOBAL_SWITCH_TEMPLATE) | (1 << GLOBAL_SWITCH_VALIDATE) | (1 << GLOBAL_SWITCH_HELP) |                       \
-     (1 << GLOBAL_SWITCH_HELPLEVEL))
-#define HAS_GLOBAL_SWITCH(ctx, globalSwitchId) (((ctx)->globalSwitches & (1 << (globalSwitchId))) != 0)
+    (BIT(GLOBAL_SWITCH_ENUM) | BIT(GLOBAL_SWITCH_LEVEL) | BIT(GLOBAL_SWITCH_PASS) | BIT(GLOBAL_SWITCH_TEMPLATE) |      \
+     BIT(GLOBAL_SWITCH_VALIDATE) | BIT(GLOBAL_SWITCH_HELP) | BIT(GLOBAL_SWITCH_HELPLEVEL))
+#define HAS_GLOBAL_SWITCH(pctx, id) ((((bitmask_t)((pctx)->globalSwitches)) & BITMASK_OF(id)) != (bitmask_t)0u)
 #define GLOBAL_SWITCH_ARG(ctx, globalSwitchId) ((ctx)->values[globalSwitchId])
 
 //** element switches declarations and definitions
@@ -182,7 +185,10 @@ static const char *elemSwConstraints[ELEMENT_SWITCH_COUNT_CONSTRAINTS] = {"requi
 
 //** functions declaration
 
-extern DLLEXPORT int Argparse_c_Init(Tcl_Interp *interp);
+void SetGlobalSwitch(GlobalSwitchesContext *ctx, unsigned int globalSwitchId, Tcl_Obj *value);
+void InitArgumentDefinition(ArgumentDefinition *ctx);
+Tcl_Obj *EnumStrBuildObj(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDict);
+extern DLLEXPORT int Argparse_Init(Tcl_Interp *interp);
 static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc, Tcl_Obj *const objv[]);
 void FreeGlobalSwitches(GlobalSwitchesContext *ctx);
 int EvalRegsubFirstMatch(Tcl_Interp *interp, Tcl_RegExp regexp, Tcl_Obj *inputObj, Tcl_Obj *replacementObj,
@@ -215,7 +221,7 @@ Tcl_Obj *BuildBadSwitchError(Tcl_Interp *interp, Tcl_Obj *argObj, Tcl_Obj *switc
 int EvalMatchRegexpGroups(Tcl_Interp *interp, Tcl_RegExp regexp, Tcl_Obj *textObj, ArgparseInterpCtx *interpCtx,
                           Tcl_Obj **resultListPtr);
 static Tcl_Obj *GenerateGlobalSwitchesKey(const GlobalSwitchesContext *ctx);
-ArgumentDefinition *CreateAndCacheArgDef(Tcl_Interp *interp, ArgparseInterpCtx *, Tcl_Obj *definition,
+ArgumentDefinition *CreateAndCacheArgDef(Tcl_Interp *interp, ArgparseInterpCtx *interpCtx, Tcl_Obj *definition,
                                          GlobalSwitchesContext *ctx, const char *key);
 static void CleanupAllArgumentDefinitions(ArgparseInterpCtx *argparseInterpCtx);
 ArgumentDefinition *DeepCopyArgumentDefinition(Tcl_Interp *interp, const ArgumentDefinition *src);
@@ -229,5 +235,5 @@ Tcl_Obj *EvaluateStringToTitle(Tcl_Interp *interp, Tcl_Obj *stringObj, Tcl_Obj *
 Tcl_Obj *BuildHelpMessage(Tcl_Interp *interp, GlobalSwitchesContext *ctx, ArgumentDefinition *argDefCtx,
                           Tcl_Obj *helpLevel, ArgparseInterpCtx *interpCtx);
 int PrefixMatch(Tcl_Interp *interp, const char **tableList, Tcl_Obj *matchObj, int useExact, int useMessage,
-                    char *messageObj, int wantErrorMessage, Tcl_Obj **resultObjPtr);
+                    const char *messageObj, int wantErrorMessage, Tcl_Obj **resultObjPtr);
 int InListStringMatch(Tcl_Interp *interp, Tcl_Obj *itemObj, Tcl_Obj *listObj);

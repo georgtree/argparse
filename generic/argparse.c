@@ -32,11 +32,15 @@
  *
  *----------------------------------------------------------------------------------------------------------------------
  */
-void SetGlobalSwitch(GlobalSwitchesContext *ctx, int globalSwitchId, Tcl_Obj *value) {
-    ctx->globalSwitches |= (1 << globalSwitchId);
-    if ((GLOBAL_SWITCH_TAKES_ARG_MASK & (1 << globalSwitchId)) && value) {
-        ctx->values[globalSwitchId] = value;
-        Tcl_IncrRefCount(value);
+void SetGlobalSwitch(GlobalSwitchesContext *ctx, unsigned int globalSwitchId, Tcl_Obj *value) {
+    unsigned u = (unsigned)globalSwitchId;
+    if (u < (unsigned)(sizeof(bitmask_t) * 8u)) {
+        bitmask_t bit = (bitmask_t)1u << u;
+        ctx->globalSwitches |= bit;
+        if (((GLOBAL_SWITCH_TAKES_ARG_MASK & bit) != (bitmask_t)0u) && (value != NULL)) {
+            ctx->values[u] = value;
+            Tcl_IncrRefCount(value);
+        }
     }
 }
 
@@ -63,8 +67,8 @@ void SetGlobalSwitch(GlobalSwitchesContext *ctx, int globalSwitchId, Tcl_Obj *va
  *----------------------------------------------------------------------------------------------------------------------
  */
 void FreeGlobalSwitches(GlobalSwitchesContext *ctx) {
-    for (int i = 0; i < GLOBAL_SWITCH_COUNT; ++i) {
-        if (ctx->values[i]) {
+    for (int i = 0; i < (int)GLOBAL_SWITCH_COUNT; ++i) {
+        if (ctx->values[i] != NULL) {
             Tcl_DecrRefCount(ctx->values[i]);
             ctx->values[i] = NULL;
         }
@@ -149,18 +153,26 @@ void InitArgumentDefinition(ArgumentDefinition *ctx) {
  *----------------------------------------------------------------------------------------------------------------------
  */
 ArgumentDefinition *DeepCopyArgumentDefinition(Tcl_Interp *interp, const ArgumentDefinition *src) {
-    if (src == NULL)
+    if (src == NULL) {
         return NULL;
-
-    ArgumentDefinition *copy = Tcl_AttemptAlloc(sizeof(ArgumentDefinition));
-    if (copy == NULL)
+    }
+    /* cppcheck-suppress misra-c2012-11.5 -- allocator returns void*; cast is intentional and alignment-safe */
+    ArgumentDefinition *copy = (ArgumentDefinition *)Tcl_AttemptAlloc(sizeof *copy);
+    if (copy == NULL) {
         return NULL; // malloc failure
+    }
     copy->defDict = DuplicateDictWithNestedDicts(interp, src->defDict);
+    /* cppcheck-suppress misra-c2012-11.8 */
     copy->aliasesDict = Tcl_DuplicateObj(src->aliasesDict);
+    /* cppcheck-suppress misra-c2012-11.8 */
     copy->orderList = Tcl_DuplicateObj(src->orderList);
+    /* cppcheck-suppress misra-c2012-11.8 */
     copy->switchesList = Tcl_DuplicateObj(src->switchesList);
+    /* cppcheck-suppress misra-c2012-11.8 */
     copy->upvarsDict = Tcl_DuplicateObj(src->upvarsDict);
+    /* cppcheck-suppress misra-c2012-11.8 */
     copy->omittedDict = Tcl_DuplicateObj(src->omittedDict);
+    /* cppcheck-suppress misra-c2012-11.8 */
     copy->catchall = src->catchall ? Tcl_DuplicateObj(src->catchall) : NULL;
     return copy;
 }
@@ -194,22 +206,30 @@ ArgumentDefinition *DeepCopyArgumentDefinition(Tcl_Interp *interp, const Argumen
  *----------------------------------------------------------------------------------------------------------------------
  */
 void FreeArgumentDefinition(ArgumentDefinition *argDef) {
-    if (!argDef)
+    if (!argDef) {
         return;
-    if (argDef->defDict)
+    }
+    if (argDef->defDict != NULL) {
         Tcl_DecrRefCount(argDef->defDict);
-    if (argDef->aliasesDict)
+    }
+    if (argDef->aliasesDict != NULL) {
         Tcl_DecrRefCount(argDef->aliasesDict);
-    if (argDef->orderList)
+    }
+    if (argDef->orderList != NULL) {
         Tcl_DecrRefCount(argDef->orderList);
-    if (argDef->switchesList)
+    }
+    if (argDef->switchesList != NULL) {
         Tcl_DecrRefCount(argDef->switchesList);
-    if (argDef->upvarsDict)
+    }
+    if (argDef->upvarsDict != NULL) {
         Tcl_DecrRefCount(argDef->upvarsDict);
-    if (argDef->omittedDict)
+    }
+    if (argDef->omittedDict != NULL) {
         Tcl_DecrRefCount(argDef->omittedDict);
-    if (argDef->catchall)
+    }
+    if (argDef->catchall != NULL) {
         Tcl_DecrRefCount(argDef->catchall);
+    }
     Tcl_Free(argDef);
 }
 
@@ -229,7 +249,7 @@ void FreeArgumentDefinition(ArgumentDefinition *argDef) {
  *      Tcl_Obj *matchObj             - input: pointer to Tcl_Obj holding the string to match
  *      int useExact                  - input: if non-zero, require exact match via TCL_EXACT flag
  *      int useMessage                - input: if non-zero and messageObj is non-NULL, use messageObj as error message
- *      char *messageObj              - input: optional custom error message (ignored if useMessage is 0 or NULL)
+ *      const char *messageObj        - input: optional custom error message (ignored if useMessage is 0 or NULL)
  *      int wantErrorMessage          - input: if non-zero, store error message in *resultObjPtr on failure
  *      Tcl_Obj **resultObjPtr        - output: double pointer to store result (matched string) or error message
  *
@@ -245,10 +265,10 @@ void FreeArgumentDefinition(ArgumentDefinition *argDef) {
  *----------------------------------------------------------------------------------------------------------------------
  */
 int PrefixMatch(Tcl_Interp *interp, const char **tableList, Tcl_Obj *matchObj, int useExact, int useMessage,
-                    char *messageObj, int wantErrorMessage, Tcl_Obj **resultObjPtr) {
+                    const char *messageObj, int wantErrorMessage, Tcl_Obj **resultObjPtr) {
     int code;
     int flags = 0;
-    if (useExact) {
+    if (useExact == 1) {
         flags = TCL_EXACT;
     }
     int index;
@@ -295,7 +315,7 @@ int PrefixMatch(Tcl_Interp *interp, const char **tableList, Tcl_Obj *matchObj, i
  *----------------------------------------------------------------------------------------------------------------------
  */
 int EvalRegsubFirstMatch(Tcl_Interp *interp, Tcl_RegExp regexp, Tcl_Obj *inputObj, Tcl_Obj *replacementObj,
-                    Tcl_Obj **resultObjPtr) {
+                         Tcl_Obj **resultObjPtr) {
     int match;
     const char *matchStart = NULL, *matchEnd = NULL;
     const char *inputStr, *replaceStr;
@@ -308,18 +328,19 @@ int EvalRegsubFirstMatch(Tcl_Interp *interp, Tcl_RegExp regexp, Tcl_Obj *inputOb
     } else if (match == 0) {
         *resultObjPtr = inputObj;
         return TCL_OK;
+    } else {
+        Tcl_RegExpRange(regexp, 0, &matchStart, &matchEnd);
+        prefixLen = matchStart - inputStr;
+        suffixLen = inputLen - (matchEnd - inputStr);
+        resultObj = Tcl_NewObj();
+        Tcl_IncrRefCount(resultObj);
+        Tcl_AppendToObj(resultObj, inputStr, prefixLen);
+        replaceStr = Tcl_GetStringFromObj(replacementObj, &replaceLen);
+        Tcl_AppendToObj(resultObj, replaceStr, replaceLen);
+        Tcl_AppendToObj(resultObj, matchEnd, suffixLen);
+        *resultObjPtr = resultObj;
+        return TCL_OK;
     }
-    Tcl_RegExpRange(regexp, 0, &matchStart, &matchEnd);
-    prefixLen = matchStart - inputStr;
-    suffixLen = inputLen - (matchEnd - inputStr);
-    resultObj = Tcl_NewObj();
-    Tcl_IncrRefCount(resultObj);
-    Tcl_AppendToObj(resultObj, inputStr, prefixLen);
-    replaceStr = Tcl_GetStringFromObj(replacementObj, &replaceLen);
-    Tcl_AppendToObj(resultObj, replaceStr, replaceLen);
-    Tcl_AppendToObj(resultObj, matchEnd, suffixLen);
-    *resultObjPtr = resultObj;
-    return TCL_OK;
 }
 
 //***    EvalMatchRegexpGroups function
@@ -360,7 +381,7 @@ int EvalMatchRegexpGroups(Tcl_Interp *interp, Tcl_RegExp regexp, Tcl_Obj *textOb
     Tcl_Obj *resultList = Tcl_NewListObj(0, NULL);
     Tcl_IncrRefCount(resultList);
     for (int i = 0; i <= info.nsubs; ++i) {
-        if (info.matches[i].start >= 0 && info.matches[i].end >= info.matches[i].start) {
+        if ((info.matches[i].start >= 0) && (info.matches[i].end >= info.matches[i].start)) {
             Tcl_RegExpRange(regexp, i, &start, &end);
             Tcl_Obj *substr = Tcl_NewStringObj(start, end - start);
             Tcl_ListObjAppendElement(interp, resultList, substr);
@@ -659,7 +680,7 @@ int InListStringMatch(Tcl_Interp *interp, Tcl_Obj *itemObj, Tcl_Obj *listObj) {
     const char *itemStr = Tcl_GetString(itemObj);
     for (Tcl_Size i = 0; i < listLen; ++i) {
         const char *elemStr = Tcl_GetString(elemPtrs[i]);
-        if (Tcl_StringMatch(itemStr, elemStr)) {
+        if (Tcl_StringMatch(itemStr, elemStr) == 1) {
             result = 1;
             break;
         }
@@ -794,7 +815,7 @@ Tcl_Obj *SplitString(Tcl_Interp *interp, Tcl_Obj *stringObj, Tcl_Obj *sepCharsOb
                 break;
             }
         }
-        if (isSep) {
+        if (isSep == 1) {
             /* Append substring [start..i-1] */
             if (i > start) {
                 Tcl_ListObjAppendElement(interp, listObj, Tcl_GetRange(stringObj, start, i - 1));
@@ -954,6 +975,8 @@ int DictLappend(Tcl_Interp *interp, Tcl_Obj *dictObjPtr, Tcl_Obj *keyObj, Tcl_Ob
         existingList = Tcl_NewListObj(0, NULL);
     } else if (Tcl_IsShared(existingList)) {
         existingList = Tcl_DuplicateObj(existingList);
+    } else {
+        /* No action required: all valid cases handled above (MISRA 15.7) */
     }
     Tcl_ListObjGetElements(interp, valuesList, &listLen, &elements);
     for (Tcl_Size i = 0; i < listLen; i++) {
@@ -997,6 +1020,8 @@ int DictLappendElem(Tcl_Interp *interp, Tcl_Obj *dictObjPtr, Tcl_Obj *keyObj, Tc
         existingList = Tcl_NewListObj(0, NULL);
     } else if (Tcl_IsShared(existingList)) {
         existingList = Tcl_DuplicateObj(existingList);
+    } else {
+        /* No action required: all valid cases handled above (MISRA 15.7) */
     }
     Tcl_ListObjAppendElement(interp, existingList, valueObj);
     Tcl_DictObjPut(interp, dictObjPtr, keyObj, existingList);
@@ -1081,9 +1106,9 @@ int DictKeys(Tcl_Interp *interp, Tcl_Obj *dictObj, Tcl_Size *keyCountPtr, Tcl_Ob
     int done;
     Tcl_Size capacity = 16;
     Tcl_Size count = 0;
-    Tcl_Obj **keys = (Tcl_Obj **)Tcl_Alloc(capacity * sizeof(Tcl_Obj *));
+    Tcl_Obj **keys = (Tcl_Obj **)Tcl_Alloc((size_t)capacity * sizeof(Tcl_Obj *));
     if (keys == NULL) {
-        Tcl_SetResult(interp, "out of memory", TCL_STATIC);
+        Tcl_SetObjResult(interp, Tcl_NewStringObj("out of memory", -1));
         return TCL_ERROR;
     }
     if (Tcl_DictObjFirst(interp, dictObj, &search, &key, &value, &done) != TCL_OK) {
@@ -1094,11 +1119,11 @@ int DictKeys(Tcl_Interp *interp, Tcl_Obj *dictObj, Tcl_Size *keyCountPtr, Tcl_Ob
         if (count == capacity) {
             // grow the array
             capacity *= 2;
-            Tcl_Obj **newKeys = (Tcl_Obj **)Tcl_Realloc(keys, capacity * sizeof(Tcl_Obj *));
+            Tcl_Obj **newKeys = (Tcl_Obj **)Tcl_Realloc(keys, (size_t)capacity * sizeof(Tcl_Obj *));
             if (newKeys == NULL) {
                 Tcl_DictObjDone(&search);
                 Tcl_Free(keys);
-                Tcl_SetResult(interp, "out of memory", TCL_STATIC);
+                Tcl_SetObjResult(interp, Tcl_NewStringObj("out of memory", -1));
                 return TCL_ERROR;
             }
             keys = newKeys;
@@ -1142,7 +1167,7 @@ int CheckAliasesAreUnique(Tcl_Interp *interp, Tcl_Obj *aliasesDict, Tcl_Obj *opt
     Tcl_Size aliasCount;
     Tcl_ListObjGetElements(interp, aliasList, &aliasCount, &aliasElems);
     for (Tcl_Size i = 0; i < aliasCount; ++i) {
-        if (DictKeyExists(interp, aliasesDict, aliasElems[i])) {
+        if (DictKeyExists(interp, aliasesDict, aliasElems[i]) == 1) {
             return 0;
         }
     }
@@ -1254,7 +1279,9 @@ Tcl_Obj *EnumStrBuildObj(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDict)
         for (Tcl_Size i = 0; i < len - 1; ++i) {
             Tcl_Obj *elem;
             Tcl_ListObjIndex(interp, valList, i, &elem);
-            if (i > 0) Tcl_AppendToObj(resultStr, ", ", -1);
+            if (i > 0) {
+                Tcl_AppendToObj(resultStr, ", ", -1);
+            }
             Tcl_AppendObjToObj(resultStr, elem);
         }
         Tcl_Obj *lastElem;
@@ -1562,6 +1589,8 @@ Tcl_Obj *BuildHelpMessage(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Argume
                                  Tcl_NewStringObj("Allows switches to appear after parameters.", -1));
     } else if (!HAS_GLOBAL_SWITCH(ctx, GLOBAL_SWITCH_PFIRST)) {
         Tcl_ListObjAppendElement(interp, description, Tcl_NewStringObj("Accepts switches only before parameters.", -1));
+    } else {
+        /* No action required: all valid cases handled above (MISRA 15.7) */
     }
     if (HAS_GLOBAL_SWITCH(ctx, GLOBAL_SWITCH_PFIRST)) {
         Tcl_ListObjAppendElement(interp, description,
@@ -1587,38 +1616,42 @@ Tcl_Obj *BuildHelpMessage(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Argume
         Tcl_Obj *combined = Tcl_NewListObj(0, NULL);
         Tcl_Obj *type = NULL;
         // basic element string building
-        if (DictKeyExists(interp, opt, interpCtx->elswitch_hsuppress)) {
+        if (DictKeyExists(interp, opt, interpCtx->elswitch_hsuppress) == 1) {
             Tcl_DictObjNext(&search, &name, &opt, &done);
             continue;
         }
-        if (DictKeyExists(interp, opt, interpCtx->elswitch_switch)) {
-            if (DictKeyExists(interp, opt, interpCtx->elswitch_required)) {
+        if (DictKeyExists(interp, opt, interpCtx->elswitch_switch) == 1) {
+            if (DictKeyExists(interp, opt, interpCtx->elswitch_required) == 1) {
                 Tcl_ListObjAppendElement(interp, elementDescr, Tcl_NewStringObj("required,", -1));
-            } else if (DictKeyExists(interp, opt, interpCtx->elswitch_boolean)) {
+            } else if (DictKeyExists(interp, opt, interpCtx->elswitch_boolean) == 1) {
                 Tcl_ListObjAppendElement(interp, elementDescr, Tcl_NewStringObj("boolean,", -1));
+            } else {
+                /* No action required: all valid cases handled above (MISRA 15.7) */
             }
             type = Tcl_NewStringObj("switch", -1);
         } else {
-            if (DictKeyExists(interp, opt, interpCtx->elswitch_optional)) {
+            if (DictKeyExists(interp, opt, interpCtx->elswitch_optional) == 1) {
                 Tcl_ListObjAppendElement(interp, elementDescr, Tcl_NewStringObj("optional", -1));
             }
             type = Tcl_NewStringObj("parameter", -1);
         }
         // element constraints string building
-        if (DictKeyExists(interp, opt, interpCtx->elswitch_require)) {
+        if (DictKeyExists(interp, opt, interpCtx->elswitch_require) == 1) {
             Tcl_Obj *enumStr = Tcl_NewListObj(0, NULL);
             Tcl_ListObjAppendElement(interp, enumStr, Tcl_NewStringObj("Requires ", -1));
             Tcl_ListObjAppendElement(interp, enumStr, EnumStrBuildObj(interp, interpCtx->elswitch_require, opt));
             Tcl_ListObjAppendElement(interp, enumStr, Tcl_NewStringObj(".", -1));
             Tcl_ListObjAppendElement(interp, constraints, JoinWithEmptySeparator(interp, enumStr));
-        } else if (DictKeyExists(interp, opt, interpCtx->elswitch_allow)) {
+        } else if (DictKeyExists(interp, opt, interpCtx->elswitch_allow) == 1) {
             Tcl_Obj *enumStr = Tcl_NewListObj(0, NULL);
             Tcl_ListObjAppendElement(interp, enumStr, Tcl_NewStringObj("Allows ", -1));
             Tcl_ListObjAppendElement(interp, enumStr, EnumStrBuildObj(interp, interpCtx->elswitch_allow, opt));
             Tcl_ListObjAppendElement(interp, enumStr, Tcl_NewStringObj(".", -1));
             Tcl_ListObjAppendElement(interp, constraints, JoinWithEmptySeparator(interp, enumStr));
+        } else {
+            /* No action required: all valid cases handled above (MISRA 15.7) */
         }
-        if (DictKeyExists(interp, opt, interpCtx->elswitch_forbid)) {
+        if (DictKeyExists(interp, opt, interpCtx->elswitch_forbid) == 1) {
             Tcl_Obj *enumStr = Tcl_NewListObj(0, NULL);
             Tcl_ListObjAppendElement(interp, enumStr, Tcl_NewStringObj("Forbids ", -1));
             Tcl_ListObjAppendElement(interp, enumStr, EnumStrBuildObj(interp, interpCtx->elswitch_forbid, opt));
@@ -1650,7 +1683,7 @@ Tcl_Obj *BuildHelpMessage(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Argume
         }
         Tcl_Obj *defaultLoc = NULL;
         if (DICT_GET_IF_EXISTS(interp, opt, interpCtx->elswitch_default, &defaultLoc) &&
-            DictKeyExists(interp, opt, interpCtx->elswitch_argument)) {
+            (DictKeyExists(interp, opt, interpCtx->elswitch_argument) == 1)) {
             Tcl_Obj *defaultStringLoc = Tcl_NewListObj(0, NULL);
             Tcl_ListObjAppendElement(interp, defaultStringLoc, Tcl_NewStringObj("Default value is ", -1));
             Tcl_ListObjAppendElement(interp, defaultStringLoc, defaultLoc);
@@ -1675,10 +1708,10 @@ Tcl_Obj *BuildHelpMessage(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Argume
                 Tcl_ListObjAppendElement(interp, combined, JoinWithEmptySeparator(interp, enumStr));
             }
         }
-        if (DictKeyExists(interp, opt, interpCtx->elswitch_catchall)) {
+        if (DictKeyExists(interp, opt, interpCtx->elswitch_catchall) == 1) {
             Tcl_ListObjAppendElement(interp, combined, Tcl_NewStringObj("Collects unassigned arguments.", -1));
         }
-        if (DictKeyExists(interp, opt, interpCtx->elswitch_upvar)) {
+        if (DictKeyExists(interp, opt, interpCtx->elswitch_upvar) == 1) {
             Tcl_ListObjAppendElement(interp, combined, Tcl_NewStringObj("Links caller variable.", -1));
         }
         Tcl_Obj *typeLoc;
@@ -1689,21 +1722,21 @@ Tcl_Obj *BuildHelpMessage(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Argume
             Tcl_ListObjAppendElement(interp, typeStr, Tcl_NewStringObj(".", -1));
             Tcl_ListObjAppendElement(interp, combined, JoinWithEmptySeparator(interp, typeStr));
         }
-        if (DictKeyExists(interp, opt, interpCtx->elswitch_enum)) {
+        if (DictKeyExists(interp, opt, interpCtx->elswitch_enum) == 1) {
             Tcl_Obj *enumStr = Tcl_NewListObj(0, NULL);
             Tcl_ListObjAppendElement(interp, enumStr, Tcl_NewStringObj("Value must be one of: ", -1));
             Tcl_ListObjAppendElement(interp, enumStr, EnumStrBuildObj(interp, interpCtx->elswitch_enum, opt));
             Tcl_ListObjAppendElement(interp, enumStr, Tcl_NewStringObj(".", -1));
             Tcl_ListObjAppendElement(interp, combined, JoinWithEmptySeparator(interp, enumStr));
         }
-        if (DictKeyExists(interp, opt, interpCtx->elswitch_imply)) {
+        if (DictKeyExists(interp, opt, interpCtx->elswitch_imply) == 1) {
             Tcl_ListObjAppendElement(interp, combined, Tcl_NewStringObj("Expects two arguments.", -1));
         }
         if (!strcmp("switch", Tcl_GetString(type))) {
             Tcl_Obj *switchStr = Tcl_DuplicateObj(interpCtx->misc_dashStrObj);
             Tcl_AppendObjToObj(switchStr, name);
-            if (DictKeyExists(interp, opt, interpCtx->elswitch_argument)) {
-                if (DictKeyExists(interp, opt, interpCtx->elswitch_optional)) {
+            if (DictKeyExists(interp, opt, interpCtx->elswitch_argument) == 1) {
+                if (DictKeyExists(interp, opt, interpCtx->elswitch_optional) == 1) {
                     Tcl_AppendObjToObj(switchStr, Tcl_NewStringObj(" ?value?", -1));
                 } else {
                     Tcl_AppendObjToObj(switchStr, Tcl_NewStringObj(" value", -1));
@@ -1870,7 +1903,10 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
         Tcl_Size enumListLen;
         Tcl_Obj **enumListElems;
         Tcl_ListObjGetElements(interp, enumList, &enumListLen, &enumListElems);
-        table = Tcl_Alloc((enumListLen + 1) * sizeof(char *));
+        if (enumListLen < 0) {
+            return TCL_ERROR;
+        }
+        table = Tcl_Alloc(((size_t)enumListLen + 1u) * sizeof(char *));
         for (Tcl_Size i = 0; i < enumListLen; ++i) {
             table[i] = Tcl_GetString(enumListElems[i]);
         }
@@ -1883,12 +1919,12 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
     if (enumExists && listFlag) {
         enumPrefixListObj = Tcl_NewListObj(0, NULL);
     }
-    if (listFlag) {
+    if (listFlag == 1) {
         Tcl_Size argc;
         Tcl_Obj **argv;
         Tcl_ListObjGetElements(interp, argObj, &argc, &argv);
         for (Tcl_Size i = 0; i < argc; ++i) {
-            if (enumExists) {
+            if (enumExists == 1) {
                 Tcl_Obj *messageStr = Tcl_ObjPrintf("%s value", Tcl_GetString(nameObj));
                 Tcl_IncrRefCount(messageStr);
                 int flags = TCL_INDEX_TEMP_TABLE;
@@ -1904,7 +1940,7 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
                 }
                 Tcl_DecrRefCount(messageStr);
                 Tcl_ListObjAppendElement(interp, enumPrefixListObj, Tcl_NewStringObj(table[index], -1));
-            } else if (validateExists) {
+            } else if (validateExists == 1) {
                 Tcl_ObjSetVar2(interp, Tcl_NewStringObj("opt", -1), NULL, optDictObj, 0);
                 Tcl_ObjSetVar2(interp, Tcl_NewStringObj("name", -1), NULL, nameObj, 0);
                 Tcl_ObjSetVar2(interp, Tcl_NewStringObj("arg", -1), NULL, argv[i], 0);
@@ -1938,10 +1974,12 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
                 Tcl_UnsetVar(interp, "arg", 0);
                 Tcl_UnsetVar(interp, "name", 0);
                 Tcl_UnsetVar(interp, "opt", 0);
+            } else {
+                /* No action required: all valid cases handled above (MISRA 15.7) */
             }
         }
     } else {
-        if (enumExists) {
+        if (enumExists == 1) {
             Tcl_Obj *messageStr = Tcl_ObjPrintf("%s value", Tcl_GetString(nameObj));
             Tcl_IncrRefCount(messageStr);
             int flags = TCL_INDEX_TEMP_TABLE;
@@ -1959,7 +1997,7 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
             *resultPtr = Tcl_NewStringObj(table[index], -1);
             Tcl_Free(table);
             return TCL_OK;
-        } else if (validateExists) {
+        } else if (validateExists == 1) {
             Tcl_ObjSetVar2(interp, Tcl_NewStringObj("opt", -1), NULL, optDictObj, 0);
             Tcl_ObjSetVar2(interp, Tcl_NewStringObj("name", -1), NULL, nameObj, 0);
             Tcl_ObjSetVar2(interp, Tcl_NewStringObj("arg", -1), NULL, argObj, 0);
@@ -1992,6 +2030,8 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
             Tcl_UnsetVar(interp, "arg", 0);
             Tcl_UnsetVar(interp, "name", 0);
             Tcl_UnsetVar(interp, "opt", 0);
+        } else {
+            /* No action required: all valid cases handled above (MISRA 15.7) */
         }
     }
     if (enumExists && listFlag) {
@@ -2038,7 +2078,7 @@ int TypeChecker(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_O
     Tcl_DictObjGet(interp, optDictObj, interpCtx->elswitch_type, &typeObj);
     if (typeObj != NULL) {
         const char *typeStr = Tcl_GetString(typeObj);
-        if (listFlag) {
+        if (listFlag == 1) {
             Tcl_Size argc;
             Tcl_Obj **argv;
             Tcl_ListObjGetElements(interp, argObj, &argc, &argv);
@@ -2046,16 +2086,16 @@ int TypeChecker(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_O
                 int isValid = 0;
                 if (!strcmp(typeStr, "integer")) {
                     int dummy;
-                    isValid = (Tcl_GetIntFromObj(interp, argv[i], &dummy) == TCL_OK);
+                    isValid = (Tcl_GetIntFromObj(interp, argv[i], &dummy) == TCL_OK) ? 1 : 0;
                 } else if (!strcmp(typeStr, "double")) {
                     double dummy;
-                    isValid = (Tcl_GetDoubleFromObj(interp, argv[i], &dummy) == TCL_OK);
+                    isValid = (Tcl_GetDoubleFromObj(interp, argv[i], &dummy) == TCL_OK) ? 1 : 0;;
                 } else if (!strcmp(typeStr, "digit")) {
                     isValid = Tcl_StringMatch(Tcl_GetString(argv[i]), "[0-9]*");
                 } else if (!strcmp(typeStr, "boolean")) {
                     int dummy;
                     /* cppcheck-suppress invalidLifetime -- Tcl_GetBooleanFromObj does not retain pointer */
-                    isValid = (Tcl_GetBooleanFromObj(interp, argv[i], &dummy) == TCL_OK);
+                    isValid = (Tcl_GetBooleanFromObj(interp, argv[i], &dummy) == TCL_OK) ? 1 : 0;;
                 } else {
                     // Fall back to string is type -strict (slower)
                     Tcl_Obj *cmd[5];
@@ -2064,17 +2104,20 @@ int TypeChecker(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_O
                     cmd[2] = typeObj;
                     cmd[3] = Tcl_NewStringObj("-strict", -1);
                     cmd[4] = argv[i];
-                    for (int j = 0; j < 5; ++j)
+                    for (int j = 0; j < 5; ++j) {
                         Tcl_IncrRefCount(cmd[j]);
+                    }
                     if (Tcl_EvalObjv(interp, 5, cmd, 0) != TCL_OK) {
-                        for (int j = 0; j < 5; ++j)
+                        for (int j = 0; j < 5; ++j) {
                             Tcl_DecrRefCount(cmd[j]);
+                        }
                         return TCL_ERROR;
                     }
                     Tcl_GetBooleanFromObj(interp, Tcl_GetObjResult(interp), &isValid);
                     Tcl_ResetResult(interp);
-                    for (int j = 0; j < 5; ++j)
+                    for (int j = 0; j < 5; ++j) {
                         Tcl_DecrRefCount(cmd[j]);
+                    }
                 }
                 if (!isValid) {
                     Tcl_Obj *errMsg = Tcl_ObjPrintf("%s value \"%s\" is not of the type %s", Tcl_GetString(nameObj),
@@ -2087,16 +2130,16 @@ int TypeChecker(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_O
             int isValid = 0;
             if (!strcmp(typeStr, "integer")) {
                 int dummy;
-                isValid = (Tcl_GetIntFromObj(interp, argObj, &dummy) == TCL_OK);
+                isValid = (Tcl_GetIntFromObj(interp, argObj, &dummy) == TCL_OK) ? 1 : 0;
             } else if (!strcmp(typeStr, "double")) {
                 double dummy;
-                isValid = (Tcl_GetDoubleFromObj(interp, argObj, &dummy) == TCL_OK);
+                isValid = (Tcl_GetDoubleFromObj(interp, argObj, &dummy) == TCL_OK) ? 1 : 0;
             } else if (!strcmp(typeStr, "digit")) {
                 isValid = Tcl_StringMatch(Tcl_GetString(argObj), "[0-9]*");
             } else if (!strcmp(typeStr, "boolean")) {
                 int dummy;
                 /* cppcheck-suppress invalidLifetime -- Tcl_GetBooleanFromObj does not retain pointer */
-                isValid = (Tcl_GetBooleanFromObj(interp, argObj, &dummy) == TCL_OK);
+                isValid = (Tcl_GetBooleanFromObj(interp, argObj, &dummy) == TCL_OK) ? 1 : 0;
             } else {
                 // Fall back to string is type -strict (slower)
                 Tcl_Obj *cmd[5];
@@ -2105,17 +2148,20 @@ int TypeChecker(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_O
                 cmd[2] = typeObj;
                 cmd[3] = Tcl_NewStringObj("-strict", -1);
                 cmd[4] = argObj;
-                for (int j = 0; j < 5; ++j)
+                for (int j = 0; j < 5; ++j) {
                     Tcl_IncrRefCount(cmd[j]);
+                }
                 if (Tcl_EvalObjv(interp, 5, cmd, 0) != TCL_OK) {
-                    for (int j = 0; j < 5; ++j)
+                    for (int j = 0; j < 5; ++j) {
                         Tcl_DecrRefCount(cmd[j]);
+                    }
                     return TCL_ERROR;
                 }
                 Tcl_GetBooleanFromObj(interp, Tcl_GetObjResult(interp), &isValid);
                 Tcl_ResetResult(interp);
-                for (int j = 0; j < 5; ++j)
+                for (int j = 0; j < 5; ++j) {
                     Tcl_DecrRefCount(cmd[j]);
+                }
             }
             if (!isValid) {
                 Tcl_Obj *errMsg = Tcl_ObjPrintf("%s value \"%s\" is not of the type %s", Tcl_GetString(nameObj),
@@ -2197,7 +2243,8 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
             return TCL_ERROR;
         }
         Tcl_Obj *optDict = Tcl_NewDictObj();
-        for (Tcl_Size j = 1; j < elemListLen; ++j) {
+        Tcl_Size j = 1;
+        while (j < elemListLen) {
             if (PrefixMatch(interp, elementSwitches, elemListElems[j], 1, 1, "option", 1, &prefixResult) == TCL_ERROR) {
                 Tcl_SetObjResult(interp, prefixResult);
                 return TCL_ERROR;
@@ -2209,6 +2256,7 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
             if (PrefixMatch(interp, elementSwitchesWithArgsNames, switchName, 1, 0, NULL, 0, NULL) == TCL_ERROR) {
 //****       Process switches without arguments
                 Tcl_DictObjPut(interp, optDict, switchName, interpCtx->misc_emptyStrObj);
+                j += 1;
             } else if (j == (elemListLen - 1)) {
                 Tcl_Obj *msg = Tcl_DuplicateObj(interpCtx->misc_dashStrObj);
                 Tcl_AppendStringsToObj(msg, Tcl_GetString(switchName), " requires an argument", NULL);
@@ -2216,8 +2264,8 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
                 return TCL_ERROR;
             } else {
 //****       Process switches with arguments
-                j++;
-                Tcl_DictObjPut(interp, optDict, switchName, elemListElems[j]);
+                Tcl_DictObjPut(interp, optDict, switchName, elemListElems[j + 1]);
+                j += 2; // consume the argument too
             }
         }
 //****       Process the first element of the element definition
@@ -2226,12 +2274,12 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
         if (elemListLen == 0) {
             Tcl_SetObjResult(interp, Tcl_NewStringObj("element definition cannot be empty", -1));
             return TCL_ERROR;
-        } else if (DictKeyExists(interp, optDict, interpCtx->elswitch_switch) &&
-                   DictKeyExists(interp, optDict, interpCtx->elswitch_parameter)) {
+        } else if ((DictKeyExists(interp, optDict, interpCtx->elswitch_switch) == 1) &&
+                   (DictKeyExists(interp, optDict, interpCtx->elswitch_parameter) == 1)) {
             Tcl_SetObjResult(interp, Tcl_NewStringObj("-switch and -parameter conflict", -1));
             return TCL_ERROR;
         } else if (HAS_GLOBAL_SWITCH(ctx, GLOBAL_SWITCH_INLINE) &&
-                   DictKeyExists(interp, optDict, interpCtx->elswitch_keep)) {
+                   (DictKeyExists(interp, optDict, interpCtx->elswitch_keep) == 1)) {
             Tcl_SetObjResult(interp, Tcl_NewStringObj("-inline and -keep conflict", -1));
             return TCL_ERROR;
         } else if (!DictKeyExists(interp, optDict, interpCtx->elswitch_switch) &&
@@ -2274,6 +2322,8 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
                     Tcl_DictObjPut(interp, optDict, interpCtx->elswitch_catchall, interpCtx->misc_emptyStrObj);
                 } else if (!strcmp(Tcl_GetString(flagsListElems[k]), "^")) {
                     Tcl_DictObjPut(interp, optDict, interpCtx->elswitch_upvar, interpCtx->misc_emptyStrObj);
+                } else {
+                    /* No action required: all valid cases handled above (MISRA 15.7) */
                 }
             }
             SAFE_DECR_REF(minus);
@@ -2291,24 +2341,24 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
         }
 
 //****       Check for collisions
-        if (DictKeyExists(interp, argCtx->defDict, name)) {
+        if (DictKeyExists(interp, argCtx->defDict, name) == 1) {
             Tcl_Obj *msg = Tcl_NewStringObj("element name collision: ", -1);
             Tcl_AppendStringsToObj(msg, Tcl_GetString(name), NULL);
             Tcl_SetObjResult(interp, msg);
             return TCL_ERROR;
         }
-        if (DictKeyExists(interp, optDict, interpCtx->elswitch_switch)) {
+        if (DictKeyExists(interp, optDict, interpCtx->elswitch_switch) == 1) {
 //****       Add -argument switch if particular switches are presented
             /* -optional, -required, -catchall, -upvar and -type imply -argument when used with switches */
             for (Tcl_Size l = 0; l < ELEMENT_SWITCH_COUNT_IMPLY_ARG; ++l) {
-                if (DictKeyExists(interp, optDict, Tcl_NewStringObj(elementSwitchesImplyElementArg[l], -1))) {
+                if (DictKeyExists(interp, optDict, Tcl_NewStringObj(elementSwitchesImplyElementArg[l], -1)) == 1) {
                     Tcl_DictObjPut(interp, optDict, interpCtx->elswitch_argument, interpCtx->misc_emptyStrObj);
                 }
             }
         } else {
 //****       Add -required switch for parameters
-            if ((DictKeyExists(interp, optDict, interpCtx->elswitch_catchall) ||
-                 DictKeyExists(interp, optDict, interpCtx->elswitch_optional)) &&
+            if (((DictKeyExists(interp, optDict, interpCtx->elswitch_catchall) == 1) ||
+                 (DictKeyExists(interp, optDict, interpCtx->elswitch_optional) == 1)) &&
                 !DictKeyExists(interp, optDict, interpCtx->elswitch_required)) {
                 Tcl_DictObjPut(interp, optDict, interpCtx->elswitch_optional, interpCtx->misc_emptyStrObj);
             } else {
@@ -2317,7 +2367,7 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
         }
 //****       Check requirements and conflicts
         for (Tcl_Size m = 0; m < ELEMENT_SWITCH_COUNT_REQPAIRS; ++m) {
-            if (DictKeyExists(interp, optDict, Tcl_NewStringObj(requireSwitchesPair0[m], -1)) &&
+            if ((DictKeyExists(interp, optDict, Tcl_NewStringObj(requireSwitchesPair0[m], -1)) == 1) &&
                 !DictKeyExists(interp, optDict, Tcl_NewStringObj(requireSwitchesPair1[m], -1))) {
                 Tcl_Obj *msg = Tcl_DuplicateObj(interpCtx->misc_dashStrObj);
                 Tcl_AppendStringsToObj(msg, requireSwitchesPair0[m], " requires -", requireSwitchesPair1[m], NULL);
@@ -2326,9 +2376,9 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
             }
         }
         for (int n = 0; n < ELEMENT_SWITCH_COUNT_CONFLICT; ++n) {
-            if (DictKeyExists(interp, optDict, Tcl_NewStringObj(conflictSwitches[n], -1))) {
+            if (DictKeyExists(interp, optDict, Tcl_NewStringObj(conflictSwitches[n], -1)) == 1) {
                 for (int p = 0; p < cSwRowSizes[n]; ++p) {
-                    if (DictKeyExists(interp, optDict, Tcl_NewStringObj(conflictSwitchesRows[n][p], -1))) {
+                    if (DictKeyExists(interp, optDict, Tcl_NewStringObj(conflictSwitchesRows[n][p], -1)) == 1) {
                         Tcl_Obj *msg = Tcl_DuplicateObj(interpCtx->misc_dashStrObj);
                         Tcl_AppendStringsToObj(msg, conflictSwitches[n], " and -", conflictSwitchesRows[n][p],
                                                " conflict", NULL);
@@ -2338,7 +2388,8 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
                 }
             }
         }
-        if (HAS_GLOBAL_SWITCH(ctx, GLOBAL_SWITCH_INLINE) && DictKeyExists(interp, optDict, interpCtx->elswitch_upvar)) {
+        if (HAS_GLOBAL_SWITCH(ctx, GLOBAL_SWITCH_INLINE) &&
+            (DictKeyExists(interp, optDict, interpCtx->elswitch_upvar) == 1)) {
             Tcl_SetObjResult(interp, Tcl_NewStringObj("-upvar and -inline conflict", -1));
             return TCL_ERROR;
         }
@@ -2347,8 +2398,9 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
             Tcl_Obj *firstSwitch = Tcl_NewStringObj(disallowedSwitchesRows[n][0], -1);
             Tcl_Obj *secondSwitch = Tcl_NewStringObj(disallowedSwitchesRows[n][1], -1);
             Tcl_Obj *thirdSwitch = Tcl_NewStringObj(disallowedSwitchesRows[n][2], -1);
-            if (DictKeyExists(interp, optDict, firstSwitch) && DictKeyExists(interp, optDict, secondSwitch) &&
-                DictKeyExists(interp, optDict, thirdSwitch)) {
+            if ((DictKeyExists(interp, optDict, firstSwitch) == 1) &&
+                (DictKeyExists(interp, optDict, secondSwitch) == 1) &&
+                (DictKeyExists(interp, optDict, thirdSwitch) == 1)) {
                 Tcl_Obj *msg = Tcl_DuplicateObj(interpCtx->misc_dashStrObj);
                 Tcl_AppendStringsToObj(msg, disallowedSwitchesRows[n][0], " -", disallowedSwitchesRows[n][1], " -",
                                        disallowedSwitchesRows[n][2], " is a disallowed combination", NULL);
@@ -2358,18 +2410,18 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
         }
 //****       Replace -boolean with "-default 0 -value 1"
         if ((HAS_GLOBAL_SWITCH(ctx, GLOBAL_SWITCH_BOOLEAN) &&
-             DictKeyExists(interp, optDict, interpCtx->elswitch_switch) &&
+             (DictKeyExists(interp, optDict, interpCtx->elswitch_switch) == 1) &&
              !DictKeyExists(interp, optDict, interpCtx->elswitch_argument) &&
              !DictKeyExists(interp, optDict, interpCtx->elswitch_upvar) &&
              !DictKeyExists(interp, optDict, interpCtx->elswitch_default) &&
              !DictKeyExists(interp, optDict, interpCtx->elswitch_value) &&
              !DictKeyExists(interp, optDict, interpCtx->elswitch_required)) ||
-            DictKeyExists(interp, optDict, interpCtx->elswitch_boolean)) {
+            (DictKeyExists(interp, optDict, interpCtx->elswitch_boolean) == 1)) {
             Tcl_DictObjPut(interp, optDict, interpCtx->elswitch_default, Tcl_NewStringObj("0", -1));
             Tcl_DictObjPut(interp, optDict, interpCtx->elswitch_value, Tcl_NewStringObj("1", -1));
         }
 //****       Insert default -level if -upvar is used
-        if (DictKeyExists(interp, optDict, interpCtx->elswitch_upvar) &&
+        if ((DictKeyExists(interp, optDict, interpCtx->elswitch_upvar) == 1) &&
             !DictKeyExists(interp, optDict, interpCtx->elswitch_level)) {
             if (HAS_GLOBAL_SWITCH(ctx, GLOBAL_SWITCH_LEVEL)) {
                 Tcl_DictObjPut(interp, optDict, interpCtx->elswitch_level, GLOBAL_SWITCH_ARG(ctx, GLOBAL_SWITCH_LEVEL));
@@ -2395,13 +2447,13 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
 //****       Build parameter and switches definition lists
         Tcl_Obj *aliasVal = NULL;
         Tcl_Obj *matchListDummy = NULL;
-        if (DictKeyExists(interp, optDict, interpCtx->elswitch_alias)) {
+        if (DictKeyExists(interp, optDict, interpCtx->elswitch_alias) == 1) {
             Tcl_DictObjGet(interp, optDict, interpCtx->elswitch_alias, &aliasVal);
         }
-        if (DictKeyExists(interp, optDict, interpCtx->elswitch_parameter)) {
+        if (DictKeyExists(interp, optDict, interpCtx->elswitch_parameter) == 1) {
 //*****          Keep track of parameter order
             Tcl_ListObjAppendElement(interp, argCtx->orderList, name);
-            if (DictKeyExists(interp, optDict, interpCtx->elswitch_catchall)) {
+            if (DictKeyExists(interp, optDict, interpCtx->elswitch_catchall) == 1) {
                 if (argCtx->catchall != NULL) {
                     Tcl_Obj *msg = Tcl_NewStringObj("multiple catchall parameters: ", -1);
                     Tcl_AppendStringsToObj(msg, Tcl_GetString(argCtx->catchall), " and ", Tcl_GetString(name), NULL);
@@ -2452,7 +2504,7 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
         }
 //*****          Map from upvar keys back to element names, and forbid collisions
         Tcl_Obj *keyVal = NULL;
-        if (DictKeyExists(interp, optDict, interpCtx->elswitch_upvar) &&
+        if ((DictKeyExists(interp, optDict, interpCtx->elswitch_upvar) == 1) &&
             DICT_GET_IF_EXISTS(interp, optDict, interpCtx->elswitch_key, &keyVal)) {
             Tcl_Obj *upvarVal = NULL;
             if (DICT_GET_IF_EXISTS(interp, argCtx->upvarsDict, keyVal, &upvarVal)) {
@@ -2497,6 +2549,8 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
                 };
                 Tcl_DictObjPut(interp, optDict, Tcl_NewStringObj("validateMsg", -1), Tcl_ConcatObj(2, objv));
             }
+        } else {
+            /* No action required: all valid cases handled above (MISRA 15.7) */
         }
 //*****          Check for allowed arguments to -type
         Tcl_Obj *typeVal = NULL;
@@ -2558,7 +2612,7 @@ ArgumentDefinition *CreateAndCacheArgDef(Tcl_Interp *interp, ArgparseInterpCtx *
     // Allocate and init
     ArgumentDefinition *argDef = Tcl_Alloc(sizeof(ArgumentDefinition));
     if (!argDef) {
-        Tcl_SetResult(interp, "Failed to allocate memory for ArgumentDefinition", TCL_STATIC);
+        Tcl_SetObjResult(interp, Tcl_NewStringObj("Failed to allocate memory for ArgumentDefinition", -1));
         Tcl_DeleteHashEntry(entry);
         return NULL;
     }
@@ -2636,8 +2690,8 @@ static void CleanupAllArgumentDefinitions(ArgparseInterpCtx *interpCtx) {
 static Tcl_Obj *GenerateGlobalSwitchesKey(const GlobalSwitchesContext *ctx) {
     Tcl_Obj *keyObj = Tcl_NewObj();
     Tcl_AppendPrintfToObj(keyObj, "%d:", ctx->globalSwitches);
-    for (int i = 0; i < GLOBAL_SWITCH_COUNT; ++i) {
-        if ((GLOBAL_SWITCH_TAKES_ARG_MASK & (1 << i)) && HAS_GLOBAL_SWITCH(ctx, i)) {
+    for (bitmask_t i = 0; i < (bitmask_t)GLOBAL_SWITCH_COUNT; ++i) {
+        if ((GLOBAL_SWITCH_TAKES_ARG_MASK & ((bitmask_t)1u << i)) && HAS_GLOBAL_SWITCH(ctx, i)) {
             Tcl_Obj *argObj = ctx->values[i];
             if (argObj != NULL) {
                 const char *argStr = Tcl_GetString(argObj);
@@ -2675,8 +2729,10 @@ static Tcl_Obj *GenerateGlobalSwitchesKey(const GlobalSwitchesContext *ctx) {
  *----------------------------------------------------------------------------------------------------------------------
  */
 Tcl_Obj *DuplicateDictWithNestedDicts(Tcl_Interp *interp, Tcl_Obj *dictObj) {
-    if (dictObj == NULL)
+    if (dictObj == NULL) {
         return NULL;
+    }
+    /* cppcheck-suppress misra-c2012-11.8 */
     Tcl_Obj *newDict = Tcl_DuplicateObj(dictObj);
     Tcl_IncrRefCount(newDict);
     Tcl_Size keyCount = 0;
@@ -2774,8 +2830,8 @@ static void FreeArgparseInterpCtx(void *clientData) {
 static ArgparseInterpCtx *InitArgparseInterpCtx(Tcl_Interp *interp) {
     ArgparseInterpCtx *interpCtx = Tcl_AttemptAlloc(sizeof(*interpCtx));
     if (interpCtx == NULL) {
-        if (interp) {
-            Tcl_SetResult(interp, "Could not allocate memory for argparse context", TCL_STATIC);
+        if (interp != NULL) {
+            Tcl_SetObjResult(interp, Tcl_NewStringObj("Could not allocate memory for argparse context", -1));
         }
         return NULL;
     }
@@ -2849,6 +2905,7 @@ static ArgparseInterpCtx *InitArgparseInterpCtx(Tcl_Interp *interp) {
  *----------------------------------------------------------------------------------------------------------------------
  */
 extern DLLEXPORT int Argparse_Init(Tcl_Interp *interp) {
+    /* cppcheck-suppress misra-c2012-10.1 */
     if (Tcl_InitStubs(interp, "8.6-10.0", 0) == NULL) {
         return TCL_ERROR;
     }
@@ -2905,23 +2962,26 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
 //***    Process arguments to argparse procedure
     Tcl_Size defListLen;
     Tcl_Obj **defListElems;
-    Tcl_Size i;
-    for (i = 1; i < objc; ++i) {
-        int globalSwitchId;
-        if (Tcl_GetIndexFromObj(NULL, objv[i], globalSwitches, "option", 0, &globalSwitchId) != TCL_OK) {
-            break;
+    Tcl_Size i = 1;
+    while (i < objc) {
+        int idx; 
+        if (Tcl_GetIndexFromObj(NULL, objv[i], globalSwitches, "option", 0, &idx) != TCL_OK) {
+            break; /* unknown switch -> stop scanning */
         }
-        // handle flags that take arguments
-        if (GLOBAL_SWITCH_TAKES_ARG_MASK & (1 << globalSwitchId)) {
-            if (i + 1 >= objc) {
-                Tcl_SetObjResult(interp, Tcl_ObjPrintf("Missing argument for %s", globalSwitches[globalSwitchId]));
+        /* Build the bit for this switch id (types kept unsigned for MISRA 10.x) */
+        bitmask_t bit = ((bitmask_t)1u << (unsigned)idx);
+        if (((GLOBAL_SWITCH_TAKES_ARG_MASK & bit) != (bitmask_t)0u)) {
+            /* switch takes an argument: ensure one is present */
+            if ((i + 1) >= objc) {
+                Tcl_SetObjResult(interp, Tcl_ObjPrintf("Missing argument for %s", globalSwitches[idx]));
                 goto cleanupOnError;
             }
-            SetGlobalSwitch(&ctx, globalSwitchId, objv[i + 1]);
-            i++; // skip value
-        }
-        else {
-            SetGlobalSwitch(&ctx, globalSwitchId, NULL);
+            SetGlobalSwitch(&ctx, (unsigned)idx, objv[i + 1]);
+            i += 2; /* consumed switch + its argument */
+        } else {
+            /* no-arg switch */
+            SetGlobalSwitch(&ctx, (unsigned)idx, NULL);
+            i += 1; /* consumed only the switch */
         }
     }
     /* End of global options. */
@@ -2967,8 +3027,8 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
             Tcl_SetObjResult(interp, Tcl_NewStringObj("error getting element definition list", -1));
             goto cleanupOnError;
         }
-	if (elemListLen == 0) {
-            Tcl_SetResult(interp, "element definition cannot be empty", TCL_STATIC);
+        if (elemListLen == 0) {
+            Tcl_SetObjResult(interp, Tcl_NewStringObj("element definition cannot be empty", -1));
             goto cleanupOnError;
         }
         if (!strcmp(Tcl_GetString(elemListElems[0]), "#")) {
@@ -3040,7 +3100,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
 //****       Create reciprocal requirements
         Tcl_Obj *otherList = NULL;
         if ((HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_RECIPROCAL) ||
-             DictKeyExists(interp, opt, interpCtx->elswitch_reciprocal)) &&
+             (DictKeyExists(interp, opt, interpCtx->elswitch_reciprocal) == 1)) &&
             DICT_GET_IF_EXISTS(interp, opt, interpCtx->elswitch_require, &otherList)) {
             Tcl_Size otherListLen;
             Tcl_Obj **otherListElems;
@@ -3080,37 +3140,39 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 }
                 if (!Tcl_StringMatch(Tcl_GetString(name), Tcl_GetString(otherName)) &&
                     DICT_GET_IF_EXISTS(interp, otherOpt, interpCtx->elswitch_key, &otherOptKey)) {
-                    if (Tcl_StringMatch(Tcl_GetString(optKey), Tcl_GetString(otherOptKey))) {
+                    if (Tcl_StringMatch(Tcl_GetString(optKey), Tcl_GetString(otherOptKey)) == 1) {
 //*****          Limit when shared keys may be used
-                        if (DictKeyExists(interp, opt, interpCtx->elswitch_parameter)) {
+                        if (DictKeyExists(interp, opt, interpCtx->elswitch_parameter) == 1) {
                             Tcl_Obj *msg = Tcl_DuplicateObj(name);
                             Tcl_AppendStringsToObj(msg, " cannot be a parameter because it shares a key with ",
                                                    Tcl_GetString(otherName), NULL);
                             Tcl_SetObjResult(interp, msg);
                             Tcl_Free(keyObjs);
                             goto cleanupOnError;
-                        } else if (DictKeyExists(interp, opt, interpCtx->elswitch_argument)) {
+                        } else if (DictKeyExists(interp, opt, interpCtx->elswitch_argument) == 1) {
                             Tcl_Obj *msg = Tcl_DuplicateObj(name);
                             Tcl_AppendStringsToObj(msg, " cannot use -argument because it shares a key with ",
                                                    Tcl_GetString(otherName), NULL);
                             Tcl_SetObjResult(interp, msg);
                             Tcl_Free(keyObjs);
                             goto cleanupOnError;
-                        } else if (DictKeyExists(interp, opt, interpCtx->elswitch_catchall)) {
+                        } else if (DictKeyExists(interp, opt, interpCtx->elswitch_catchall) == 1) {
                             Tcl_Obj *msg = Tcl_DuplicateObj(name);
                             Tcl_AppendStringsToObj(msg, " cannot use -catchall because it shares a key with ",
                                                    Tcl_GetString(otherName), NULL);
                             Tcl_SetObjResult(interp, msg);
                             Tcl_Free(keyObjs);
                             goto cleanupOnError;
-                        } else if (DictKeyExists(interp, opt, interpCtx->elswitch_default) &&
-                                   DictKeyExists(interp, otherOpt, interpCtx->elswitch_default)) {
+                        } else if ((DictKeyExists(interp, opt, interpCtx->elswitch_default) == 1) &&
+                                   (DictKeyExists(interp, otherOpt, interpCtx->elswitch_default) == 1)) {
                             Tcl_Obj *msg = Tcl_DuplicateObj(name);
                             Tcl_AppendStringsToObj(msg, " and ", Tcl_GetString(otherName),
                                                    " cannot both use -default because they share a key", NULL);
                             Tcl_SetObjResult(interp, msg);
                             Tcl_Free(keyObjs);
                             goto cleanupOnError;
+                        } else {
+                            /* No action required: all valid cases handled above (MISRA 15.7) */
                         }
 //*****          Create forbid constraints on shared keys
                         int nameInForbidList = 0;
@@ -3158,7 +3220,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
         } else {
             helpSwitchPresented = InList(interp, Tcl_NewStringObj("-help", -1), argv);
         }
-        if (helpSwitchPresented) {
+        if (helpSwitchPresented == 1) {
             Tcl_Obj *helpLevel = NULL;
             if (!HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_HELPLEVEL)) {
                 helpLevel = Tcl_NewStringObj("2", -1);
@@ -3204,7 +3266,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
             Tcl_Obj *name = orderListElems[j];
             Tcl_Obj *innerDict = NULL;
             Tcl_DictObjGet(interp, argDefCtx->defDict, name, &innerDict);
-            if (DictKeyExists(interp, innerDict, interpCtx->elswitch_required)) {
+            if (DictKeyExists(interp, innerDict, interpCtx->elswitch_required) == 1) {
                 Tcl_ListObjAppendElement(interp, orderReq, name);
             } else {
                 Tcl_ListObjAppendElement(interp, orderOpt, name);
@@ -3222,6 +3284,8 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
         } else if (lenOrderOpt > 0) {
             Tcl_DecrRefCount(argDefCtx->orderList);
             argDefCtx->orderList = orderOpt;
+        } else {
+            /* No action required: all valid cases handled above (MISRA 15.7) */
         }
     }
 
@@ -3239,7 +3303,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 Tcl_Obj *name = orderListElems[j];
                 Tcl_Obj *innerDict = NULL;
                 Tcl_DictObjGet(interp, argDefCtx->defDict, name, &innerDict);
-                if (DictKeyExists(interp, innerDict, interpCtx->elswitch_required)) {
+                if (DictKeyExists(interp, innerDict, interpCtx->elswitch_required) == 1) {
                     start++;
                 }
             }
@@ -3253,7 +3317,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 Tcl_Obj *name = orderListElems[j];
                 Tcl_Obj *innerDict = NULL;
                 Tcl_DictObjGet(interp, argDefCtx->defDict, name, &innerDict);
-                if (DictKeyExists(interp, innerDict, interpCtx->elswitch_required)) {
+                if (DictKeyExists(interp, innerDict, interpCtx->elswitch_required) == 1) {
                     end--;
                 }
             }
@@ -3345,13 +3409,13 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
             int done;
             int count = 0;
             int capacity = 8;
-            const char **table = Tcl_Alloc(capacity * sizeof(char *));
+            const char **table = Tcl_Alloc((size_t)capacity * sizeof(char *));
             Tcl_DictObjFirst(interp, argDefCtx->defDict, &search, &key, &data, &done);
             while (!done) {
-                if (DictKeyExists(interp, data, interpCtx->elswitch_switch)) {
+                if (DictKeyExists(interp, data, interpCtx->elswitch_switch) == 1) {
                     if (count >= capacity) {
                         capacity *= 2;
-                        table = Tcl_Realloc((void *)table, capacity * sizeof(char *));
+                        table = Tcl_Realloc((void *)table, (size_t)capacity * sizeof(char *));
                     }
                     table[count++] = Tcl_GetString(key);
                 }
@@ -3359,7 +3423,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
             }
             Tcl_DictObjDone(&search);
             if (count >= capacity) {
-                table = Tcl_Realloc((void *)table, (capacity + 1) * sizeof(char *));
+                table = Tcl_Realloc((void *)table, ((size_t)capacity + 1u) * sizeof(char *));
             }
             table[count] = NULL;
             const char *const *tablePtr = table;
@@ -3367,14 +3431,14 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
             int prefixCode = Tcl_GetIndexFromObj(interp, name, tablePtr, "switch", TCL_INDEX_TEMP_TABLE, &index);
             Tcl_ResetResult(interp);
             Tcl_Free(table);
-            if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_switch)) {
+            if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_switch) == 1) {
                 // Exact match.  No additional lookup needed
             } else if (!HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_EXACT) && prefixCode == TCL_OK) {
                 // Use the switch whose prefix unambiguously matches
                 name = Tcl_NewStringObj(tablePtr[index], -1);
                 normal = Tcl_DuplicateObj(interpCtx->misc_dashStrObj);
                 Tcl_AppendStringsToObj(normal, Tcl_GetString(name), NULL);
-            } else if (DictKeyExists(interp, argDefCtx->defDict, interpCtx->misc_emptyStrObj)) {
+            } else if (DictKeyExists(interp, argDefCtx->defDict, interpCtx->misc_emptyStrObj) == 1) {
                 // Use default pass-through if defined
                 name = interpCtx->misc_emptyStrObj;
             } else {
@@ -3386,7 +3450,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 goto cleanupOnError;
             }
 //*****          If the switch is standalone, ignore all constraints
-            if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_standalone)) {
+            if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_standalone) == 1) {
                 Tcl_Obj **keyObjsLoc;
                 Tcl_Size keyCountLoc;
                 DictKeys(interp, argDefCtx->defDict, &keyCountLoc, &keyObjsLoc);
@@ -3400,7 +3464,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                                              (Tcl_Obj *[]){other, interpCtx->elswitch_forbid});
                     Tcl_DictObjRemoveKeyList(interp, argDefCtx->defDict, 2,
                                              (Tcl_Obj *[]){other, interpCtx->elswitch_allow});
-                    if (NestedDictKeyExists(interp, argDefCtx->defDict, other, interpCtx->elswitch_parameter)) {
+                    if (NestedDictKeyExists(interp, argDefCtx->defDict, other, interpCtx->elswitch_parameter) == 1) {
                         Tcl_DictObjPutKeyList(interp, argDefCtx->defDict, 2,
                                               (Tcl_Obj *[]){other, interpCtx->elswitch_optional},
                                               interpCtx->misc_emptyStrObj);
@@ -3421,10 +3485,10 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
 //*****          Load key and pass into local variables for easy access
             Tcl_Obj *keyLoc = NULL;
             Tcl_Obj *passLoc = NULL;
-            if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_key)) {
+            if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_key) == 1) {
                 GetNestedDictValue(interp, argDefCtx->defDict, name, interpCtx->elswitch_key, &keyLoc);
             }
-            if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_pass)) {
+            if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_pass) == 1) {
                 GetNestedDictValue(interp, argDefCtx->defDict, name, interpCtx->elswitch_pass, &passLoc);
             }
 //*****          Keep track of which switches have been seen
@@ -3432,7 +3496,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
 //*****          Validate switch arguments and store values into the result dict
             Tcl_Size argvLen;
             Tcl_ListObjLength(interp, argv, &argvLen);
-            if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_catchall)) {
+            if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_catchall) == 1) {
                 // The switch is catchall, so store all remaining arguments.
                 // validate
                 Tcl_Obj *resultList = NULL;
@@ -3471,7 +3535,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                     goto cleanupOnError;
                 }
                 if (keyLoc != NULL) {
-                    if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_value)) {
+                    if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_value) == 1) {
                         Tcl_Obj *valueLoc = NULL;
                         GetNestedDictValue(interp, argDefCtx->defDict, name, interpCtx->elswitch_value, &valueLoc);
                         Tcl_DictObjPut(interp, resultDict, keyLoc, valueLoc);
@@ -3507,7 +3571,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                     goto cleanupOnError;
                 }
                 if (keyLoc != NULL) {
-                    if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_optional)) {
+                    if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_optional) == 1) {
                         Tcl_Obj *list = Tcl_NewListObj(0, NULL);
                         Tcl_Obj *emptyList = Tcl_NewListObj(0, NULL);
                         Tcl_ListObjAppendElement(interp, list, emptyList);
@@ -3554,7 +3618,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 }
             }
             // Insert this switch's implied arguments into the argument list
-            if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_imply)) {
+            if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_imply) == 1) {
                 Tcl_Obj *implyName = NULL;
                 GetNestedDictValue(interp, argDefCtx->defDict, name, interpCtx->elswitch_imply, &implyName);
                 Tcl_Size valueLen;
@@ -3573,10 +3637,10 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
         int done;
         Tcl_DictObjFirst(interp, argDefCtx->defDict, &search, &name, &opt, &done);
         while (!done) {
-            if (DictKeyExists(interp, opt, interpCtx->elswitch_switch) &&
+            if ((DictKeyExists(interp, opt, interpCtx->elswitch_switch) == 1) &&
                 !DictKeyExists(interp, opt, interpCtx->misc_presentSwitchObj) &&
-                DictKeyExists(interp, opt, interpCtx->elswitch_required)) {
-                if (DictKeyExists(interp, opt, interpCtx->elswitch_alias)) {
+                (DictKeyExists(interp, opt, interpCtx->elswitch_required) == 1)) {
+                if (DictKeyExists(interp, opt, interpCtx->elswitch_alias) == 1) {
                     Tcl_ListObjAppendElement(interp, missingList, BuildAliasJoinString(interp, opt, name, interpCtx));
                 } else {
                     Tcl_Obj *dashName = Tcl_DuplicateObj(interpCtx->misc_dashStrObj);
@@ -3622,7 +3686,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     Tcl_ListObjGetElements(interp, argDefCtx->orderList, &orderListLen, &orderListElems);
     for (Tcl_Size j = 0; j < orderListLen; ++j) {
         Tcl_Obj *name = orderListElems[j];
-        if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_required)) {
+        if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_required) == 1) {
             if (count > 0) {
                 Tcl_DictObjPut(interp, allocDict, name, Tcl_NewWideIntObj(1));
                 Tcl_DictObjRemove(interp, argDefCtx->omittedDict, name);
@@ -3666,7 +3730,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
             Tcl_Obj *catchallName = argDefCtx->catchall;
             DictIncr(interp, allocDict, catchallName, Tcl_NewWideIntObj(count));
             Tcl_DictObjRemove(interp, argDefCtx->omittedDict, catchallName);
-        } else if (DictKeyExists(interp, argDefCtx->defDict, interpCtx->misc_emptyStrObj)) {
+        } else if (DictKeyExists(interp, argDefCtx->defDict, interpCtx->misc_emptyStrObj) == 1) {
             // If there is no catchall parameter, instead allocate to the default pass-through result key.
             Tcl_ListObjAppendElement(interp, argDefCtx->orderList, interpCtx->misc_emptyStrObj);
             Tcl_DictObjPut(interp, allocDict, interpCtx->misc_emptyStrObj, Tcl_NewWideIntObj(count));
@@ -3681,7 +3745,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     int done;
     Tcl_DictObjFirst(interp, argDefCtx->defDict, &search, &name, &opt, &done);
     while (!done) {
-        if (DictKeyExists(interp, opt, interpCtx->misc_presentSwitchObj)) {
+        if (DictKeyExists(interp, opt, interpCtx->misc_presentSwitchObj) == 1) {
             int match = 1;
             Tcl_Obj *condition = Tcl_NewStringObj("require", -1);
             Tcl_Obj *description = Tcl_NewStringObj("requires", -1);
@@ -3696,13 +3760,14 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                         match) {
                         Tcl_Obj *dashName = NULL;
                         Tcl_Obj *dashOtherName = NULL;
-                        if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_switch)) {
+                        if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_switch) == 1) {
                             dashName = Tcl_DuplicateObj(interpCtx->misc_dashStrObj);
                             Tcl_AppendStringsToObj(dashName, Tcl_GetString(name), NULL);
                         } else {
                             dashName = name;
                         }
-                        if (NestedDictKeyExists(interp, argDefCtx->defDict, otherName, interpCtx->elswitch_switch)) {
+                        if (NestedDictKeyExists(interp, argDefCtx->defDict, otherName, interpCtx->elswitch_switch) ==
+                            1) {
                             dashOtherName = Tcl_DuplicateObj(interpCtx->misc_dashStrObj);
                             Tcl_AppendStringsToObj(dashOtherName, Tcl_GetString(otherName), NULL);
                         } else {
@@ -3729,13 +3794,14 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                         match) {
                         Tcl_Obj *dashName = NULL;
                         Tcl_Obj *dashOtherName = NULL;
-                        if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_switch)) {
+                        if (NestedDictKeyExists(interp, argDefCtx->defDict, name, interpCtx->elswitch_switch) == 1) {
                             dashName = Tcl_DuplicateObj(interpCtx->misc_dashStrObj);
                             Tcl_AppendStringsToObj(dashName, Tcl_GetString(name), NULL);
                         } else {
                             dashName = name;
                         }
-                        if (NestedDictKeyExists(interp, argDefCtx->defDict, otherName, interpCtx->elswitch_switch)) {
+                        if (NestedDictKeyExists(interp, argDefCtx->defDict, otherName, interpCtx->elswitch_switch) ==
+                            1) {
                             dashOtherName = Tcl_DuplicateObj(interpCtx->misc_dashStrObj);
                             Tcl_AppendStringsToObj(dashOtherName, Tcl_GetString(otherName), NULL);
                         } else {
@@ -3757,7 +3823,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     Tcl_Obj *presentedNames = Tcl_NewListObj(0, NULL);
     Tcl_DictObjFirst(interp, argDefCtx->defDict, &search, &name, &opt, &done);
     while (!done) {
-        if (DictKeyExists(interp, opt, interpCtx->misc_presentSwitchObj)) {
+        if (DictKeyExists(interp, opt, interpCtx->misc_presentSwitchObj) == 1) {
             Tcl_ListObjAppendElement(interp, presentedNames, name);
         }
         Tcl_DictObjNext(&search, &name, &opt, &done);
@@ -3766,7 +3832,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
 
     Tcl_DictObjFirst(interp, argDefCtx->defDict, &search, &name, &opt, &done);
     while (!done) {
-        if (DictKeyExists(interp, opt, interpCtx->misc_presentSwitchObj)) {
+        if (DictKeyExists(interp, opt, interpCtx->misc_presentSwitchObj) == 1) {
             Tcl_Obj *allowedNames = NULL;
              if (DICT_GET_IF_EXISTS(interp, opt, interpCtx->elswitch_allow, &allowedNames)) {
                 Tcl_Size presentedNamesListLen;
@@ -3774,7 +3840,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 Tcl_ListObjGetElements(interp, presentedNames, &presentedNamesListLen, &presentedNamesListElems);
                 for (Tcl_Size j = 0; j < presentedNamesListLen; ++j) {
                     Tcl_Obj *presentedName = presentedNamesListElems[j];
-                    if (Tcl_StringMatch(Tcl_GetString(presentedName), Tcl_GetString(name))) {
+                    if (Tcl_StringMatch(Tcl_GetString(presentedName), Tcl_GetString(name)) == 1) {
                         continue;
                     }
                     if (!InListStringMatch(interp, presentedName, allowedNames)) {
@@ -3828,7 +3894,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
         Tcl_DictObjGet(interp, argDefCtx->defDict, nameLoc, &optLoc);
         Tcl_Obj *passLoc = NULL;
         Tcl_Obj *defaultLoc = NULL;
-        if (DictKeyExists(interp, allocDict, nameLoc)) {
+        if (DictKeyExists(interp, allocDict, nameLoc) == 1) {
             Tcl_Obj *val = NULL;
             Tcl_Size nameLen;
             Tcl_ListObjLength(interp, nameLoc, &nameLen);
@@ -3877,7 +3943,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                     }
                     val = resultList;
                 }
-                if (DictKeyExists(interp, optLoc, interpCtx->elswitch_pass)) {
+                if (DictKeyExists(interp, optLoc, interpCtx->elswitch_pass) == 1) {
                     Tcl_Obj *val0 = NULL;
                     Tcl_ListObjIndex(interp, val, 0, &val0);
                     Tcl_Obj *passLocLoc = NULL;
@@ -3902,6 +3968,8 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 DictLappendElem(interp, resultDict, passLoc, interpCtx->misc_doubleDashStrObj);
             }
             DictLappendElem(interp, resultDict, passLoc, defaultLoc);
+        } else {
+            /* No action required: all valid cases handled above (MISRA 15.7) */
         }
     }
 //***    Create default values for missing elements
@@ -3913,8 +3981,10 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 Tcl_Obj *defaultLoc;
                 if (DICT_GET_IF_EXISTS(interp, opt, interpCtx->elswitch_default, &defaultLoc)) {
                     Tcl_DictObjPut(interp, resultDict, keyLoc, defaultLoc);
-                } else if (DictKeyExists(interp, opt, interpCtx->elswitch_catchall)) {
+                } else if (DictKeyExists(interp, opt, interpCtx->elswitch_catchall) == 1) {
                     Tcl_DictObjPut(interp, resultDict, keyLoc, interpCtx->misc_emptyStrObj);
+                } else {
+                    /* No action required: all valid cases handled above (MISRA 15.7) */
                 }
             }
         }
