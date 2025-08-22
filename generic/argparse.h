@@ -7,7 +7,7 @@ typedef uint32_t bitmask_t;
 
 //** useful macroses
 #define DICT_GET_IF_EXISTS(interp, dictObj, keyObj, valPtr)                                                            \
-    (Tcl_DictObjGet((interp), (dictObj), (keyObj), (valPtr)) == TCL_OK && *(valPtr) != NULL)
+    ((Tcl_DictObjGet((interp), (dictObj), (keyObj), (valPtr)) == TCL_OK) && (*(valPtr) != NULL))
 
 #define SAFE_DECR_REF_AND_NULL(objPtr)                                                                                 \
     do {                                                                                                               \
@@ -67,15 +67,42 @@ typedef struct {
 //** A per-interpreter context for argparse.
 typedef struct {
     Tcl_HashTable argDefHashTable; // arguments definition hash table
-    Tcl_Obj *list_allowedTypes, *list_templateSubstNames, *list_helpGenSubstNames; // cashed list objects
-    Tcl_Obj *misc_emptyStrObj, *misc_presentSwitchObj, *misc_validateMsgStrObj, *misc_dashStrObj,
-        *misc_doubleDashStrObj; // cashed miscellanious objects
-    Tcl_Obj *elswitch_alias, *elswitch_argument, *elswitch_boolean, *elswitch_catchall, *elswitch_default,
-        *elswitch_enum, *elswitch_forbid, *elswitch_ignore, *elswitch_imply, *elswitch_keep, *elswitch_key,
-        *elswitch_level, *elswitch_optional, *elswitch_parameter, *elswitch_pass, *elswitch_reciprocal,
-        *elswitch_require, *elswitch_required, *elswitch_standalone, *elswitch_switch, *elswitch_upvar,
-        *elswitch_validate, *elswitch_value, *elswitch_type, *elswitch_allow, *elswitch_help, *elswitch_errormsg,
-        *elswitch_hsuppress; // cashed element switches objects
+    Tcl_Obj *list_allowedTypes;
+    Tcl_Obj *list_templateSubstNames;
+    Tcl_Obj *list_helpGenSubstNames; // cashed list objects
+    Tcl_Obj *misc_emptyStrObj;
+    Tcl_Obj *misc_presentSwitchObj;
+    Tcl_Obj *misc_validateMsgStrObj;
+    Tcl_Obj *misc_dashStrObj;
+    Tcl_Obj *misc_doubleDashStrObj; // cashed miscellanious objects
+    Tcl_Obj *elswitch_alias;
+    Tcl_Obj *elswitch_argument;
+    Tcl_Obj *elswitch_boolean;
+    Tcl_Obj *elswitch_catchall;
+    Tcl_Obj *elswitch_default;
+    Tcl_Obj *elswitch_enum;
+    Tcl_Obj *elswitch_forbid;
+    Tcl_Obj *elswitch_ignore;
+    Tcl_Obj *elswitch_imply;
+    Tcl_Obj *elswitch_keep;
+    Tcl_Obj *elswitch_key;
+    Tcl_Obj *elswitch_level;
+    Tcl_Obj *elswitch_optional;
+    Tcl_Obj *elswitch_parameter;
+    Tcl_Obj *elswitch_pass;
+    Tcl_Obj *elswitch_reciprocal;
+    Tcl_Obj *elswitch_require;
+    Tcl_Obj *elswitch_required;
+    Tcl_Obj *elswitch_standalone;
+    Tcl_Obj *elswitch_switch;
+    Tcl_Obj *elswitch_upvar;
+    Tcl_Obj *elswitch_validate;
+    Tcl_Obj *elswitch_value;
+    Tcl_Obj *elswitch_type;
+    Tcl_Obj *elswitch_allow;
+    Tcl_Obj *elswitch_help;
+    Tcl_Obj *elswitch_errormsg;
+    Tcl_Obj *elswitch_hsuppress; // cashed element switches objects
 } ArgparseInterpCtx;
 
 //** global switches declarations and definitions. Order MUST match globaSwitches[]
@@ -116,13 +143,6 @@ typedef struct {
 #define GLOBAL_SWITCH_ARG(ctx, globalSwitchId) ((ctx)->values[globalSwitchId])
 
 //** element switches declarations and definitions
-#define ELEMENT_SWITCH_COUNT 28
-static const char *elementSwitches[] = {
-    "-alias",    "-argument",   "-boolean", "-catchall", "-default",    "-enum",     "-forbid",
-    "-ignore",   "-imply",      "-keep",    "-key",      "-level",      "-optional", "-parameter",
-    "-pass",     "-reciprocal", "-require", "-required", "-standalone", "-switch",   "-upvar",
-    "-validate", "-value",      "-type",    "-allow",    "-help",       "-errormsg", "-hsuppress", NULL};
-
 #define INIT_LIST(name, strings, count)                                                                                \
     do {                                                                                                               \
         (name) = Tcl_NewListObj(0, NULL);                                                                              \
@@ -136,23 +156,15 @@ static const char *elementSwitches[] = {
         Tcl_DecrRefCount((name));                                                                                      \
         (name) = NULL;                                                                                                 \
     } while (0)
-#define ELEMENT_SWITCH_COUNT_WARGS 14
-static const char *elementSwitchesWithArgsNames[] = {
-    "alias",   "default",  "enum",  "forbid", "imply", "key",  "pass",
-    "require", "validate", "value", "type",   "allow", "help", "errormsg", NULL};
 #define ELEMENT_SWITCH_COUNT_TYPES 19
 static const char *allowedTypes[] = {
     "alnum", "alpha", "ascii", "boolean", "control", "dict",  "digit",       "double",   "graph", "integer",
     "list",  "lower", "print", "punct",   "space",   "upper", "wideinteger", "wordchar", "xdigit", NULL};
-#define TEMPLATE_SUBST_COUNT 5
-static const char *templateSubstNames[TEMPLATE_SUBST_COUNT] = {"\\\\\\\\", "\\\\", "\\\\%", "%", "%"};
-#define HELP_GEN_SUBST_COUNT 4
-static const char *helpGenSubstNames[HELP_GEN_SUBST_COUNT] = {",;", ";", ",.", "."};
 
 // Initialization macro
 #define ELSWITCH(name, string)                                                                                         \
     do {                                                                                                               \
-        (name) = Tcl_NewStringObj(#string, -1);                                                                        \
+        (name) = Tcl_NewStringObj((string), -1);                                                                        \
         Tcl_IncrRefCount((name));                                                                                      \
     } while (0)
 
@@ -163,37 +175,6 @@ static const char *helpGenSubstNames[HELP_GEN_SUBST_COUNT] = {",;", ";", ",.", "
         (name) = NULL;                                                                                                 \
     } while (0)
 
-//** static string arrays
-#define ELEMENT_SWITCH_COUNT_IMPLY_ARG 5
-static const char *elementSwitchesImplyElementArg[] = {"optional", "required", "catchall", "upvar", "type"};
-#define ELEMENT_SWITCH_COUNT_CONFLICT 9
-static const char *conflictSwitches[] = {"parameter", "ignore", "required", "argument", "upvar",
-                                         "boolean",   "enum",   "type",     "allow"};
-static const char *cSwRow1[] = {"alias", "boolean", "value", "argument", "imply"};
-static const char *cSwRow2[] = {"key", "pass"};
-static const char *cSwRow3[] = {"boolean", "default"};
-static const char *cSwRow4[] = {"boolean", "value"};
-static const char *cSwRow5[] = {"boolean", "inline", "catchall"};
-static const char *cSwRow6[] = {"default", "value"};
-static const char *cSwRow7[] = {"validate"};
-static const char *cSwRow8[] = {"upvar", "boolean", "enum"};
-static const char *cSwRow9[] = {"forbid"};
-static const char **conflictSwitchesRows[] = {cSwRow1, cSwRow2, cSwRow3, cSwRow4, cSwRow5,
-                                              cSwRow6, cSwRow7, cSwRow8, cSwRow9};
-static const int cSwRowSizes[] = {5, 2, 2, 2, 3, 2, 1, 3, 1};
-#define ELEMENT_SWITCH_COUNT_DISALLOW 6
-static const char *disSwRow1[] = {"switch", "optional", "catchall"};
-static const char *disSwRow2[] = {"switch", "optional", "upvar"};
-static const char *disSwRow3[] = {"switch", "optional", "default"};
-static const char *disSwRow4[] = {"switch", "optional", "boolean"};
-static const char *disSwRow5[] = {"switch", "optional", "type"};
-static const char *disSwRow6[] = {"parameter", "optional", "required"};
-static const char **disallowedSwitchesRows[] = {disSwRow1, disSwRow2, disSwRow3, disSwRow4, disSwRow5, disSwRow6};
-#define ELEMENT_SWITCH_COUNT_REQPAIRS 3
-static const char *requireSwitchesPair0[ELEMENT_SWITCH_COUNT_REQPAIRS] = {"reciprocal", "level", "errormsg"};
-static const char *requireSwitchesPair1[ELEMENT_SWITCH_COUNT_REQPAIRS] = {"require", "upvar", "validate"};
-#define ELEMENT_SWITCH_COUNT_CONSTRAINTS 3
-static const char *elemSwConstraints[ELEMENT_SWITCH_COUNT_CONSTRAINTS] = {"require", "forbid", "allow"};
 
 //** functions declaration
 
@@ -247,5 +228,5 @@ Tcl_Obj *EvaluateStringToTitle(Tcl_Interp *interp, Tcl_Obj *stringObj, Tcl_Obj *
 Tcl_Obj *BuildHelpMessage(Tcl_Interp *interp, GlobalSwitchesContext *ctx, ArgumentDefinition *argDefCtx,
                           Tcl_Obj *helpLevel, ArgparseInterpCtx *interpCtx);
 int PrefixMatch(Tcl_Interp *interp, const char **tableList, Tcl_Obj *matchObj, int useExact, int useMessage,
-                    const char *messageObj, int wantErrorMessage, Tcl_Obj **resultObjPtr);
+                    const char *message, int wantErrorMessage, Tcl_Obj **resultObjPtr);
 int InListStringMatch(Tcl_Interp *interp, Tcl_Obj *itemObj, Tcl_Obj *listObj);

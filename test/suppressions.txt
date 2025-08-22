@@ -1,0 +1,7 @@
+*:*/tclDecls.h
+*:*/tcl.h
+*:*/tclPlatDecls.h
+misra-c2012-15.1 //The goto statement should not be used
+misra-c2012-15.4 //There should be no more than one break or goto statement used to terminate any iteration statement
+misra-c2012-15.5 //A function should have a single point of exit at the end - dissapplied in MISRA-2025
+misra-c2012-17.2 //Functions shall not call themselves, either directly or indirectly
