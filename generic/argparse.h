@@ -31,16 +31,28 @@ typedef uint32_t bitmask_t;
         }                                                                                                              \
     } while (0)
 
-#define PRINT_REF_COUNT(obj)                                                                                           \
+#define PRINT_REF_COUNT(obj_)                                                                                          \
     do {                                                                                                               \
-        if (obj != NULL) {                                                                                             \
-            printf("Reference count of Tcl_Obj \"%s\": %ld\n", Tcl_GetString(obj), obj->refCount);                     \
+        Tcl_Obj *const _obj = (obj_);                                                                                  \
+        if (_obj != NULL) {                                                                                            \
+            printf("Reference count of Tcl_Obj \"%s\": %d\n", Tcl_GetString(_obj), _obj->refCount);                    \
         } else {                                                                                                       \
             printf("Tcl_Obj is NULL\n");                                                                               \
         }                                                                                                              \
         fflush(stdout);                                                                                                \
     } while (0)
 
+#define TCL_RETURN_IF_ERROR(expr)                                                                                      \
+    do {                                                                                                               \
+        if ((expr) != TCL_OK)                                                                                          \
+            return TCL_ERROR;                                                                                          \
+    } while (0)
+
+#define TCL_RETURN_NULL_IF_ERROR(expr)                                                                             \
+    do {                                                                                                               \
+        if ((expr) != TCL_OK)                                                                                          \
+            return NULL;                                                                                              \
+    } while (0)
 //** arguments definition structure
 typedef struct {
     Tcl_Obj *defDict;
@@ -115,7 +127,7 @@ static const char *elementSwitches[] = {
     do {                                                                                                               \
         (name) = Tcl_NewListObj(0, NULL);                                                                              \
         for (int i = 0; i < (count); ++i) {                                                                            \
-            Tcl_ListObjAppendElement(NULL, (name), Tcl_NewStringObj((strings)[i], -1));                                \
+            TCL_RETURN_NULL_IF_ERROR(Tcl_ListObjAppendElement(NULL, (name), Tcl_NewStringObj((strings)[i], -1)));      \
         }                                                                                                              \
         Tcl_IncrRefCount((name));                                                                                      \
     } while (0)
