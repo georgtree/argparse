@@ -17,7 +17,7 @@ interp alias {} = {} expr
 # For documentation please see README.md file
 
 proc ::argparse {args} {
-### Common validation helper routine.
+    ### Common validation helper routine.
     set validateHelper {apply {{name opt args} {
         if {[dict exists $opt enum]} {
             set command [list tcl::prefix match -message "$name value"\
@@ -34,7 +34,7 @@ proc ::argparse {args} {
         }
         return $args
     }}}
-### Type checking routine
+    ### Type checking routine
     set typeChecker {apply {{name opt args} {
         if {[dict exists $opt type]} {
             foreach arg $args {
@@ -45,7 +45,7 @@ proc ::argparse {args} {
         }
         return $args
     }}}
-### Check aliases
+    ### Check aliases
     set aliasesChecker {apply {{aliases opt} {
         foreach alias [dict get $opt alias] {
             if {[dict exists $aliases $alias]} {
@@ -54,7 +54,7 @@ proc ::argparse {args} {
         }
         return true
     }}}
-### Process arguments to argparse procedure
+    ### Process arguments to argparse procedure
     set level 1
     set enum {}
     set validate {}
@@ -120,7 +120,7 @@ proc ::argparse {args} {
     if {[info exists mixed] && [info exists pfirst]} {
         return -code error {-mixed and -pfirst conflict}
     }
-### Parse element definition list.
+    ### Parse element definition list.
     set def {}
     set aliases {}
     set order {}
@@ -128,7 +128,7 @@ proc ::argparse {args} {
     set upvars {}
     set omitted {}
     foreach elem $definition {
-####  Read element definition switches.
+        ####  Read element definition switches.
         set opt {}
         set defsSwitches {-alias -argument -boolean -catchall -default -enum -forbid -ignore -imply -keep -key -level\
                                   -optional -parameter -pass -reciprocal -require -required -standalone -switch -upvar\
@@ -136,17 +136,17 @@ proc ::argparse {args} {
         set defsSwitchesWArgs {alias default enum forbid imply key pass require validate value type allow help errormsg}
         for {set i 1} {$i<[llength $elem]} {incr i} {
             if {[set switch [regsub {^-} [tcl::prefix match $defsSwitches [@ $elem $i]] {}]] ni $defsSwitchesWArgs} {
-#####   Process switches without arguments.
+                #####   Process switches without arguments.
                 dict set opt $switch {}
             } elseif {$i == [llength $elem]-1} {
                 return -code error "-$switch requires an argument"
             } else {
-#####   Process switches with arguments.
+                #####   Process switches with arguments.
                 incr i
                 dict set opt $switch [@ $elem $i]
             }
         }
-####  Process the first element of the element definition.
+        ####  Process the first element of the element definition.
         if {$elem eq {}} {
             return -code error {element definition cannot be empty}
         } elseif {[dict exists $opt switch] && [dict exists $opt parameter]} {
@@ -178,12 +178,12 @@ proc ::argparse {args} {
             # of the definition is the element name, with no processing applied.
             set name [@ $elem 0]
         }
-####  Check for collisions.
+        ####  Check for collisions.
         if {[dict exists $def $name]} {
             return -code error "element name collision: $name"
         }
         if {[dict exists $opt switch]} {
-####  Add -argument switch if particular switches are presented
+            ####  Add -argument switch if particular switches are presented
             # -optional, -required, -catchall, -upvar and -type imply -argument when
             # used with switches.
             foreach switch {optional required catchall upvar type} {
@@ -192,7 +192,7 @@ proc ::argparse {args} {
                 }
             }
         } else {
-####  Add -required switch for parameters
+            ####  Add -required switch for parameters
             # Parameters are required unless -catchall or -optional are used.
             if {([dict exists $opt catchall] || [dict exists $opt optional]) && ![dict exists $opt required]} {
                 dict set opt optional {}
@@ -200,7 +200,7 @@ proc ::argparse {args} {
                 dict set opt required {}
             }
         }
-####  Check requirements and conflicts.
+        ####  Check requirements and conflicts.
         foreach {switch other} {reciprocal require  level upvar  errormsg validate} {
             if {[dict exists $opt $switch] && ![dict exists $opt $other]} {
                 return -code error "-$switch requires -$other"
@@ -228,7 +228,7 @@ proc ::argparse {args} {
         if {[dict exists $opt upvar] && [info exists inline]} {
             return -code error {-upvar and -inline conflict}
         }
-####  Check for disallowed combinations.
+        ####  Check for disallowed combinations.
         foreach combination {
             {switch optional catchall}
             {switch optional upvar}
@@ -247,18 +247,18 @@ proc ::argparse {args} {
                 }
             }
         }
-####  Replace -boolean with "-default 0 -value 1".
+        ####  Replace -boolean with "-default 0 -value 1".
         if {([info exists boolean] && [dict exists $opt switch] && ![dict exists $opt argument]\
                      && ![dict exists $opt upvar] && ![dict exists $opt default] && ![dict exists $opt value]\
                      && ![dict exists $opt required]) || [dict exists $opt boolean]} {
             dict set opt default 0
             dict set opt value 1
         }
-####  Insert default -level if -upvar is used.
+        ####  Insert default -level if -upvar is used.
         if {[dict exists $opt upvar] && ![dict exists $opt level]} {
             dict set opt level $level
         }
-####  Compute default output key if -ignore, -key, and -pass aren't used.
+        ####  Compute default output key if -ignore, -key, and -pass aren't used.
         if {![dict exists $opt ignore] && ![dict exists $opt key] && ![dict exists $opt pass]} {
             if {[info exists template]} {
                 dict set opt key [string map [list \\\\ \\ \\% % % $name] $template]
@@ -267,9 +267,9 @@ proc ::argparse {args} {
             }
         }
         if {[dict exists $opt parameter]} {
-####  Keep track of parameter order.
+            ####  Keep track of parameter order.
             lappend order $name
-####  Forbid more than one catchall parameter.
+            ####  Forbid more than one catchall parameter.
             if {[dict exists $opt catchall]} {
                 if {[info exists catchall]} {
                     return -code error "multiple catchall parameters: $catchall and $name"
@@ -278,31 +278,31 @@ proc ::argparse {args} {
                 }
             }
         } elseif {![dict exists $opt alias]} {
-####  Build list of switches.
+            ####  Build list of switches.
             lappend switches -$name
         } elseif {![regexp {^\w[\w-]*( \w[\w-]*)*$} [dict get $opt alias]]} {
             return -code error "bad alias: [dict get $opt alias]"
         } elseif {![{*}$aliasesChecker $aliases $opt]} {
             return -code error "element alias collision: [dict get $opt alias]"
         } else {
-####  Build list of switches (with aliases), and link switch aliases.
+            ####  Build list of switches (with aliases), and link switch aliases.
             foreach alias [dict get $opt alias] {
                 dict set aliases $alias $name
             }
             lappend switches -[join [list {*}[dict get $opt alias] $name] |]
         }
-####  Check for collision between alias and other switch name
+        ####  Check for collision between alias and other switch name
         if {$name in [dict keys $aliases]} {
             return -code error "collision of switch -[dict get $aliases $name] alias with the -$name switch"
         }
-####  Map from upvar keys back to element names, and forbid collisions.
+        ####  Map from upvar keys back to element names, and forbid collisions.
         if {[dict exists $opt upvar] && [dict exists $opt key]} {
             if {[dict exists $upvars [dict get $opt key]]} {
                 return -code error "multiple upvars to the same variable: [dict get $upvars [dict get $opt key]] $name"
             }
             dict set upvars [dict get $opt key] $name
         }
-####  Look up named enumeration lists and validation expressions.
+        ####  Look up named enumeration lists and validation expressions.
         if {[dict exists $opt enum] && [dict exists $enum [dict get $opt enum]]} {
             dict set opt enum [dict get $enum [dict get $opt enum]]
         } elseif {[dict exists $opt validate]} {
@@ -313,7 +313,7 @@ proc ::argparse {args} {
                 dict set opt validateMsg "validation: [dict get $opt validate]"
             }
         }
-####  Check for allowed arguments to -type
+        ####  Check for allowed arguments to -type
         if {[dict exists $opt type]} {
             set allowedTypes {alnum alpha ascii boolean control dict digit double graph integer list lower print punct\
                                       space upper wideinteger wordchar xdigit}
@@ -322,14 +322,14 @@ proc ::argparse {args} {
                         [join [lrange $allowedTypes 0 end-1] {, }] or [@ $allowedTypes end]"
             }
         }
-####  Save element definition.
+        ####  Save element definition.
         dict set def $name $opt
-####  Prepare to identify omitted elements.
+        ####  Prepare to identify omitted elements.
         dict set omitted $name {}
     }
-### Process constraints and shared key logic.
+    ### Process constraints and shared key logic.
     dict for {name opt} $def {
-####  Verify constraint references.
+        ####  Verify constraint references.
         foreach constraint {require forbid allow} {
             if {[dict exists $opt $constraint]} {
                 foreach otherName [dict get $opt $constraint] {
@@ -339,7 +339,7 @@ proc ::argparse {args} {
                 }
             }
         }
-####  Create reciprocal requirements.
+        ####  Create reciprocal requirements.
         if {([info exists reciprocal] || [dict exists $opt reciprocal]) && [dict exists $opt require]} {
             foreach other [dict get $opt require] {
                 dict update def $other otherOpt {
@@ -347,12 +347,12 @@ proc ::argparse {args} {
                 }
             }
         }
-####  Perform shared key logic.
+        ####  Perform shared key logic.
         if {[dict exists $opt key]} {
             dict for {otherName otherOpt} $def {
                 if {$name ne $otherName && [dict exists $otherOpt key] && ([dict get $otherOpt key] eq\
                                                                                    [dict get $opt key])} {
-#####   Limit when shared keys may be used.
+                    #####   Limit when shared keys may be used.
                     if {[dict exists $opt parameter]} {
                         return -code error "$name cannot be a parameter because it shares a key with $otherName"
                     } elseif {[dict exists $opt argument]} {
@@ -362,13 +362,13 @@ proc ::argparse {args} {
                     } elseif {[dict exists $opt default] && [dict exists $otherOpt default]} {
                         return -code error "$name and $otherName cannot both use -default because they share a key"
                     }
-#####   Create forbid constraints on shared keys.
+                    #####   Create forbid constraints on shared keys.
                     if {![dict exists $otherOpt forbid] || ($name ni [dict get $otherOpt forbid])} {
                         dict update def $otherName otherOpt {
                             dict lappend otherOpt forbid $name
                         }
                     }
-#####   Set default -value for shared keys.
+                    #####   Set default -value for shared keys.
                     if {![dict exists $opt value]} {
                         dict set def $name value $name
                     }
@@ -376,7 +376,7 @@ proc ::argparse {args} {
             }
         }
     }
-####  Build help string
+    ####  Build help string
     if {[info exists help]} {
         package require textutil::adjust
         namespace import textutil::adjust::*
@@ -535,11 +535,11 @@ proc ::argparse {args} {
             }
         }
     }
-### Handle default pass-through switch by creating a dummy element.
+    ### Handle default pass-through switch by creating a dummy element.
     if {[info exists pass]} {
         dict set def {} pass $pass
     }
-### Reorder parameters to have required parameters first if -pfirst global switch is specified
+    ### Reorder parameters to have required parameters first if -pfirst global switch is specified
     if {[info exists pfirst]} {
         foreach name $order {
             if {[dict exists $def $name required]} {
@@ -556,7 +556,7 @@ proc ::argparse {args} {
             set order $orderOpt
         }
     }
-### Force required parameters to bypass switch logic.
+    ### Force required parameters to bypass switch logic.
     set end [= {[llength $argv]-1}]
     set start 0
     if {![info exists mixed]} {
@@ -581,11 +581,11 @@ proc ::argparse {args} {
         set force [lreplace $argv $start end]
         set argv [lrange $argv $start end]
     }
-### Perform switch logic.
+    ### Perform switch logic.
     set result {}
     set missing {}
     if {$switches ne {}} {
-####  Build regular expression to match switches.
+        ####  Build regular expression to match switches.
         set re ^-
         if {[info exists long]} {
             append re -?
@@ -597,10 +597,10 @@ proc ::argparse {args} {
             append re ()()
         }
         append re $
-####  Process switches, and build the list of parameter arguments.
+        ####  Process switches, and build the list of parameter arguments.
         set params {}
         while {$argv ne {}} {
-#####   Check if this argument appears to be a switch.
+            #####   Check if this argument appears to be a switch.
             set argv [lassign $argv arg]
             if {[regexp $re $arg _ name equal val]} {
                 # This appears to be a switch.  Fall through to the handler.
@@ -620,13 +620,13 @@ proc ::argparse {args} {
                 set params [linsert $argv 0 $arg]
                 break
             }
-#####   Process switch aliases.
+            #####   Process switch aliases.
             if {[dict exists $aliases $name]} {
                 set name [dict get $aliases $name]
             }
-#####   Preliminary guess for the normalized switch name.
+            #####   Preliminary guess for the normalized switch name.
             set normal -$name
-#####   Perform switch name lookup.
+            #####   Perform switch name lookup.
             if {[dict exists $def $name switch]} {
                 # Exact match.  No additional lookup needed.
             } elseif {![info exists exact] &&\
@@ -653,7 +653,7 @@ proc ::argparse {args} {
                 set switches [join $switches {*}[if {[llength $switches]>2} {list ", "}]]
                 return -code error "bad switch \"$arg\": must be $switches"
             }
-#####   If the switch is standalone, ignore all constraints.
+            #####   If the switch is standalone, ignore all constraints.
             if {[dict exists $def $name standalone]} {
                 foreach other [dict keys $def] {
                     dict unset def $other required
@@ -665,23 +665,23 @@ proc ::argparse {args} {
                     }
                 }
             }
-#####   Keep track of which elements are present.
+            #####   Keep track of which elements are present.
             dict set def $name present {}
             # If the switch value was set using -switch=value notation, insert
             # the value into the argument list to be handled below.
             if {$equal eq {=}} {
                 set argv [linsert $argv 0 $val]
             }
-#####   Load key and pass into local variables for easy access.
+            #####   Load key and pass into local variables for easy access.
             unset -nocomplain key pass
             foreach var {key pass} {
                 if {[dict exists $def $name $var]} {
                     set $var [dict get $def $name $var]
                 }
             }
-#####   Keep track of which switches have been seen.
+            #####   Keep track of which switches have been seen.
             dict unset omitted $name
-#####   Validate switch arguments and store values into the result dict.
+            #####   Validate switch arguments and store values into the result dict.
             if {[dict exists $def $name catchall]} {
                 # The switch is catchall, so store all remaining arguments.
                 set argv [{*}$validateHelper $normal [dict get $def $name] {*}$argv]
@@ -759,7 +759,7 @@ proc ::argparse {args} {
                 dict unset def $name imply
             }
         }
-#####   Build list of missing required switches.
+        #####   Build list of missing required switches.
         dict for {name opt} $def {
             if {[dict exists $opt switch] && ![dict exists $opt present] && [dict exists $opt required]} {
                 if {[dict exists $opt alias]} {
@@ -769,7 +769,7 @@ proc ::argparse {args} {
                 }
             }
         }
-#####   Fail if at least one required switch is missing.
+        #####   Fail if at least one required switch is missing.
         if {$missing ne {}} {
             set missing [lsort $missing]
             if {[llength $missing]>1} {
@@ -784,7 +784,7 @@ proc ::argparse {args} {
         # arguments using the parameter logic.
         set params $argv
     }
-### Allocate one argument to each required parameter, including catchalls.
+    ### Allocate one argument to each required parameter, including catchalls.
     set alloc {}
     if {[info exists pfirst]} {
         set params [linsert $params 0 {*}$force]
@@ -806,7 +806,7 @@ proc ::argparse {args} {
         }
         incr i
     }
-### Fail if at least one required parameter is missing.
+    ### Fail if at least one required parameter is missing.
     if {$missing ne {}} {
         if {[llength $missing]>1} {
             lset missing end "and [@ $missing end]"
@@ -814,7 +814,7 @@ proc ::argparse {args} {
         return -code error [string cat "missing required parameter" {*}[if {[llength $missing]>1} {list s}] ": "\
                                     [join $missing {*}[if {[llength $missing]>2} {list ", "}]]]
     }
-### Try to allocate one argument to each optional, non-catchall parameter, until there are no arguments left.
+    ### Try to allocate one argument to each optional, non-catchall parameter, until there are no arguments left.
     if {$count} {
         foreach name $order {
             if {![dict exists $def $name required] && ![dict exists $def $name catchall]} {
@@ -827,7 +827,7 @@ proc ::argparse {args} {
             }
         }
     }
-### Process excess arguments.
+    ### Process excess arguments.
     if {$count} {
         if {[info exists catchall]} {
             # Allocate remaining arguments to the catchall parameter.
@@ -842,7 +842,7 @@ proc ::argparse {args} {
             return -code error {too many arguments}
         }
     }
-### Check constraints.
+    ### Check constraints.
     dict for {name opt} $def {
         if {[dict exists $opt present]} {
             foreach {match condition description} {1 require requires 0 forbid {conflicts with}} {
@@ -881,7 +881,7 @@ proc ::argparse {args} {
             }
         }
     }
-### If normalization is enabled, explicitly store into the pass-through keys
+    ### If normalization is enabled, explicitly store into the pass-through keys
     # all omitted switches that have a pass-through key, accept an argument, and
     # have a default value.
     if {[info exists normalize]} {
@@ -892,7 +892,7 @@ proc ::argparse {args} {
             }
         }
     }
-### Validate parameters and store in result dict.
+    ### Validate parameters and store in result dict.
     set i 0
     foreach name $order {
         set opt [dict get $def $name]
@@ -936,7 +936,7 @@ proc ::argparse {args} {
             dict lappend result [dict get $opt pass] [dict get $opt default]
         }
     }
-### Create default values for missing elements.
+    ### Create default values for missing elements.
     dict for {name opt} $def {
         if {[dict exists $opt key] && ![dict exists $result [dict get $opt key]]} {
             if {[dict exists $opt default]} {
@@ -950,10 +950,10 @@ proc ::argparse {args} {
         }
     }
     if {[info exists inline]} {
-####  Return result dict.
+        ####  Return result dict.
         return $result
     } else {
-####  Unless -keep was used, unset caller variables for omitted elements.
+        ####  Unless -keep was used, unset caller variables for omitted elements.
         if {![info exists keep]} {
             dict for {name val} $omitted {
                 set opt [dict get $def $name]
@@ -962,7 +962,7 @@ proc ::argparse {args} {
                 }
             }
         }
-####  Process results.
+        ####  Process results.
         dict for {key val} $result {
             if {[dict exists $upvars $key]} {
                 # If this element uses -upvar, link to the named variable.
