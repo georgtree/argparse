@@ -13,6 +13,9 @@ the parsed once argument definition.
 
 You have two ways: install from git repo (convinient for Linux users) or from archive package release.
 
+Additionaly, package was added into "batteries included" Magicsplat 
+[distribution](https://www.magicsplat.com/tcl-installer/index.html#packages) of Tcl8.6 and Tcl9.0.
+
 ### From git repo
 
 To install default C implementation, run following commands:

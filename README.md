@@ -13,6 +13,9 @@ the parsed once argument definition.
 
 You have two ways: install from git repo (convinient for Linux users) or from archive package release.
 
+Additionaly, package was added into "batteries included" Magicsplat 
+[distribution](https://www.magicsplat.com/tcl-installer/index.html#packages) of Tcl8.6 and Tcl9.0.
+
 ### From git repo
 
 To install default C implementation, run following commands:
@@ -905,21 +908,10 @@ proc genNums {args} {
 }
 genNums -help
 ```
-```text
-Procedure generates sequence of numbers.. Can accepts unambiguous prefixes
-instead of switches names. Accepts switches only before parameters.
-    Switches:
-        -from value - Provides start of sequence. Default value is 1. Type
-            double.
-        -to value - Provides end of sequence. Default value is 10. Type double.
-        -step value - Provides step between adjacent numbers of sequence.
-            Default value is 1. Type double.
-        -prec value - Provides precision of numbers in the sequence. Default
-            value is 1. Type double.
-        -help - Help switch, when provided, forces ignoring all other switches
-            and parameters, prints the help message to stdout, and returns up to 2
-            levels above the current level.
+```{tclerr}
+
 ```
+
 
 Generated message contains information important for the user of the command, not all information that is in definition
 of elements. Individual description for each parameter can be added as and argument to [element switch](#element-switch)
@@ -946,24 +938,10 @@ proc sheduleEvent {args} {
 }
 sheduleEvent -help
 ```
-```text
-Procedure shedules event at cetain date. At least one of the switches must be
-provided: -allday, -duration or -endtime. Can accepts unambiguous prefixes
-instead of switches names. Accepts switches only before parameters.
-    Switches:
-        -allday - Set event duration for the rest of the day. Allows date or
-            time.
-        -duration value - Set event duration in format HH:MM. Allows date or
-            time.
-        -endtime value - Set end time of event in format HH:MM. Allows date or
-            time.
-        -help - Help switch, when provided, forces ignoring all other switches
-            and parameters, prints the help message to stdout, and returns up to 2
-            levels above the current level.
-    Parameters:
-        date - Provides date in format DD-MM-YY.
-        time - Provides time in format HH:MM.
+```{tclerr}
+
 ```
+
 
 ## Argument Processing Sequence
 
