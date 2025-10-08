@@ -4,7 +4,7 @@ package require argparse
 set currentDir [file normalize [file dirname [info script]]]
 
 
-const templateProcStr {proc templateProc {args} {
+set templateProcStr {proc templateProc {args} {
     set arguments [argparse @additionalArgs@ {
         @definitions@
     }]
