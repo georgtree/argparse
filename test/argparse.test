@@ -1531,15 +1531,17 @@ testTemplate typeTest-9 {} {} {
 -b=
 {-c= -type integer}} {-b 2 -c 4 -a 1 2 3} {a {1 2 3} b 2 c 4}
 
-testTemplate typeTest-10 {} {} {
-{-a= -type double -catchall}
--b=
-{-c= -type dict}} {-b 2 -c {a n u k} -a 1 2 3} {a {1 2 3} b 2 c {a n u k}}
+if {[package vsatisfies [package provide Tcl] 9.0-]} {
+    testTemplate typeTest-10 {} {} {
+    {-a= -type double -catchall}
+    -b=
+    {-c= -type dict}} {-b 2 -c {a n u k} -a 1 2 3} {a {1 2 3} b 2 c {a n u k}}
 
-testTemplate typeTest-11 {} {} {
-{-a= -type double -catchall}
--b=
-{-c= -type dict}} {-b 2 -c {a n u} -a 1 2 3} {-c value "a n u" is not of the type dict}
+    testTemplate typeTest-11 {} {} {
+    {-a= -type double -catchall}
+    -b=
+    {-c= -type dict}} {-b 2 -c {a n u} -a 1 2 3} {-c value "a n u" is not of the type dict}
+}
 
 ### Check -allow in definitions 
 testTemplate allowTest-1 {} {} {
