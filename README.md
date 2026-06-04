@@ -119,7 +119,7 @@ reading the precise details on how it works.
 
 Consider the following:
 
-```tcl
+```tclcode
 package require argparse
 proc greet {args} {
     argparse {
@@ -138,6 +138,7 @@ proc greet {args} {
     append msg " " $subject
 }
 ```
+
 
 This example demonstrates many of the argparse core concepts and features. The greet command is defined to accept args.
 When not explicitly given an argument list to parse, argparse parses the value of the args variable and stores the
@@ -159,10 +160,11 @@ guaranteed. On the contrary, because `modifier` and `title` are optional and hav
 use `info exists` to confirm their variables' existence before attempting to read them. Because `title` does not accept
 an argument, its variable's value (if the variable exists at all) is predefined to be empty string.
 
-```tcl
+```tclcode
 greet world
 ```
-```text
+
+```tclout
 ==> hello world
 ```
 
@@ -173,10 +175,11 @@ therefore stored in the `subject` variable. Because their associated switches do
 `salutation` variable is set to its default value (`hello`), and the `modifier` and `title` variables are unset due to
 lacking a default.
 
-```tcl
+```tclcode
 greet -salutation howdy world
 ```
-```text
+
+```tclout
 ==> howdy world
 ```
 
@@ -185,10 +188,11 @@ immediately stored into the `subject` variable before any switch processing occu
 are examined and determined to be the name and value of the `salutation` switch. Thus, the second argument (`howdy`) is
 stored in the `salutation` variable. The `modifier` and `title` variables are unset.
 
-```tcl
+```tclcode
 greet -title -mod "my dear" world
 ```
-```text
+
+```tclout
 ==> Hello, my dear world
 ```
 
@@ -198,10 +202,11 @@ thereof, i.e. an abbreviation. This causes the third argument (`my dear`) to be 
 the final argument (`world`) is stored in the `subject` variable. As for the `salutation` variable, it is set to its
 default (`hello`).
 
-```tcl
+```tclcode
 greet -title
 ```
-```text
+
+```tclout
 ==> hello -title
 ```
 
@@ -242,7 +247,7 @@ The following example definition may conceivably be used by a command that store
 
 The example of such procedure is [source](https://stackoverflow.com/a/38436286/21306711):
 
-```tcl
+```tclcode
 proc genNums {args} {
     argparse {
         # {Optional sequence control switches}
@@ -265,7 +270,8 @@ proc genNums {args} {
 genNums -from 0 -to 10 -step 2 sequenceVar
 puts $sequenceVar
 ```
-```text
+
+```tclout
 0.0 2.0 4.0 6.0 8.0
 ```
 
@@ -494,7 +500,7 @@ Comment is the [element](#element) started with `#` at the start of definition i
 With `-catchall` [element switch](#element-switch), we can collects the rest of otherwise unassigned 
 [arguments](#argument) to list and save to switch's [key](#key). Let's consider next example:
 
-```tcl
+```tclcode
 proc applyOperator {args} {
     argparse {
         {-op= -enum {+ *}}
@@ -509,7 +515,8 @@ proc applyOperator {args} {
 
 applyOperator -op * -elements 1 2 3 4 5
 ```
-```text
+
+```tclout
 ==> 120
 ```
 
@@ -539,7 +546,7 @@ and the argument to a per-element `-enum` switch is an enumeration name or list.
 A validation expression is an `[expr]` expression parameterized on a variable named `arg` which is replaced with the 
 [argument](#argument). If the expression evaluates to `true`, the argument is accepted. Let's consider the example:
 
-```tcl
+```tclcode
 proc exponentiation {args} {
     argparse {
         {-b!= -validate {[string is double $arg]}}
@@ -550,7 +557,8 @@ proc exponentiation {args} {
 
 exponentiation -b 2 -n 4
 ```
-```text
+
+```tclout
 ==> 16
 ```
 
@@ -559,11 +567,18 @@ that could be considered as floating numbers, and only after that set the corres
 
 If wrong string is provided, a error message appears:
 
-```tcl
+```tclcode
 exponentiation -b a -n 4
 ```
-```{tclerr}
+
+```tclerr
 -b value "a" fails validation: [string is double $arg]
+    while executing
+"argparse {
+        {-b!= -validate {[string is double $arg]}}
+        {-n!= -validate {[string is double $arg]}}
+    }"
+    (procedure "exponentiation" line 2)
 ```
 
 
@@ -580,7 +595,7 @@ with `-argument` (or `=` [shorthand](#shorthand-flag)). Conflicts with `-upvar`,
 
 As an example, we can use previously proposed procedure:
 
-```tcl
+```tclcode
 proc genNums {args} {
     argparse {
         # {Optional sequence control switches}
@@ -602,20 +617,29 @@ proc genNums {args} {
 }
 ```
 
+
 If we provide the wrong argument type to `genNums` procedure, the error occurs:
 
-```tcl
+```tclcode
 genNums -from 0 -to 10.. -step 2 sequenceVar
 ```
-```{tclerr}
+
+```tclerr
 -to value "10.." is not of the type double
+    while executing
+"argparse {
+        # {Optional sequence control switches}
+        {-from= -default 1 -type double}
+        {-to=   -default 10 -type double}
+        {..."
+    (procedure "genNums" line 2)
 ```
 
 
 For `-validation` switch the custom error message could be provided by element switch `-errormsg`. For substitution,
 `arg` and `name` variables are availible, as well as internal dictionary `opt` that contains processed definition of 
 element. For example, the previously defined procedure could be rewritted with custom error messages:
-```tcl
+```tclcode
 proc exponentiation {args} {
     argparse {
         {-b!= -validate {[string is double $arg]} -errormsg {Value of switch '$name' must be double,\
@@ -628,8 +652,14 @@ proc exponentiation {args} {
 
 exponentiation -b 2 -n 4t
 ```
-```{tclerr}
+
+```tclerr
 Value of switch '-n' must be double, '4t' was provided
+    while executing
+"argparse {
+        {-b!= -validate {[string is double $arg]} -errormsg {Value of switch '$name' must be double, '$arg' was provided}}
+        {-n!= -v..."
+    (procedure "exponentiation" line 2)
 ```
 
 
@@ -639,7 +669,7 @@ If the presence of an [element](#element) should be forbidden in combination wit
 `-forbid` [switch](#element-switch) followed by a list of element names. In next example, we can forbid using
 arguments that logically incompatible:
 
-```tcl
+```tclcode
 proc sheduleEvent {args} {
     set arguments [argparse -inline\
             -validate [dict create date {[regexp {^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$} $arg]}\
@@ -656,6 +686,7 @@ proc sheduleEvent {args} {
     return $arguments
 }
 ```
+
 
 This procedure provides template for sheduling event. As input, date in format DD-MM-YYYY and time in format HH:MM of 
 the event provides as [parameters](#parameter), and the duration of the event could be provided by different mutually
@@ -675,20 +706,25 @@ argument processing.
 
 Normal operation:
 
-```tcl
+```tclcode
 sheduleEvent -duration 01:30 20-12-2024 13:30
 ```
-```text
+
+```tclout
 ==> duration 01:30 date 20-12-2024 time 13:30
 ```
 
 Error is issued in case of providing conflicting switches:
 
-```tcl
+```tclcode
 sheduleEvent -allday -duration 01:30 20-12-2024 13:30
 ```
-```{tclerr}
+
+```tclerr
 -allday conflicts with -duration
+    while executing
+"argparse -inline -validate [dict create date {[regexp {^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$} $arg]} time {[regexp {^([01][0-9]|2[0-3]):[0-..."
+    (procedure "sheduleEvent" line 2)
 ```
 
 
@@ -698,7 +734,7 @@ sheduleEvent -allday -duration 01:30 20-12-2024 13:30
 be presented if element is presented. As an example, we can use previous procedure but now implemented with `-allow`
 instead of forbid:
 
-```tcl
+```tclcode
 proc sheduleEvent {args} {
     set arguments [argparse -inline\
             -validate [dict create date {[regexp {^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$} $arg]}\
@@ -716,22 +752,28 @@ proc sheduleEvent {args} {
 }
 ```
 
+
 Normal operation:
 
-```tcl
+```tclcode
 sheduleEvent -duration 01:30 20-12-2024 13:30
 ```
-```text
+
+```tclout
 ==> duration 01:30 date 20-12-2024 time 13:30
 ```
 
 Error is issued in case of providing conflicting switches:
 
-```tcl
+```tclcode
 sheduleEvent -allday -duration 01:30 20-12-2024 13:30
 ```
-```{tclerr}
+
+```tclerr
 allday doesn't allow duration
+    while executing
+"argparse -inline -validate [dict create date {[regexp {^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$} $arg]} time {[regexp {^([01][0-9]|2[0-3]):[0-..."
+    (procedure "sheduleEvent" line 2)
 ```
 
 
@@ -767,7 +809,7 @@ Element switch `-reciprocal` do the same thing but only for that particular elem
 `-imply` [element switch](#element-switch) allows to specify additional argument to the [switch](#switch). Extra 
 [argument](#argument) will be assigned to different switch specified in argument to `-imply` switch. For example:
 
-```tcl
+```tclcode
 proc implyTest {args} {
     set arguments [argparse -inline {
         -a=
@@ -778,31 +820,42 @@ proc implyTest {args} {
 }
 ```
 
+
 If we provide an additional argument to `-b`, it will be assigned to `-c` [key](#key):
 
-```tcl
+```tclcode
 implyTest -a 1 -b 2 3
 ```
-```text
+
+```tclout
 ==> a 1 b 2 c 3
 ```
 
 If additional argument is not provided, the error is raised:
 
-```tcl
+```tclcode
 implyTest -a 1 -b 2
 ```
-```{tclerr}
+
+```tclerr
 -c requires an argument
+    while executing
+"argparse -inline {
+        -a=
+        {-b= -imply -c}
+        -c=
+    }"
+    (procedure "implyTest" line 2)
 ```
 
 
 And if `-b` switch with argument is not provided at all, `-c` is also considered omitted:
 
-```tcl
+```tclcode
 implyTest -a 1
 ```
-```text
+
+```tclout
 ==> a 1
 ```
 
@@ -851,7 +904,7 @@ substitution mark `%` symbol is used.
 
 As an example let's use our previous procedure:
 
-```tcl
+```tclcode
 proc genNums {args} {
     argparse -template vars(%) {
         # {Optional sequence control switches}
@@ -872,7 +925,8 @@ proc genNums {args} {
 }
 genNums -from 0 -to 10 -step 2
 ```
-```text
+
+```tclout
 ==> 0.0 2.0 4.0 6.0 8.0
 ```
 
@@ -887,7 +941,7 @@ that case, message with procedure and arguments description is put to stdout, an
 can provide interactive help for the user of the command. To activate, [global switch](#global-switch) `-help` must be
 provided. Let's take previous procedure `genNums` and add help to it:
 
-```tcl
+```tclcode
 proc genNums {args} {
     argparse -template vars(%) -help {Procedure generates sequence of numbers.} {
         # {Optional sequence control switches}
@@ -908,9 +962,6 @@ proc genNums {args} {
 }
 genNums -help
 ```
-```{tclerr}
-
-```
 
 
 Generated message contains information important for the user of the command, not all information that is in definition
@@ -919,7 +970,7 @@ of elements. Individual description for each parameter can be added as and argum
 
 Let's use another procedure, this time with switches and parameters presented:
 
-```tcl
+```tclcode
 proc sheduleEvent {args} {
     set arguments [argparse -help {Procedure shedules event at cetain date. At least one of the switches must be\
         provided: -allday, -duration or -endtime} -inline\
@@ -937,9 +988,6 @@ proc sheduleEvent {args} {
     return $arguments
 }
 sheduleEvent -help
-```
-```{tclerr}
-
 ```
 
 
@@ -965,7 +1013,7 @@ allocated number of arguments.
 
 Let's look at normal operation in the next example:
 
-```tcl
+```tclcode
 proc argProcSeq {args} {
     set arguments [argparse -inline {
         -a=
@@ -978,23 +1026,25 @@ proc argProcSeq {args} {
 }
 argProcSeq -c -a 1 2
 ```
-```text
+
+```tclout
 ==> c {} a 1 d 2
 ```
 
 First switches are processed, and there one argument left and it is assigned to required parameter `r`. If we provided
 another additional argument, it will be assigned to optional parameter `e`:
 
-```tcl
+```tclcode
 argProcSeq -c -a 1 2 3
 ```
-```text
+
+```tclout
 ==> c {} a 1 d 2 e 3
 ```
 
 More complicated example:
 
-```tcl
+```tclcode
 proc argProcSeq {args} {
     set arguments [argparse -inline {
         -a=
@@ -1008,27 +1058,40 @@ proc argProcSeq {args} {
 }
 argProcSeq -c -a 1 2 3
 ```
-```text
+
+```tclout
 ==> c {} a 1 d 2 f 3
 ```
 
 In that case the last two arguments is assigned to *two* required parameters. If we provide two arguments after switch
 `-a`, then again they are assigned to required parameters, but because `-a` require argument, the error is thrown:
 
-```tcl
+```tclcode
 argProcSeq -c -a 1 2
 ```
-```{tclerr}
+
+```tclerr
 -a requires an argument
+    while executing
+"argparse -inline {
+        -a=
+        -b=
+        -c
+        d
+        e?
+        f
+    }"
+    (procedure "argProcSeq" line 2)
 ```
 
 
 If we provide four arguments after `-a`:
 
-```tcl
+```tclcode
 argProcSeq -c -a 1 2 3 4
 ```
-```text
+
+```tclout
 ==> c {} a 1 d 2 e 3 f 4
 ```
 
@@ -1038,30 +1101,43 @@ also gets the value in *order in definition*.
 
 There is a special case when argument to parameter looks like a switch:
 
-```tcl
+```tclcode
 argProcSeq -c -a 1 -2 3 4
 ```
-```{tclerr}
+
+```tclerr
 bad switch "-2": must be -a, -b, or -c
+    while executing
+"argparse -inline {
+        -a=
+        -b=
+        -c
+        d
+        e?
+        f
+    }"
+    (procedure "argProcSeq" line 2)
 ```
 
 
 The error is appeared because after counting required parameters (two required), last two arguments are assigned to
 that parameters, and the -2 looks like a switch, so argparse tries to parse it as a switch. To fix that we can use `--`:
 
-```tcl
+```tclcode
 argProcSeq -c -a 1 -- -2 3 4
 ```
-```text
+
+```tclout
 ==> c {} a 1 d -2 e 3 f 4
 ```
 
 If one of the last two switches appears with `-`, all is processed as it should:
 
-```tcl
+```tclcode
 argProcSeq -c -a 1 -- 2 -3 4
 ```
-```text
+
+```tclout
 ==> c {} a 1 d 2 e -3 f 4
 ```
 
@@ -1077,7 +1153,7 @@ But, even if number arguments are enough to assign to both required and optional
 assigned first - it is different to how it works when parameters arguments are provided after switches. These two
 examples demonstrating that:
 
-```tcl
+```tclcode
 proc argProcSeq {args} {
     set arguments [argparse -inline -pfirst {
         -a=
@@ -1091,48 +1167,63 @@ proc argProcSeq {args} {
 }
 argProcSeq 1 2 -c -a 1
 ```
-```text
+
+```tclout
 ==> c {} a 1 d 1 f 2
 ```
 
-```tcl
+```tclcode
 argProcSeq 1 2 3 -c -a 1
 ```
-```text
+
+```tclout
 ==> c {} a 1 d 1 f 2 e 3
 ```
 
 Also, the remaining parameters could be provided after switches:
 
-```tcl
+```tclcode
 argProcSeq 1 2 -c -a 1 3
 ```
-```text
+
+```tclout
 ==> c {} a 1 d 1 f 2 e 3
 ```
 
 But it doesn't work in case of parameter argument looking like a switch:
 
-```tcl
+```tclcode
 argProcSeq 1 2 -c -a 1 -3
 ```
-```{tclerr}
+
+```tclerr
 bad switch "-3": must be -a, -b, or -c
+    while executing
+"argparse -inline -pfirst {
+        -a=
+        -b=
+        -c
+        d
+        e?
+        f
+    }"
+    (procedure "argProcSeq" line 2)
 ```
 
 
 In that case we can use the same trick with `--` termination of switch processing:
 
-```tcl
+```tclcode
 argProcSeq 1 2 -c -a 1 -- -3
 ```
-```text
+
+```tclout
 ==> c {} a 1 d 1 f 2 e -3
 ```
 
 Also there is a special treatment of `-catchall` parameter:
 
-```tcl
+```tclcode
 proc argProcSeq {args} {
     set arguments [argparse -inline -pfirst {
         -a=
@@ -1147,7 +1238,8 @@ proc argProcSeq {args} {
 }
 argProcSeq 1 2 -c -a 1 3 4
 ```
-```text
+
+```tclout
 ==> c {} a 1 d 1 f 2 e 3 g 4
 ```
 
@@ -1161,7 +1253,7 @@ special `--` switch terminates switch processing and forces all remaining argume
 
 Let's see in example:
 
-```tcl
+```tclcode
 proc argProcSeq {args} {
     set arguments [argparse -inline -mixed {
         -a=
@@ -1176,7 +1268,8 @@ proc argProcSeq {args} {
 }
 argProcSeq 1 2 -c -a 1 3 4
 ```
-```text
+
+```tclout
 ==> c {} a 1 d 1 e 2 f 3 g 4
 ```
 
@@ -1185,7 +1278,7 @@ case the process is going as usual, but can be interrupted by providing switch w
 
 The processing could be altered multiple times:
 
-```tcl
+```tclcode
 proc argProcSeq {args} {
     set arguments [argparse -inline -mixed {
         -a=
@@ -1200,25 +1293,39 @@ proc argProcSeq {args} {
 }
 argProcSeq 1 -c 2 -a 1 3 4
 ```
-```text
+
+```tclout
 ==> c {} a 1 d 1 e 2 f 3 g 4
 ```
 
 Result is exact the same as in the previous example. Problems started when parameter looks like a switch, in that case
 only `--` can force the rest of arguments considered as parameters arguments:
 
-```tcl
+```tclcode
 argProcSeq 1 -c -2 -a 1 3 4
 ```
-```{tclerr}
+
+```tclerr
 bad switch "-2": must be -a, -b, or -c
+    while executing
+"argparse -inline -mixed {
+        -a=
+        -b=
+        -c
+        d
+        e?
+        f
+        {g -catchall}
+    }"
+    (procedure "argProcSeq" line 2)
 ```
 
 
-```tcl
+```tclcode
 argProcSeq 1 -c -a 1 -- -2 3 4
 ```
-```text
+
+```tclout
 ==> c {} a 1 d -2 e 3 f 4 g {}
 ```
 

@@ -8,8 +8,6 @@
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 package require Tcl 8.6-
 package provide argparse 0.61
-interp alias {} @ {} lindex
-interp alias {} = {} expr
 # argparse --
 # Parses an argument list according to a definition list.  The result may be
 # stored into caller variables or returned as a dict.
@@ -61,24 +59,25 @@ proc ::argparse {args} {
     set globalSwitches {-boolean -enum -equalarg -exact -inline -keep -level -long -mixed -normalize -pass -reciprocal\
                                 -template -validate -help -helplevel -pfirst -helpret}
     for {set i 0} {$i<[llength $args]} {incr i} {
-        if {[catch {regsub {^-} [tcl::prefix match -message switch $globalSwitches [@ $args $i]] {} switch} errorMsg]} {
+        if {[catch {regsub {^-} [tcl::prefix match -message switch $globalSwitches [lindex $args $i]] {} switch}\
+                     errorMsg]} {
             # Do not allow "--" or definition lists nested within the special
             # empty-string element containing extra overall switches.
             # Stop after "--" or at the first non-switch argument.
-            if {[@ $args $i] eq {--}} {
+            if {[lindex $args $i] eq {--}} {
                 incr i
             }
             # Extract definition and args from the argument list, pulling from
             # the caller's args variable if the args parameter is omitted.
-            switch [= {[llength $args]-$i}] {
+            switch [expr {[llength $args]-$i}] {
             0 {
                 break
             } 1 {
-                set definition [@ $args end]
+                set definition [lindex $args end]
                 set argv [uplevel 1 {::set args}]
             } 2 {
-                set definition [@ $args end-1]
-                set argv [@ $args end]
+                set definition [lindex $args end-1]
+                set argv [lindex $args end]
             } default {
                 return -code error {too many arguments}
             }}
@@ -88,7 +87,7 @@ proc ::argparse {args} {
             set args {}
             set i -1
             foreach elem $definition[set definition {}] {
-                if {[@ $elem 0] eq "#"} {
+                if {[lindex $elem 0] eq "#"} {
                     if {[llength $elem] == 1} {
                         set comment {}
                     }
@@ -105,7 +104,7 @@ proc ::argparse {args} {
             return -code error "-$switch requires an argument"
         } else {
             # Process switches with arguments.
-            set $switch [@ $args [incr i]]
+            set $switch [lindex $args [incr i]]
         }
     }
     # Fail if no definition argument was supplied.
@@ -135,7 +134,8 @@ proc ::argparse {args} {
                                   -validate -value -type -allow -help -errormsg -hsuppress}
         set defsSwitchesWArgs {alias default enum forbid imply key pass require validate value type allow help errormsg}
         for {set i 1} {$i<[llength $elem]} {incr i} {
-            if {[set switch [regsub {^-} [tcl::prefix match $defsSwitches [@ $elem $i]] {}]] ni $defsSwitchesWArgs} {
+            if {[set switch [regsub {^-} [tcl::prefix match $defsSwitches [lindex $elem $i]] {}]]\
+                        ni $defsSwitchesWArgs} {
                 #####   Process switches without arguments.
                 dict set opt $switch {}
             } elseif {$i == [llength $elem]-1} {
@@ -143,7 +143,7 @@ proc ::argparse {args} {
             } else {
                 #####   Process switches with arguments.
                 incr i
-                dict set opt $switch [@ $elem $i]
+                dict set opt $switch [lindex $elem $i]
             }
         }
         ####  Process the first element of the element definition.
@@ -157,8 +157,8 @@ proc ::argparse {args} {
             # If -switch and -parameter are not used, parse shorthand syntax.
             if {![regexp -expanded {
                 ^(?:(-)(?:(.*)\|)?)?(\w[\w-]*)([=?!*^]*)$
-            } [@ $elem 0] _ minus alias name flags]} {
-                return -code error "bad element shorthand: [@ $elem 0]"
+            } [lindex $elem 0] _ minus alias name flags]} {
+                return -code error "bad element shorthand: [lindex $elem 0]"
             }
             if {$minus ne {}} {
                 dict set opt switch {}
@@ -171,12 +171,12 @@ proc ::argparse {args} {
             foreach flag [split $flags {}] {
                 dict set opt [dict get {= argument ? optional ! required * catchall ^ upvar} $flag] {}
             }
-        } elseif {![regexp {^\w[\w-]*$} [@ $elem 0]]} {
-            return -code error "bad element name: [@ $elem 0]"
+        } elseif {![regexp {^\w[\w-]*$} [lindex $elem 0]]} {
+            return -code error "bad element name: [lindex $elem 0]"
         } else {
             # If exactly one of -switch or -parameter is used, the first element
             # of the definition is the element name, with no processing applied.
-            set name [@ $elem 0]
+            set name [lindex $elem 0]
         }
         ####  Check for collisions.
         if {[dict exists $def $name]} {
@@ -319,7 +319,7 @@ proc ::argparse {args} {
                                       space upper wideinteger wordchar xdigit}
             if {[dict get $opt type] ni $allowedTypes} {
                 return -code error "type [dict get $opt type] is not in the list of allowed types, must be\
-                        [join [lrange $allowedTypes 0 end-1] {, }] or [@ $allowedTypes end]"
+                        [join [lrange $allowedTypes 0 end-1] {, }] or [lindex $allowedTypes end]"
             }
         }
         ####  Save element definition.
@@ -383,11 +383,11 @@ proc ::argparse {args} {
         if {({-help} in $argv) || ([info exists long] && ({--help} in $argv))} {
             set enumStrBuild {apply {{name opt} {
                 if {[llength [dict get $opt $name]]>2} {
-                    set str "[join [lrange [dict get $opt $name] 0 end-1] {, }] or [@ [dict get $opt $name] end]"
+                    set str "[join [lrange [dict get $opt $name] 0 end-1] {, }] or [lindex [dict get $opt $name] end]"
                 } elseif {[llength [dict get $opt $name]]==2} {
-                    set str "[@ [dict get $opt $name] 0] or [@ [dict get $opt $name] end]"
+                    set str "[lindex [dict get $opt $name] 0] or [lindex [dict get $opt $name] end]"
                 } else {
-                    set str [@ [dict get $opt $name] 0]
+                    set str [lindex [dict get $opt $name] 0]
                 }
                 return $str
             }}}
@@ -506,8 +506,8 @@ proc ::argparse {args} {
                 }
                 unset -nocomplain elementDescr constraints combined
             }
-            lappend descriptionSwitches [indent [indent [adjust "-help - Help switch, when provided, forces ignoring all\
-                    other switches and parameters, prints the help message to stdout, and returns up to $helplevel\
+            lappend descriptionSwitches [indent [indent [adjust "-help - Help switch, when provided, forces ignoring\
+                    all other switches and parameters, prints the help message to stdout, and returns up to $helplevel\
                     levels above the current level." -length 72] $4spaces 1] $8spaces]
             set description [adjust [join $description] -length 80]
             if {[info exists descriptionSwitches] && [info exists descriptionParameters]} {
@@ -557,7 +557,7 @@ proc ::argparse {args} {
         }
     }
     ### Force required parameters to bypass switch logic.
-    set end [= {[llength $argv]-1}]
+    set end [expr {[llength $argv]-1}]
     set start 0
     if {![info exists mixed]} {
         if {[info exists pfirst]} {
@@ -648,7 +648,7 @@ proc ::argparse {args} {
                 # Fail if this is an invalid switch.
                 set switches [lsort $switches]
                 if {[llength $switches]>1} {
-                    lset switches end "or [@ $switches end]"
+                    lset switches end "or [lindex $switches end]"
                 }
                 set switches [join $switches {*}[if {[llength $switches]>2} {list ", "}]]
                 return -code error "bad switch \"$arg\": must be $switches"
@@ -718,8 +718,8 @@ proc ::argparse {args} {
                 }
             } elseif {$argv ne {}} {
                 # The switch was given the expected argument.
-                set argv0 [@ [{*}$validateHelper $normal [dict get $def $name] [@ $argv 0]] 0]
-                set argv0 [@ [{*}$typeChecker $normal [dict get $def $name] $argv0] 0]
+                set argv0 [lindex [{*}$validateHelper $normal [dict get $def $name] [lindex $argv 0]] 0]
+                set argv0 [lindex [{*}$typeChecker $normal [dict get $def $name] $argv0] 0]
                 if {[info exists key]} {
                     if {[dict exists $def $name optional]} {
                         dict set result $key [list {} $argv0]
@@ -733,7 +733,7 @@ proc ::argparse {args} {
                     } elseif {$equal eq {=}} {
                         dict lappend result $pass $arg
                     } else {
-                        dict lappend result $pass $arg [@ $argv 0]
+                        dict lappend result $pass $arg [lindex $argv 0]
                     }
                 }
                 set argv [lrange $argv 1 end]
@@ -773,7 +773,7 @@ proc ::argparse {args} {
         if {$missing ne {}} {
             set missing [lsort $missing]
             if {[llength $missing]>1} {
-                lset missing end "and [@ $missing end]"
+                lset missing end "and [lindex $missing end]"
             }
             set missing [join $missing {*}[if {[llength $missing]>2} {list ", "}]]
             return -code error [string cat "missing required switch"\
@@ -809,7 +809,7 @@ proc ::argparse {args} {
     ### Fail if at least one required parameter is missing.
     if {$missing ne {}} {
         if {[llength $missing]>1} {
-            lset missing end "and [@ $missing end]"
+            lset missing end "and [lindex $missing end]"
         }
         return -code error [string cat "missing required parameter" {*}[if {[llength $missing]>1} {list s}] ": "\
                                     [join $missing {*}[if {[llength $missing]>2} {list ", "}]]]
@@ -898,8 +898,8 @@ proc ::argparse {args} {
         set opt [dict get $def $name]
         if {[dict exists $alloc $name]} {
             if {![dict exists $opt catchall] && $name ne {}} {
-                set val [@ [{*}$validateHelper $name $opt [@ $params $i]] 0]
-                set val [@ [{*}$typeChecker $name $opt $val] 0]
+                set val [lindex [{*}$validateHelper $name $opt [lindex $params $i]] 0]
+                set val [lindex [{*}$typeChecker $name $opt $val] 0]
                 if {[dict exists $opt pass]} {
                     if {([string index $val 0] eq {-}) && ![dict exists $result [dict get $opt pass]]} {
                         dict lappend result [dict get $opt pass] --
@@ -909,13 +909,13 @@ proc ::argparse {args} {
                 incr i
             } else {
                 set step [dict get $alloc $name]
-                set val [lrange $params $i [= {$i+$step-1}]]
+                set val [lrange $params $i [expr {$i+$step-1}]]
                 if {$name ne {}} {
                     set val [{*}$validateHelper $name $opt {*}$val]
                     set val [{*}$typeChecker $name $opt {*}$val]
                 }
                 if {[dict exists $opt pass]} {
-                    if {([string index [@ $val 0] 0] eq {-}) && ![dict exists $result [dict get $opt pass]]} {
+                    if {([string index [lindex $val 0] 0] eq {-}) && ![dict exists $result [dict get $opt pass]]} {
                         dict lappend result [dict get $opt pass] --
                     }
                     dict lappend result [dict get $opt pass] {*}$val

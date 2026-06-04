@@ -12,4 +12,8 @@ fileutil::updateInPlace [file join $currentDir .. README.md] processMd
 
 # nroff generating
 set file [file join $currentDir .. README.md]
-exec md2man-roff [file join $currentDir .. README.md] > [file join $currentDir argparse.n]
+if {$tcl_platform(platform) eq {windows}} {
+    exec md2man-roff.cmd [file join $currentDir .. README.md] > [file join $currentDir argparse.n]
+} else {
+    exec md2man-roff [file join $currentDir .. README.md] > [file join $currentDir argparse.n]
+}
