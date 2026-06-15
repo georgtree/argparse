@@ -963,17 +963,24 @@ proc genNums {args} {
 genNums -help
 ```
 
-```tclerr
-while executing
-"argparse -template vars(%) -help {Procedure generates sequence of numbers.} {
-        # {Optional sequence control switches}
-        {-from= -default ..."
-    (procedure "genNums" line 2)
+```text
+Procedure generates sequence of numbers.. Can accepts unambiguous prefixes
+instead of switches names. Accepts switches only before parameters.
+    Switches:
+        -from value - Provides start of sequence. Default value is 1. Type
+            double.
+        -to value - Provides end of sequence. Default value is 10. Type double.
+        -step value - Provides step between adjacent numbers of sequence.
+            Default value is 1. Type double.
+        -prec value - Provides precision of numbers in the sequence. Default
+            value is 1. Type double.
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.
 ```
 
-
 Generated message contains information important for the user of the command, not all information that is in definition
-of elements. Individual description for each parameter can be added as and argument to [element switch](#element-switch)
+of elements. Individual description for each parameter can be added as end argument to [element switch](#element-switch)
 `-help`.
 
 Let's use another procedure, this time with switches and parameters presented:
@@ -998,12 +1005,24 @@ proc sheduleEvent {args} {
 sheduleEvent -help
 ```
 
-```tclerr
-while executing
-"argparse -help {Procedure shedules event at cetain date. At least one of the switches must be provided: -allday, -duration or -endtime} -inline -valid..."
-    (procedure "sheduleEvent" line 2)
+```text
+Procedure shedules event at cetain date. At least one of the switches must be
+provided: -allday, -duration or -endtime. Can accepts unambiguous prefixes
+instead of switches names. Accepts switches only before parameters.
+    Switches:
+        -allday - Set event duration for the rest of the day. Allows date or
+            time.
+        -duration value - Set event duration in format HH:MM. Allows date or
+            time.
+        -endtime value - Set end time of event in format HH:MM. Allows date or
+            time.
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.
+    Parameters:
+        date - Provides date in format DD-MM-YY.
+        time - Provides time in format HH:MM.
 ```
-
 
 ## Argument Processing Sequence
 
