@@ -6,7 +6,6 @@ pkgIndex.tcl
 configure~
 *.pdf
 *.tpj
-*.html
 \#README.md#
 /docs/_sources
 /docs/sphinx

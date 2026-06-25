@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>&lt;no title&gt; &#8212; argparse  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=2bf1fcf8" />
+    
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="argparse" href="argparse.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="argparse.html" title="argparse"
+             accesskey="N">next</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">argparse  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">&lt;no title&gt;</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="argparse.html">argparse</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#installation">Installation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="argparse.html#from-git-repo">From git repo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="argparse.html#from-archive">From archive</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#synopsys">Synopsys</a></li>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#description">Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#quick-start">Quick Start</a></li>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#concepts">Concepts</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="argparse.html#r-argparse-argument">Argument</a></li>
+<li class="toctree-l3"><a class="reference internal" href="argparse.html#r-argparse-definition">Definition</a></li>
+<li class="toctree-l3"><a class="reference internal" href="argparse.html#global-switch">Global Switch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="argparse.html#r-argparse-element">Element</a></li>
+<li class="toctree-l3"><a class="reference internal" href="argparse.html#r-argparse-element-switch">Element Switch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="argparse.html#r-argparse-name">Name</a></li>
+<li class="toctree-l3"><a class="reference internal" href="argparse.html#key">Key</a></li>
+<li class="toctree-l3"><a class="reference internal" href="argparse.html#r-argparse-switch">Switch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="argparse.html#r-argparse-parameter">Parameter</a></li>
+<li class="toctree-l3"><a class="reference internal" href="argparse.html#value">Value</a></li>
+<li class="toctree-l3"><a class="reference internal" href="argparse.html#alias">Alias</a></li>
+<li class="toctree-l3"><a class="reference internal" href="argparse.html#r-argparse-shorthand-flag">Shorthand flag</a></li>
+<li class="toctree-l3"><a class="reference internal" href="argparse.html#r-argparse-comment">Comment</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#r-argparse-global-switches">Global Switches</a></li>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#r-argparse-element-switches">Element Switches</a></li>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#collecting-unassigned-arguments">Collecting unassigned arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#default-values">Default values</a></li>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#validation">Validation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#forbid">Forbid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#allow">Allow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#reciprocal">Reciprocal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#imply">Imply</a></li>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#passthrough-and-normalization">Passthrough and normalization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#upvar-elements">Upvar Elements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#template">Template</a></li>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#help">Help</a></li>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#argument-processing-sequence">Argument Processing Sequence</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="argparse.html#normal-processing">Normal processing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="argparse.html#processing-with-parameters-first">Processing with parameters first</a></li>
+<li class="toctree-l3"><a class="reference internal" href="argparse.html#processing-with-mixed">Processing with mixed</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#return-value">Return Value</a></li>
+<li class="toctree-l2"><a class="reference internal" href="argparse.html#author-s">Author(s)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="genindex.html">Index</a></li>
+</ul>
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="argparse.html"
+                          title="next chapter">argparse</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="argparse.html" title="argparse"
+             >next</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">argparse  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">&lt;no title&gt;</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright George Yashin.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    </div>
+  </body>
+</html>

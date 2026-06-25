@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>argparse &#8212; argparse  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=2bf1fcf8" />
+    
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="&lt;no title&gt;" href="index.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="index.html" title="&lt;no title&gt;"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">argparse  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">argparse</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="argparse">
+<span id="r-argparse"></span><span id="r-3a3aargparse"></span><h1>argparse<a class="headerlink" href="#argparse" title="Link to this heading">¶</a></h1>
+<p>This is a fork of argparse project initially developed by Andy Goth <a class="reference external" href="mailto:andrew&#46;m&#46;goth&#37;&#52;&#48;gmail&#46;com">mailto:andrew<span>&#46;</span>m<span>&#46;</span>goth<span>&#64;</span>gmail<span>&#46;</span>com</a>.</p>
+<p>See <a class="reference external" href="https://core.tcl-lang.org/tcllib/timeline?r=amg-argparse">original repository</a>, and
+<a class="reference external" href="https://wiki.tcl-lang.org/page/argparse">wiki page</a>.</p>
+<p>Starting from 0.6 version, the base implementation is in C. Tcl-only version is still availible and will be
+availible in future with the same feature set. C version in order of magnitude faster than Tcl-only version due
+to cashing of the parsed once argument definition.</p>
+<section id="installation">
+<span id="r-argparse-installation"></span><span id="r-3a3aargparseqzinstallation"></span><h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">¶</a></h2>
+<p>You have two ways: install from git repo (convinient for Linux users) or from archive package release.</p>
+<p>Additionaly, package was added into “batteries included” Magicsplat
+<a class="reference external" href="https://www.magicsplat.com/tcl-installer/index.html#packages">distribution</a> of Tcl8.6 and Tcl9.0.</p>
+<section id="from-git-repo">
+<span id="r-argparse-from-git-repo"></span><span id="r-3a3aargparseqzfrom20git20repo"></span><h3>From git repo<a class="headerlink" href="#from-git-repo" title="Link to this heading">¶</a></h3>
+<p>To install default C implementation, run following commands:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/georgtree/argparse.git</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">./configure</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">make</span> <span class="pre">install</span></code></p></li>
+</ul>
+<p>During installation manpages are also installed.</p>
+<p>For test package in place run <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">test</span></code>.</p>
+<p>For package uninstall run <code class="docutils literal notranslate"><span class="pre">sudo</span> <span class="pre">make</span> <span class="pre">uninstall</span></code>.</p>
+<p>To install Tcl-only version, the sequence is the same, except the flag <code class="docutils literal notranslate"><span class="pre">--enable-tcl-only</span></code> provided to
+<code class="docutils literal notranslate"><span class="pre">./configure</span></code> script.</p>
+</section>
+<section id="from-archive">
+<span id="r-argparse-from-archive"></span><span id="r-3a3aargparseqzfrom20archive"></span><h3>From archive<a class="headerlink" href="#from-archive" title="Link to this heading">¶</a></h3>
+<p>To install the package you should extract archive with source code and add path of the package folder to
+<code class="docutils literal notranslate"><span class="pre">auto_path</span></code> variable:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nb">lappend</span><span class="w"> </span>auto_path<span class="w"> </span><span class="s2">&quot;path to argparse package&quot;</span>
+<span class="nb">package</span><span class="w"> </span>require<span class="w"> </span>argparse
+</pre></div>
+</div>
+<p>There are two pre-compiled version: for Linux x86-64 and for Windows x86-64 UCRT. Both archives provide C and
+Tcl-only versions, you can select the version you need in <code class="docutils literal notranslate"><span class="pre">pkgIndex.tcl</span></code> by conditional statement.</p>
+</section>
+</section>
+<section id="synopsys">
+<span id="r-argparse-synopsys"></span><span id="r-3a3aargparseqzsynopsys"></span><h2>Synopsys<a class="headerlink" href="#synopsys" title="Link to this heading">¶</a></h2>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>package require Tcl 8.6-
+package require textutil::adjust
+argparse ?-globalSwitch ...? ?--? definition ?arguments?
+</pre></div>
+</div>
+</section>
+<section id="description">
+<span id="r-argparse-description"></span><span id="r-3a3aargparseqzdescription"></span><h2>Description<a class="headerlink" href="#description" title="Link to this heading">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">argparse</span></code> package provides a powerful argument parser command named <code class="docutils literal notranslate"><span class="pre">argparse</span></code> capable of flexibly
+processing and validating many varieties of switches and parameters.</p>
+<p>Tcl commands requiring more advanced argument parsing than provided by the standard <code class="docutils literal notranslate"><span class="pre">proc</span></code> command can be
+declared to accept <code class="docutils literal notranslate"><span class="pre">args</span></code> (i.e. any number of arguments), then can call <code class="docutils literal notranslate"><span class="pre">argparse</span></code> to perform the real argument
+parsing.</p>
+<p>In addition to Tcl command argument parsing, <code class="docutils literal notranslate"><span class="pre">argparse</span></code> is suitable for command line argument parsing, operating
+on the value of the <code class="docutils literal notranslate"><span class="pre">::argv</span></code> global variable. To use it with <code class="docutils literal notranslate"><span class="pre">argparse</span></code>, you should provide <code class="docutils literal notranslate"><span class="pre">argv</span></code> as an
+argument to procedure after definition.</p>
+<p><code class="docutils literal notranslate"><span class="pre">argparse</span></code> may be applied to a variety of special purposes beyond standard argument parsing. For example,
+<code class="docutils literal notranslate"><span class="pre">argparse</span></code> can parse custom variadic data structures formatted as lists of switches and/or parameters of a
+highly dynamic nature.  Another example: by calling <code class="docutils literal notranslate"><span class="pre">argparse</span></code> multiple times, it is possible to parse nested or
+multi-part argument lists in which arguments to subsystems are embedded in passthrough switches or parameters.</p>
+</section>
+<section id="quick-start">
+<span id="r-argparse-quick-start"></span><span id="r-3a3aargparseqzquick20start"></span><h2>Quick Start<a class="headerlink" href="#quick-start" title="Link to this heading">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">argparse</span></code> command may have many complex features, but it is not necessary to understand it in depth before
+using it for the most common tasks. Its syntax is reasonably intuitive, so the best thing to do is see it in
+action before reading the precise details on how it works.</p>
+<p>Consider the following:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nb">package</span><span class="w"> </span>require<span class="w"> </span>argparse
+<span class="k">proc</span><span class="w"> </span>greet<span class="w"> </span><span class="k">{</span><span class="nv">args</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="nv">argparse</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-salutation</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>default<span class="w"> </span>hello<span class="k">}</span>
+<span class="w">        </span><span class="nv">-modifier</span><span class="o">=</span>
+<span class="w">        </span><span class="nv">-title</span>
+<span class="w">        </span><span class="nv">subject</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="k">set</span><span class="w"> </span>msg<span class="w"> </span><span class="nv">$salutation</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="k">{[</span><span class="nb">info</span><span class="w"> </span>exists<span class="w"> </span>title<span class="k">]}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">set</span><span class="w"> </span>msg<span class="w"> </span><span class="k">[</span><span class="nb">string</span><span class="w"> </span>totitle<span class="w"> </span><span class="nv">$msg</span><span class="k">]</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="k">{[</span><span class="nb">info</span><span class="w"> </span>exists<span class="w"> </span>modifier<span class="k">]}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="nb">append</span><span class="w"> </span>msg<span class="w"> </span><span class="s2">&quot;, &quot;</span><span class="w"> </span><span class="nv">$modifier</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="nb">append</span><span class="w"> </span>msg<span class="w"> </span><span class="s2">&quot; &quot;</span><span class="w"> </span><span class="nv">$subject</span>
+<span class="k">}</span>
+</pre></div>
+</div>
+<p>This example demonstrates many of the argparse core concepts and features. The greet command is defined to
+accept args.  When not explicitly given an argument list to parse, argparse parses the value of the args
+variable and stores the results into local variables having the same <a class="reference external" href="#name">names</a> as the various
+<a class="reference external" href="#element">elements</a> of the <a class="reference external" href="#definition">definition</a>.</p>
+<p>Here, the definition is a list of four elements, named <code class="docutils literal notranslate"><span class="pre">salutation</span></code>, <code class="docutils literal notranslate"><span class="pre">modifier</span></code>, <code class="docutils literal notranslate"><span class="pre">title</span></code>, and <code class="docutils literal notranslate"><span class="pre">subject</span></code>. Because
+their names are prefixed with <code class="docutils literal notranslate"><span class="pre">-</span></code>, <code class="docutils literal notranslate"><span class="pre">salutation</span></code>, <code class="docutils literal notranslate"><span class="pre">modifier</span></code>, and <code class="docutils literal notranslate"><span class="pre">title</span></code> are <a class="reference external" href="#switch">switches</a>, whereas
+<code class="docutils literal notranslate"><span class="pre">subject</span></code>, lacking a <code class="docutils literal notranslate"><span class="pre">-</span></code> prefix, is a <a class="reference external" href="#parameter">parameter</a>. Two of the switches are given a <code class="docutils literal notranslate"><span class="pre">=</span></code> suffix, which
+means they each take an <a class="reference external" href="#argument">argument</a>, whereas <code class="docutils literal notranslate"><span class="pre">title</span></code> does not. In addition to these <a class="reference external" href="#flag">flag</a>
+characters, the <code class="docutils literal notranslate"><span class="pre">salutation</span></code> element is surrounded with braces because it contains more list words used to
+further customize how it is handled. Namely, it uses the <code class="docutils literal notranslate"><span class="pre">-default</span></code> <a class="reference external" href="#element-switches">element switch</a> to set
+its default value to <code class="docutils literal notranslate"><span class="pre">hello</span></code>, in case <code class="docutils literal notranslate"><span class="pre">-salutation</span></code> is not present in the argument list.</p>
+<p>By default, switches are <a class="reference external" href="#optional">optional</a> and parameters are <a class="reference external" href="#required">required</a>. <code class="docutils literal notranslate"><span class="pre">salutation</span></code>,
+<code class="docutils literal notranslate"><span class="pre">modifier</span></code>, and <code class="docutils literal notranslate"><span class="pre">title</span></code>, being switches, are all optional, but since <code class="docutils literal notranslate"><span class="pre">salutation</span></code> has a default value, its
+variable’s existence is therefore guaranteed. Likewise, <code class="docutils literal notranslate"><span class="pre">subject</span></code>, being a parameter, is required, and its
+variable’s existence is also guaranteed. On the contrary, because <code class="docutils literal notranslate"><span class="pre">modifier</span></code> and <code class="docutils literal notranslate"><span class="pre">title</span></code> are optional and have
+no default value, it is necessary to use <code class="docutils literal notranslate"><span class="pre">info</span> <span class="pre">exists</span></code> to confirm their variables’ existence before attempting
+to read them. Because <code class="docutils literal notranslate"><span class="pre">title</span></code> does not accept an argument, its variable’s value (if the variable exists at all)
+is predefined to be empty string.</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">greet</span><span class="w"> </span>world
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; hello world
+</pre></div>
+</div>
+<p>The first time <code class="docutils literal notranslate"><span class="pre">greet</span></code> is called, it is given only one argument, which is bound to the <code class="docutils literal notranslate"><span class="pre">subject</span></code>
+parameter. Normally, switch arguments appear to the left of parameter arguments, and parameter arguments are
+bound first. Thus, the final argument to <code class="docutils literal notranslate"><span class="pre">greet</span></code> is always bound to the <code class="docutils literal notranslate"><span class="pre">subject</span></code> parameter, even if it happens
+to resemble a switch, and is therefore stored in the <code class="docutils literal notranslate"><span class="pre">subject</span></code> variable. Because their associated switches do
+not appear in the argument list, the <code class="docutils literal notranslate"><span class="pre">salutation</span></code> variable is set to its default value (<code class="docutils literal notranslate"><span class="pre">hello</span></code>), and the
+<code class="docutils literal notranslate"><span class="pre">modifier</span></code> and <code class="docutils literal notranslate"><span class="pre">title</span></code> variables are unset due to lacking a default.</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">greet</span><span class="w"> </span><span class="o">-</span>salutation<span class="w"> </span>howdy<span class="w"> </span>world
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; howdy world
+</pre></div>
+</div>
+<p>The second time <code class="docutils literal notranslate"><span class="pre">greet</span></code> is called, it is given three arguments. As discussed above, the final argument (<code class="docutils literal notranslate"><span class="pre">world</span></code>)
+is immediately stored into the <code class="docutils literal notranslate"><span class="pre">subject</span></code> variable before any switch processing occurs. Next, the remaining two
+arguments are examined and determined to be the name and value of the <code class="docutils literal notranslate"><span class="pre">salutation</span></code> switch. Thus, the second
+argument (<code class="docutils literal notranslate"><span class="pre">howdy</span></code>) is stored in the <code class="docutils literal notranslate"><span class="pre">salutation</span></code> variable. The <code class="docutils literal notranslate"><span class="pre">modifier</span></code> and <code class="docutils literal notranslate"><span class="pre">title</span></code> variables are unset.</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">greet</span><span class="w"> </span><span class="o">-</span>title<span class="w"> </span><span class="o">-</span>mod<span class="w"> </span><span class="s2">&quot;my dear&quot;</span><span class="w"> </span>world
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; Hello, my dear world
+</pre></div>
+</div>
+<p>The third time <code class="docutils literal notranslate"><span class="pre">greet</span></code> is called, it is given four arguments. The first is <code class="docutils literal notranslate"><span class="pre">-title</span></code>, causing the title variable
+to be set to empty string. The second is the name of the <code class="docutils literal notranslate"><span class="pre">modifier</span></code> switch. More precisely, it is an unambiguous
+prefix thereof, i.e. an abbreviation. This causes the third argument (<code class="docutils literal notranslate"><span class="pre">my</span> <span class="pre">dear</span></code>) to be stored in the <code class="docutils literal notranslate"><span class="pre">modifier</span></code>
+variable, and the final argument (<code class="docutils literal notranslate"><span class="pre">world</span></code>) is stored in the <code class="docutils literal notranslate"><span class="pre">subject</span></code> variable. As for the <code class="docutils literal notranslate"><span class="pre">salutation</span></code>
+variable, it is set to its default (<code class="docutils literal notranslate"><span class="pre">hello</span></code>).</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">greet</span><span class="w"> </span><span class="o">-</span>title
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; hello -title
+</pre></div>
+</div>
+<p>The fourth time <code class="docutils literal notranslate"><span class="pre">greet</span></code> is called, it is given one argument. Because the final argument is always bound to the
+<code class="docutils literal notranslate"><span class="pre">subject</span></code> parameter, <code class="docutils literal notranslate"><span class="pre">subject</span></code> is set to <code class="docutils literal notranslate"><span class="pre">-title</span></code> even though there happens to be a switch with the same
+name. There are no remaining arguments, so the switches are all handled according to defaults, just like in the
+first call to <code class="docutils literal notranslate"><span class="pre">greet</span></code>.</p>
+</section>
+<section id="concepts">
+<span id="r-argparse-concepts"></span><span id="r-3a3aargparseqzconcepts"></span><h2>Concepts<a class="headerlink" href="#concepts" title="Link to this heading">¶</a></h2>
+<p>This section lists and explains the concepts and terminology employed by the <code class="docutils literal notranslate"><span class="pre">argparse</span></code> package. The concepts
+are numerous and interrelated, so it may be necessary to read this section multiple times and to refer back to
+it while reading the remainder of this document.</p>
+<section id="r-argparse-argument">
+<span id="r-3a3aargparseqzargument"></span><span id="id1"></span><h3>Argument<a class="headerlink" href="#r-argparse-argument" title="Link to this heading">¶</a></h3>
+<p>The actual values passed to the <code class="docutils literal notranslate"><span class="pre">argparse</span></code> command to be parsed are known as arguments. There are two ways of</p>
+<dl class="field-list simple">
+<dt class="field-odd">providing arguments<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Via local variable <code class="docutils literal notranslate"><span class="pre">args</span></code> of current scope procedure, or explicitly as an argument after <code class="docutils literal notranslate"><span class="pre">definition</span></code>.</p>
+</dd>
+</dl>
+</section>
+<section id="r-argparse-definition">
+<span id="r-3a3aargparseqzdefinition"></span><span id="id2"></span><h3>Definition<a class="headerlink" href="#r-argparse-definition" title="Link to this heading">¶</a></h3>
+<p>The <em>definition</em> determines how the <code class="docutils literal notranslate"><span class="pre">argparse</span></code> command parses its arguments. Definitions are Tcl lists of any
+length, each word of which is an <a class="reference external" href="#element">element</a>. Each definition contains a unique, non-empty name element
+consisting of alphanumerics, underscores, and minus (not as the first character), then zero or more of the
+<a class="reference external" href="#element-switch">element switches</a></p>
+<p>The following example definition may conceivably be used by a command that stores a sequence of numbers into a
+variable.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>{
+    # {Optional sequence control switches}
+    {-from= -default 1}
+    {-to=   -default 10}
+    {-step= -default 1}
+    # {Required output list variable}
+    listVar^
+}
+</pre></div>
+</div>
+<p>The example of such procedure is <a class="reference external" href="https://stackoverflow.com/a/38436286/21306711">source</a>:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">proc</span><span class="w"> </span>genNums<span class="w"> </span><span class="k">{</span><span class="nv">args</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="nv">argparse</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="c"># {Optional sequence control switches}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-from</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>default<span class="w"> </span><span class="mi">1</span><span class="k">}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-to</span><span class="o">=</span><span class="w">   </span><span class="o">-</span>default<span class="w"> </span><span class="mi">10</span><span class="k">}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-step</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>default<span class="w"> </span><span class="mi">1</span><span class="k">}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-prec</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>default<span class="w"> </span><span class="mi">1</span><span class="k">}</span>
+<span class="w">        </span><span class="c"># {Required output list variable}</span>
+<span class="w">        </span><span class="nv">listVar</span><span class="o">^</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="k">{</span><span class="nv">$step</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="nv">0</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">set</span><span class="w"> </span>op<span class="w"> </span><span class="o">::</span>tcl::mathop::<span class="o">&gt;</span>
+<span class="w">    </span><span class="k">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">set</span><span class="w"> </span>op<span class="w"> </span><span class="o">::</span>tcl::mathop::<span class="o">&lt;</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="k">{set</span><span class="w"> </span>n<span class="w"> </span><span class="nv">$from</span><span class="k">}</span><span class="w"> </span><span class="k">{[</span><span class="nv">$op</span><span class="w"> </span><span class="nv">$n</span><span class="w"> </span><span class="nv">$to</span><span class="k">]}</span><span class="w"> </span><span class="k">{set</span><span class="w"> </span>n<span class="w"> </span><span class="k">[expr</span><span class="w"> </span><span class="k">{</span><span class="nv">$n</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nv">$step</span><span class="k">}]}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="nb">lappend</span><span class="w"> </span>listVar<span class="w"> </span><span class="k">[</span><span class="nb">format</span><span class="w"> </span><span class="o">%</span>.<span class="o">*</span>f<span class="w"> </span><span class="nv">$prec</span><span class="w"> </span><span class="nv">$n</span><span class="k">]</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="k">}</span>
+<span class="nv">genNums</span><span class="w"> </span><span class="o">-</span>from<span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">-</span>to<span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="o">-</span>step<span class="w"> </span><span class="mi">2</span><span class="w"> </span>sequenceVar
+<span class="nb">puts</span><span class="w"> </span><span class="nv">$sequenceVar</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>0.0 2.0 4.0 6.0 8.0
+</pre></div>
+</div>
+<p>In this example procedure definition <code class="docutils literal notranslate"><span class="pre">{-prec=</span> <span class="pre">-default</span> <span class="pre">1}</span></code> is added and defines precision of resulted sequence
+of numbers. Instead of returning value via <code class="docutils literal notranslate"><span class="pre">[return]</span></code> command we save resulted list directly in variable of
+caller scope <code class="docutils literal notranslate"><span class="pre">sequenceVar</span></code>.</p>
+</section>
+<section id="global-switch">
+<span id="r-argparse-global-switch"></span><span id="r-3a3aargparseqzglobal20switch"></span><h3>Global Switch<a class="headerlink" href="#global-switch" title="Link to this heading">¶</a></h3>
+<p>A <em>global switch</em> configures the overall operation of the <code class="docutils literal notranslate"><span class="pre">argparse</span></code> command. Global switches are optional
+initial arguments to <code class="docutils literal notranslate"><span class="pre">argparse</span></code> and may only appear before the <a class="reference external" href="#definition">definition</a> argument. Global
+switches may also be embedded within special definition <a class="reference external" href="#element">elements</a> whose <a class="reference external" href="#name">name</a> is empty
+string.</p>
+</section>
+<section id="r-argparse-element">
+<span id="r-3a3aargparseqzelement"></span><span id="id5"></span><h3>Element<a class="headerlink" href="#r-argparse-element" title="Link to this heading">¶</a></h3>
+<p>A <a class="reference external" href="#definition">definition</a> contains any number of <em>elements</em>. For the most part, each element defines either a
+<a class="reference external" href="#switch">switch</a> or a <a class="reference external" href="#parameter">parameter</a>. Elements may also be <a class="reference external" href="#comment">comments</a> or <a class="reference external" href="#global-switches">global
+switches</a>. An element is itself a Tcl list whose required first word is the name (with
+optional shorthand aliases and flags) and whose optional subsequent words are element switches.</p>
+<p>In addition to <a class="reference external" href="#switch">switches</a> and <a class="reference external" href="#parameter">parameters</a>, elements may be <a class="reference external" href="#comment">comments</a> or lists
+of <a class="reference external" href="#global-switches">global switches</a>.</p>
+<p>The example definition shown above contains one parameter element, three switch elements, two comment elements,
+and no global switches. All switch and parameter elements in the example make use of shorthand flags.</p>
+<p>One element from the above example is repeated here so it may be examined more closely.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>{-from= -default 1}
+</pre></div>
+</div>
+<p>The name of this element is from. It uses the <code class="docutils literal notranslate"><span class="pre">-</span></code> and <code class="docutils literal notranslate"><span class="pre">=</span></code> flags, as well as the <code class="docutils literal notranslate"><span class="pre">-default</span></code> element switch with
+argument <code class="docutils literal notranslate"><span class="pre">1</span></code>. The specific meaning of flags and element switches are described elsewhere in this document.</p>
+</section>
+<section id="r-argparse-element-switch">
+<span id="r-3a3aargparseqzelement20switch"></span><span id="id11"></span><h3>Element Switch<a class="headerlink" href="#r-argparse-element-switch" title="Link to this heading">¶</a></h3>
+<p>An <em>element switch</em> configures a single <a class="reference external" href="#element">element</a> in the <a class="reference external" href="#definition">definition</a>. Element switches
+are listed following the <a class="reference external" href="#name">name</a> word of the definition element.</p>
+<p>In the above example definition, each <a class="reference external" href="#switch">switch</a> element explicitly uses the <code class="docutils literal notranslate"><span class="pre">-default</span></code> element
+switch. Due to use of the <code class="docutils literal notranslate"><span class="pre">-</span></code> and <code class="docutils literal notranslate"><span class="pre">=</span></code> shorthand <a class="reference external" href="#flag">flags</a>, each switch element also implicitly uses the
+<code class="docutils literal notranslate"><span class="pre">-switch</span></code> and <code class="docutils literal notranslate"><span class="pre">-argument</span></code> element switches.</p>
+</section>
+<section id="r-argparse-name">
+<span id="r-3a3aargparseqzname"></span><span id="id16"></span><h3>Name<a class="headerlink" href="#r-argparse-name" title="Link to this heading">¶</a></h3>
+<p>Aside from <a class="reference external" href="#alias">aliases</a> and <a class="reference external" href="#flag">flags</a>, the first word of each <a class="reference external" href="#switch">switch</a> or
+<a class="reference external" href="#parameter">parameter</a> <a class="reference external" href="#element">element</a> in the <a class="reference external" href="#definition">definition</a> is the <em>name</em>.</p>
+<p>Switch and parameter element names may not be used more than once within a definition.</p>
+<p>If the name is <code class="docutils literal notranslate"><span class="pre">#</span></code>, the element is a <a class="reference external" href="#comment">comment</a> and is ignored. If the name is empty string, the
+element is neither a switch nor a parameter and is instead a list of <a class="reference external" href="#global-switches">global switches</a>.</p>
+</section>
+<section id="key">
+<span id="r-argparse-key"></span><span id="r-3a3aargparseqzkey"></span><h3>Key<a class="headerlink" href="#key" title="Link to this heading">¶</a></h3>
+<p>In addition to having a <a class="reference external" href="#name">name</a>, every <a class="reference external" href="#switch">switch</a> and <a class="reference external" href="#parameter">parameter</a>
+<a class="reference external" href="#definition">definition</a> <a class="reference external" href="#element">element</a> has a key. Unlike names, multiple elements may share the same key,
+subject to restrictions.</p>
+<p>By default, the key defaults to the name, but it is possible to use the <code class="docutils literal notranslate"><span class="pre">-key</span></code> <a class="reference external" href="#element-switch">element switch</a>
+to explicitly declare an element’s key.</p>
+<p>Keys determine the variable names or dict keys <code class="docutils literal notranslate"><span class="pre">argparse</span></code> uses to return the argument value of the switch or
+parameter.</p>
+<p>Multiple elements may share the same <code class="docutils literal notranslate"><span class="pre">-key</span></code> value if they are switches, do not use <code class="docutils literal notranslate"><span class="pre">-argument</span></code> or <code class="docutils literal notranslate"><span class="pre">-catchall</span></code>,
+and do not use <code class="docutils literal notranslate"><span class="pre">-default</span></code> for more than one element. Such elements are automatically are given <code class="docutils literal notranslate"><span class="pre">-forbid</span></code>
+constraints to prevent them from being used simultaneously.  If such an element does not use <code class="docutils literal notranslate"><span class="pre">-boolean</span></code> or
+<code class="docutils literal notranslate"><span class="pre">-value</span></code>, the element name is used as its default <code class="docutils literal notranslate"><span class="pre">-value</span></code>.</p>
+</section>
+<section id="r-argparse-switch">
+<span id="r-3a3aargparseqzswitch"></span><span id="id29"></span><h3>Switch<a class="headerlink" href="#r-argparse-switch" title="Link to this heading">¶</a></h3>
+<p>Switch is the optional element, that could be made mandatory with <code class="docutils literal notranslate"><span class="pre">-required</span></code> <a class="reference external" href="#element-switch">element switch</a>.
+It could be defined either with shorthand <code class="docutils literal notranslate"><span class="pre">-</span></code> before name or with <code class="docutils literal notranslate"><span class="pre">-switch</span></code> <a class="reference external" href="#element-switch">element switch</a>.</p>
+<p>Unambiguous prefixes of switch names are acceptable, unless the <code class="docutils literal notranslate"><span class="pre">-exact</span></code> switch is used. Switches in the
+argument list normally begin with a single <code class="docutils literal notranslate"><span class="pre">-</span></code> but can also begin with <code class="docutils literal notranslate"><span class="pre">--</span></code> if the <code class="docutils literal notranslate"><span class="pre">-long</span></code> switch is
+used. Arguments to switches normally appear as the list element following the switch, but if <code class="docutils literal notranslate"><span class="pre">-equalarg</span></code> is
+used, they may be supplied within the switch element itself, delimited with an <code class="docutils literal notranslate"><span class="pre">=</span></code> character,
+e.g. <code class="docutils literal notranslate"><span class="pre">-switch=arg</span></code>.</p>
+<p>When <code class="docutils literal notranslate"><span class="pre">-switch</span></code> and <code class="docutils literal notranslate"><span class="pre">-optional</span></code> are both used, <code class="docutils literal notranslate"><span class="pre">-catchall</span></code>, <code class="docutils literal notranslate"><span class="pre">-default</span></code>, and <code class="docutils literal notranslate"><span class="pre">-upvar</span></code> are disallowed.</p>
+</section>
+<section id="r-argparse-parameter">
+<span id="r-3a3aargparseqzparameter"></span><span id="id32"></span><h3>Parameter<a class="headerlink" href="#r-argparse-parameter" title="Link to this heading">¶</a></h3>
+<p>Parameter is the mandatory <a class="reference external" href="#element">element</a> that is provided without any preceding flags before name, and
+it’s position in the list of <a class="reference external" href="#definition">definitions</a> is the same as it must be passed to <code class="docutils literal notranslate"><span class="pre">argparse</span></code>
+procedure.</p>
+<p>In definition list it is also could be explicitly stated with <code class="docutils literal notranslate"><span class="pre">-parameter</span></code> <a class="reference external" href="#element-switch">element
+switch</a>. Parameters can be made optional with <code class="docutils literal notranslate"><span class="pre">-optional</span></code>. <code class="docutils literal notranslate"><span class="pre">-catchall</span></code> also makes parameters
+optional, unless <code class="docutils literal notranslate"><span class="pre">-required</span></code> is used, in which case at least one argument must be assigned to the
+parameter. Otherwise, using <code class="docutils literal notranslate"><span class="pre">-required</span></code> with <code class="docutils literal notranslate"><span class="pre">-parameter</span></code> has no effect.</p>
+</section>
+<section id="value">
+<span id="r-argparse-value"></span><span id="r-3a3aargparseqzvalue"></span><h3>Value<a class="headerlink" href="#value" title="Link to this heading">¶</a></h3>
+<p>Value is the argument that is passed into variable (or dictionary value) for particular <a class="reference external" href="#parameter">parameter</a>
+or <a class="reference external" href="#switch">switch</a> if it is defined with <code class="docutils literal notranslate"><span class="pre">-argument</span></code> or shorthand <code class="docutils literal notranslate"><span class="pre">=</span></code> after switch name. <code class="docutils literal notranslate"><span class="pre">-optional</span></code>,
+<code class="docutils literal notranslate"><span class="pre">-required</span></code>, <code class="docutils literal notranslate"><span class="pre">-catchall</span></code>, and <code class="docutils literal notranslate"><span class="pre">-upvar</span></code> imply <code class="docutils literal notranslate"><span class="pre">-argument</span></code> when used with <code class="docutils literal notranslate"><span class="pre">-switch</span></code>.  Consequently, switches
+require an argument when any of the <a class="reference external" href="#shorthand-flag">shorthand flag</a> characters are used, and it is not
+necessary to explicitly specify <code class="docutils literal notranslate"><span class="pre">=</span></code> if any of the other flag characters are used.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">-argument</span></code> is used, the value assigned to the switch’s <a class="reference external" href="#key">key</a> is normally the next argument following
+the switch.  With <code class="docutils literal notranslate"><span class="pre">-catchall</span></code>, the value assigned to the switch’s key is instead the list of all remaining
+arguments. With <code class="docutils literal notranslate"><span class="pre">-optional</span></code>, the following processing is applied:</p>
+<ul class="simple">
+<li><p>If the switch is not present, the switch’s key is omitted from the result.  If the switch is not the final</p></li>
+<li><p>argument, its value is a two-element list consisting of empty string and the argument following the switch.</p></li>
+<li><p>If the switch is the final argument, its value is empty string.</p></li>
+</ul>
+<p>We can also explicitly specify particular value which is assigned to switch key whet switch is presented is
+present with <code class="docutils literal notranslate"><span class="pre">-value</span></code> after switch name in <a class="reference external" href="#definition">definition</a>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">-value</span></code> may not be used with <code class="docutils literal notranslate"><span class="pre">-argument</span></code>, <code class="docutils literal notranslate"><span class="pre">-optional</span></code>, <code class="docutils literal notranslate"><span class="pre">-required</span></code>, or <code class="docutils literal notranslate"><span class="pre">-catchall</span></code>. <code class="docutils literal notranslate"><span class="pre">-value</span></code> normally defaults
+to empty string, except when <code class="docutils literal notranslate"><span class="pre">-boolean</span></code> is used (1 is the default <code class="docutils literal notranslate"><span class="pre">-value</span></code>) or multiple switches share the same
+<code class="docutils literal notranslate"><span class="pre">-key</span></code> (the element name is the default <code class="docutils literal notranslate"><span class="pre">-value</span></code>).</p>
+</section>
+<section id="alias">
+<span id="r-argparse-alias"></span><span id="r-3a3aargparseqzalias"></span><h3>Alias<a class="headerlink" href="#alias" title="Link to this heading">¶</a></h3>
+<p>Alias is the alternative <a class="reference external" href="#name">name</a> of the <a class="reference external" href="#switch">switch</a> element. It can be provided by <code class="docutils literal notranslate"><span class="pre">-alias</span> <span class="pre">ALIAS</span></code>
+element switch, or before the base name with <code class="docutils literal notranslate"><span class="pre">|</span></code> shorthand flag, but after <code class="docutils literal notranslate"><span class="pre">-</span></code> flag. For example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>{-variable= -alias var -required}
+</pre></div>
+</div>
+<p>or</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>{-var|variable= -required}
+</pre></div>
+</div>
+<p>Also supported multiple aliases for single switch, for example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>{-variable= -alias {var v} -required}
+</pre></div>
+</div>
+<p>or</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>{-var|v|variable= -required}
+</pre></div>
+</div>
+<p>The name of the element is the last name in the list of aliases, if it is provided via shorhand syntax.</p>
+</section>
+<section id="r-argparse-shorthand-flag">
+<span id="r-3a3aargparseqzshorthand20flag"></span><span id="id41"></span><h3>Shorthand flag<a class="headerlink" href="#r-argparse-shorthand-flag" title="Link to this heading">¶</a></h3>
+<p>If neither <code class="docutils literal notranslate"><span class="pre">-switch</span></code> nor <code class="docutils literal notranslate"><span class="pre">-parameter</span></code> are used, a shorthand flag form is permitted. If the <a class="reference external" href="#name">name</a> is
+preceded by <code class="docutils literal notranslate"><span class="pre">-</span></code>, it is a <a class="reference external" href="#switch">switch</a>; otherwise, it is a <a class="reference external" href="#parameter">parameter</a>. An alias may be written
+after <code class="docutils literal notranslate"><span class="pre">-</span></code>, then followed by <code class="docutils literal notranslate"><span class="pre">|</span></code> and the switch name.</p>
+<p>The element name may be followed by any number of flag characters:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 50.0%" />
+<col style="width: 50.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Shorthand flag</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">=</span></code></p></td>
+<td><p>Same as <code class="docutils literal notranslate"><span class="pre">-argument</span></code>; only valid for switches</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">?</span></code></p></td>
+<td><p>Same as <code class="docutils literal notranslate"><span class="pre">-optional</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">!</span></code></p></td>
+<td><p>Same as <code class="docutils literal notranslate"><span class="pre">-required</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">*</span></code></p></td>
+<td><p>Same as <code class="docutils literal notranslate"><span class="pre">-catchall</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">^</span></code></p></td>
+<td><p>Same as <code class="docutils literal notranslate"><span class="pre">-upvar</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="r-argparse-comment">
+<span id="r-3a3aargparseqzcomment"></span><span id="id45"></span><h3>Comment<a class="headerlink" href="#r-argparse-comment" title="Link to this heading">¶</a></h3>
+<p>Comment is the <a class="reference external" href="#element">element</a> started with <code class="docutils literal notranslate"><span class="pre">#</span></code> at the start of definition in the definition list.</p>
+</section>
+</section>
+<section id="r-argparse-global-switches">
+<span id="r-3a3aargparseqzglobal20switches"></span><span id="id47"></span><h2>Global Switches<a class="headerlink" href="#r-argparse-global-switches" title="Link to this heading">¶</a></h2>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 50.0%" />
+<col style="width: 50.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Switch</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-inline</span></code></p></td>
+<td><p>Return the result dict rather than setting caller variables</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-exact</span></code></p></td>
+<td><p>Require exact switch name matches, and do not accept prefixes</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-mixed</span></code></p></td>
+<td><p>Allow switches to appear after parameters</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-pfirst</span></code></p></td>
+<td><p>Set required parameters to appear before switches; conflicts with <code class="docutils literal notranslate"><span class="pre">-mixed</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-long</span></code></p></td>
+<td><p>Recognize <code class="docutils literal notranslate"><span class="pre">--switch</span></code> long option alternative syntax</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-equalarg</span></code></p></td>
+<td><p>Recognize <code class="docutils literal notranslate"><span class="pre">-switch=arg</span></code> inline argument alternative syntax</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-normalize</span></code></p></td>
+<td><p>Normalize switch syntax in passthrough result keys</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-reciprocal</span></code></p></td>
+<td><p>Every element’s <code class="docutils literal notranslate"><span class="pre">-require</span></code> constraints are reciprocal</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-level</span> <span class="pre">levelSpec</span></code></p></td>
+<td><p>Every <code class="docutils literal notranslate"><span class="pre">-upvar</span></code> element’s <code class="docutils literal notranslate"><span class="pre">[upvar]</span></code> level; defaults to 1</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-template</span> <span class="pre">templateString</span></code></p></td>
+<td><p>Transform default element names using a substitution template</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-pass</span> <span class="pre">passKey</span></code></p></td>
+<td><p>Pass unrecognized elements through to a result key</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-keep</span></code></p></td>
+<td><p>Do not unset omitted element variables; conflicts with <code class="docutils literal notranslate"><span class="pre">-inline</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-boolean</span></code></p></td>
+<td><p>Treat switches as having <code class="docutils literal notranslate"><span class="pre">-boolean</span></code> wherever possible</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-validate</span> <span class="pre">validDef</span></code></p></td>
+<td><p>Define named validation expressions to be used by elements</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-enum</span> <span class="pre">enumDef</span></code></p></td>
+<td><p>Define named enumeration lists to be used by elements</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-help</span> <span class="pre">description</span></code></p></td>
+<td><p>Enable help message generating when -help argument is provided</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-helplevel</span> <span class="pre">value</span></code></p></td>
+<td><p>Set -level option for return command in help evaluation</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-helpret</span></code></p></td>
+<td><p>Set to return help message as a return value of procedure instead of putting into stdout</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--</span></code></p></td>
+<td><p>Force next argument to be interpreted as the definition list</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="r-argparse-element-switches">
+<span id="r-3a3aargparseqzelement20switches"></span><span id="id48"></span><h2>Element Switches<a class="headerlink" href="#r-argparse-element-switches" title="Link to this heading">¶</a></h2>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 50.0%" />
+<col style="width: 50.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Switch</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-switch</span></code></p></td>
+<td><p>Element is a switch; conflicts with <code class="docutils literal notranslate"><span class="pre">-parameter</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-parameter</span></code></p></td>
+<td><p>Element is a parameter; conflicts with <code class="docutils literal notranslate"><span class="pre">-switch</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-alias</span> <span class="pre">aliasName</span></code></p></td>
+<td><p>Alias names; requires <code class="docutils literal notranslate"><span class="pre">-switch</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-ignore</span></code></p></td>
+<td><p>Element is omitted from result; conflicts with <code class="docutils literal notranslate"><span class="pre">-key</span></code> and <code class="docutils literal notranslate"><span class="pre">-pass</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-key</span> <span class="pre">keyName</span></code></p></td>
+<td><p>Override key name; not affected by <code class="docutils literal notranslate"><span class="pre">-template</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-pass</span> <span class="pre">keyName</span></code></p></td>
+<td><p>Pass through to result key; not affected by <code class="docutils literal notranslate"><span class="pre">-template</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-default</span> <span class="pre">value</span></code></p></td>
+<td><p>Value if omitted; conflicts with <code class="docutils literal notranslate"><span class="pre">-required</span></code> and <code class="docutils literal notranslate"><span class="pre">-keep</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-keep</span></code></p></td>
+<td><p>Do not unset if omitted; requires <code class="docutils literal notranslate"><span class="pre">-optional</span></code>; conflicts <code class="docutils literal notranslate"><span class="pre">-inline</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-value</span> <span class="pre">value</span></code></p></td>
+<td><p>Value if present; requires <code class="docutils literal notranslate"><span class="pre">-switch</span></code>; conflicts with <code class="docutils literal notranslate"><span class="pre">-argument</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-boolean</span></code></p></td>
+<td><p>Equivalent to <code class="docutils literal notranslate"><span class="pre">-default</span> <span class="pre">0</span> <span class="pre">-value</span> <span class="pre">1</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-argument</span></code></p></td>
+<td><p>Value is next argument following switch; requires <code class="docutils literal notranslate"><span class="pre">-switch</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-optional</span></code></p></td>
+<td><p>Switch value is optional, or parameter is optional</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-required</span></code></p></td>
+<td><p>Switch is required, or stop <code class="docutils literal notranslate"><span class="pre">-catchall</span></code> from implying <code class="docutils literal notranslate"><span class="pre">-optional</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-catchall</span></code></p></td>
+<td><p>Value is list of all otherwise unassigned arguments</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-upvar</span></code></p></td>
+<td><p>Links caller variable; conflicts with <code class="docutils literal notranslate"><span class="pre">-inline</span></code> and <code class="docutils literal notranslate"><span class="pre">-catchall</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-level</span> <span class="pre">levelSpec</span></code></p></td>
+<td><p>This element’s <code class="docutils literal notranslate"><span class="pre">[upvar]</span></code> level; requires <code class="docutils literal notranslate"><span class="pre">-upvar</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-standalone</span></code></p></td>
+<td><p>If element is present, ignore <code class="docutils literal notranslate"><span class="pre">-required</span></code>, <code class="docutils literal notranslate"><span class="pre">-require</span></code>, <code class="docutils literal notranslate"><span class="pre">-forbid</span></code> and <code class="docutils literal notranslate"><span class="pre">-allow</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-require</span> <span class="pre">nameList</span></code></p></td>
+<td><p>If element is present, other elements that must be present</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-forbid</span> <span class="pre">nameList</span></code></p></td>
+<td><p>If element is present, other elements that must not be present</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-allow</span> <span class="pre">nameList</span></code></p></td>
+<td><p>If element is present, other elements that is not in the <code class="docutils literal notranslate"><span class="pre">nameList</span></code> must not be present</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-imply</span> <span class="pre">argList</span></code></p></td>
+<td><p>If element is present, extra switch arguments; requires <code class="docutils literal notranslate"><span class="pre">-switch</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-reciprocal</span></code></p></td>
+<td><p>This element’s <code class="docutils literal notranslate"><span class="pre">-require</span></code> is reciprocal; requires <code class="docutils literal notranslate"><span class="pre">-require</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-validate</span> <span class="pre">validNameOrDef</span></code></p></td>
+<td><p>Name of validation expression, or inline validation definition</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-errormsg</span> <span class="pre">message</span></code></p></td>
+<td><p>Custom error message that replaces the default one; requires <code class="docutils literal notranslate"><span class="pre">-validate</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-enum</span> <span class="pre">enumNameOrDef</span></code></p></td>
+<td><p>Name of enumeration list, or inline enumeration definition</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-type</span> <span class="pre">typeName</span></code></p></td>
+<td><p>Validate value according to type defined in [string is] command, requires <code class="docutils literal notranslate"><span class="pre">-argument</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-help</span> <span class="pre">description</span></code></p></td>
+<td><p>Provide description to element that is displayed when help message is generated</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-hsuppress</span></code></p></td>
+<td><p>Suppress help generation for certain element</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="collecting-unassigned-arguments">
+<span id="r-argparse-collecting-unassigned-arguments"></span><span id="r-3a3aargparseqzcollecting20unassigned20arguments"></span><h2>Collecting unassigned arguments<a class="headerlink" href="#collecting-unassigned-arguments" title="Link to this heading">¶</a></h2>
+<p>With <code class="docutils literal notranslate"><span class="pre">-catchall</span></code> <a class="reference external" href="#element-switch">element switch</a>, we can collects the rest of otherwise unassigned
+<a class="reference external" href="#argument">arguments</a> to list and save to switch’s <a class="reference external" href="#key">key</a>. Let’s consider next example:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">proc</span><span class="w"> </span>applyOperator<span class="w"> </span><span class="k">{</span><span class="nv">args</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="nv">argparse</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-op</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>enum<span class="w"> </span><span class="k">{</span><span class="o">+</span><span class="w"> </span><span class="o">*</span><span class="k">}}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-elements</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>catchall<span class="k">}</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="k">set</span><span class="w"> </span>result<span class="w"> </span><span class="k">[</span><span class="nb">lindex</span><span class="w"> </span><span class="nv">$elements</span><span class="w"> </span><span class="mi">0</span><span class="k">]</span>
+<span class="w">    </span><span class="k">foreach</span><span class="w"> </span>element<span class="w"> </span><span class="k">[</span><span class="nb">lrange</span><span class="w"> </span><span class="nv">$elements</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span>end<span class="k">]</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">set</span><span class="w"> </span>result<span class="w"> </span><span class="k">[</span><span class="o">::</span><span class="nv">tcl</span><span class="o">::</span>mathop::<span class="nv">$op</span><span class="w"> </span><span class="nv">$result</span><span class="w"> </span><span class="nv">$element</span><span class="k">]</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nv">$result</span>
+<span class="k">}</span>
+
+<span class="nv">applyOperator</span><span class="w"> </span><span class="o">-</span>op<span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="o">-</span>elements<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="mi">5</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; 120
+</pre></div>
+</div>
+<p>This procedure make summation or product of all arguments passed after <code class="docutils literal notranslate"><span class="pre">-elements</span></code> switch with <code class="docutils literal notranslate"><span class="pre">-catchall</span></code>
+element switch. There is also an example of using <code class="docutils literal notranslate"><span class="pre">-enum</span></code> switch to <a class="reference external" href="#validation">validate</a> possible values of
+argument to <code class="docutils literal notranslate"><span class="pre">-op</span></code> switch.</p>
+<p>At most one parameter may use <code class="docutils literal notranslate"><span class="pre">-catchall</span></code>.</p>
+</section>
+<section id="default-values">
+<span id="r-argparse-default-values"></span><span id="r-3a3aargparseqzdefault20values"></span><h2>Default values<a class="headerlink" href="#default-values" title="Link to this heading">¶</a></h2>
+<p><a class="reference external" href="#element-switch">Element switch</a> <code class="docutils literal notranslate"><span class="pre">-default</span></code> specifies the <a class="reference external" href="#value">value</a> to assign to <a class="reference external" href="#element">element</a>
+<a class="reference external" href="#key">keys</a> when the element is omitted. If <code class="docutils literal notranslate"><span class="pre">-default</span></code> is not used, keys for omitted <a class="reference external" href="#switch">switches</a> and
+<a class="reference external" href="#parameter">parameters</a> are omitted from the result, unless <code class="docutils literal notranslate"><span class="pre">-catchall</span></code> is used, in which case the default
+value for <code class="docutils literal notranslate"><span class="pre">-default</span></code> is empty string.</p>
+</section>
+<section id="validation">
+<span id="r-argparse-validation"></span><span id="r-3a3aargparseqzvalidation"></span><h2>Validation<a class="headerlink" href="#validation" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">-validate</span></code> and <code class="docutils literal notranslate"><span class="pre">-enum</span></code> provide <a class="reference external" href="#element">element</a> <a class="reference external" href="#value">value</a> validation.  The global <code class="docutils literal notranslate"><span class="pre">-validate</span></code> and
+<code class="docutils literal notranslate"><span class="pre">-enum</span></code> <a class="reference external" href="#global-switch">switches</a> declare named validation expressions and enumeration lists, and the
+per-element <code class="docutils literal notranslate"><span class="pre">-validate</span></code> and <code class="docutils literal notranslate"><span class="pre">-enum</span></code> switches select which validation expressions and enumeration lists are used
+on which elements.  The argument to the global <code class="docutils literal notranslate"><span class="pre">-validate</span></code> and <code class="docutils literal notranslate"><span class="pre">-enum</span></code> switches is a dict mapping from
+validation or enumeration name to validation expressions or enumeration lists. The argument to a per-element
+<code class="docutils literal notranslate"><span class="pre">-validate</span></code> switch is a validation name or expression, and the argument to a per-element <code class="docutils literal notranslate"><span class="pre">-enum</span></code> switch is an
+enumeration name or list.  An element may not use both <code class="docutils literal notranslate"><span class="pre">-validate</span></code> and <code class="docutils literal notranslate"><span class="pre">-enum</span></code>.</p>
+<p>A validation expression is an <code class="docutils literal notranslate"><span class="pre">[expr]</span></code> expression parameterized on a variable named <code class="docutils literal notranslate"><span class="pre">arg</span></code> which is replaced with
+the <a class="reference external" href="#argument">argument</a>. If the expression evaluates to <code class="docutils literal notranslate"><span class="pre">true</span></code>, the argument is accepted. Let’s consider the
+example:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">proc</span><span class="w"> </span>exponentiation<span class="w"> </span><span class="k">{</span><span class="nv">args</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="nv">argparse</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-b</span><span class="o">!=</span><span class="w"> </span><span class="o">-</span>validate<span class="w"> </span><span class="k">{[</span><span class="nb">string</span><span class="w"> </span>is<span class="w"> </span>double<span class="w"> </span><span class="nv">$arg</span><span class="k">]}}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-n</span><span class="o">!=</span><span class="w"> </span><span class="o">-</span>validate<span class="w"> </span><span class="k">{[</span><span class="nb">string</span><span class="w"> </span>is<span class="w"> </span>double<span class="w"> </span><span class="nv">$arg</span><span class="k">]}}</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="k">[expr</span><span class="w"> </span><span class="k">{</span><span class="nv">$b</span><span class="o">**</span><span class="nv">$n</span><span class="k">}]</span>
+<span class="k">}</span>
+
+<span class="nv">exponentiation</span><span class="w"> </span><span class="o">-</span>b<span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">-</span>n<span class="w"> </span><span class="mi">4</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; 16
+</pre></div>
+</div>
+<p>This simple function return exponentiation of number <code class="docutils literal notranslate"><span class="pre">b</span></code> in <code class="docutils literal notranslate"><span class="pre">n</span></code>. Our simple tests verify that the arguments are
+strings that could be considered as floating numbers, and only after that set the corresponding variables.</p>
+<p>If wrong string is provided, a error message appears:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">exponentiation</span><span class="w"> </span><span class="o">-</span>b<span class="w"> </span>a<span class="w"> </span><span class="o">-</span>n<span class="w"> </span><span class="mi">4</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>-b value &quot;a&quot; fails validation: [string is double $arg]
+while executing
+&quot;argparse {
+    {-b!= -validate {[string is double $arg]}}
+    {-n!= -validate {[string is double $arg]}}
+}&quot;
+(procedure &quot;exponentiation&quot; line 2)
+</pre></div>
+</div>
+<p>An enumeration list is a list of possible argument values. If the argument appears in the enumeration list, the
+argument is accepted. Unless <code class="docutils literal notranslate"><span class="pre">-exact</span></code> is used, if the argument is a prefix of exactly one element of the
+enumeration list, the argument is replaced with the enumeration list element.</p>
+<p>Additional built-in validation of argument is done with help of [string is] command. All types (classes) are
+supported except <code class="docutils literal notranslate"><span class="pre">true</span></code> and <code class="docutils literal notranslate"><span class="pre">false</span></code> class. To declare type of argument, the switch <code class="docutils literal notranslate"><span class="pre">-type</span></code> should be provided to
+definition of switch or parameter with one of the argument: <code class="docutils literal notranslate"><span class="pre">alnum</span> <span class="pre">alpha</span> <span class="pre">ascii</span> <span class="pre">boolean</span> <span class="pre">control</span> <span class="pre">dict</span> <span class="pre">digit</span> <span class="pre">double</span>
+<span class="pre">graph</span> <span class="pre">integer</span> <span class="pre">list</span> <span class="pre">lower</span> <span class="pre">print</span> <span class="pre">punct</span> <span class="pre">space</span> <span class="pre">upper</span> <span class="pre">wideinteger</span> <span class="pre">wordchar</span> <span class="pre">xdigit</span></code>. If you specify type for switch,
+the switch should be defined with <code class="docutils literal notranslate"><span class="pre">-argument</span></code> (or <code class="docutils literal notranslate"><span class="pre">=</span></code> <a class="reference external" href="#shorthand-flag">shorthand</a>). Conflicts with <code class="docutils literal notranslate"><span class="pre">-upvar</span></code>,
+<code class="docutils literal notranslate"><span class="pre">-boolean</span></code> and <code class="docutils literal notranslate"><span class="pre">-enum</span></code>, combination of <code class="docutils literal notranslate"><span class="pre">-switch</span></code>, <code class="docutils literal notranslate"><span class="pre">-optional</span></code> and <code class="docutils literal notranslate"><span class="pre">type</span></code> is forbidden.</p>
+<p>As an example, we can use previously proposed procedure:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">proc</span><span class="w"> </span>genNums<span class="w"> </span><span class="k">{</span><span class="nv">args</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="nv">argparse</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="c"># {Optional sequence control switches}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-from</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>default<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span>type<span class="w"> </span>double<span class="k">}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-to</span><span class="o">=</span><span class="w">   </span><span class="o">-</span>default<span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="o">-</span>type<span class="w"> </span>double<span class="k">}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-step</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>default<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span>type<span class="w"> </span>double<span class="k">}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-prec</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>default<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span>type<span class="w"> </span>double<span class="k">}</span>
+<span class="w">        </span><span class="c"># {Required output list variable}</span>
+<span class="w">        </span><span class="nv">listVar</span><span class="o">^</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="k">{</span><span class="nv">$step</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="nv">0</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">set</span><span class="w"> </span>op<span class="w"> </span><span class="o">::</span>tcl::mathop::<span class="o">&gt;</span>
+<span class="w">    </span><span class="k">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">set</span><span class="w"> </span>op<span class="w"> </span><span class="o">::</span>tcl::mathop::<span class="o">&lt;</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="k">{set</span><span class="w"> </span>n<span class="w"> </span><span class="nv">$from</span><span class="k">}</span><span class="w"> </span><span class="k">{[</span><span class="nv">$op</span><span class="w"> </span><span class="nv">$n</span><span class="w"> </span><span class="nv">$to</span><span class="k">]}</span><span class="w"> </span><span class="k">{set</span><span class="w"> </span>n<span class="w"> </span><span class="k">[expr</span><span class="w"> </span><span class="k">{</span><span class="nv">$n</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nv">$step</span><span class="k">}]}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="nb">lappend</span><span class="w"> </span>listVar<span class="w"> </span><span class="k">[</span><span class="nb">format</span><span class="w"> </span><span class="o">%</span>.<span class="o">*</span>f<span class="w"> </span><span class="nv">$prec</span><span class="w"> </span><span class="nv">$n</span><span class="k">]</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="k">}</span>
+</pre></div>
+</div>
+<p>If we provide the wrong argument type to <code class="docutils literal notranslate"><span class="pre">genNums</span></code> procedure, the error occurs:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">genNums</span><span class="w"> </span><span class="o">-</span>from<span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">-</span>to<span class="w"> </span><span class="mi">10</span>..<span class="w"> </span><span class="o">-</span>step<span class="w"> </span><span class="mi">2</span><span class="w"> </span>sequenceVar
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>-to value &quot;10..&quot; is not of the type double
+while executing
+&quot;argparse {
+    # {Optional sequence control switches}
+    {-from= -default 1 -type double}
+    {-to=   -default 10 -type double}
+    {...&quot;
+(procedure &quot;genNums&quot; line 2)
+</pre></div>
+</div>
+<p>For <code class="docutils literal notranslate"><span class="pre">-validation</span></code> switch the custom error message could be provided by element switch <code class="docutils literal notranslate"><span class="pre">-errormsg</span></code>. For
+substitution, <code class="docutils literal notranslate"><span class="pre">arg</span></code> and <code class="docutils literal notranslate"><span class="pre">name</span></code> variables are availible, as well as internal dictionary <code class="docutils literal notranslate"><span class="pre">opt</span></code> that contains
+processed definition of element. For example, the previously defined procedure could be rewritted with custom
+error messages:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">proc</span><span class="w"> </span>exponentiation<span class="w"> </span><span class="k">{</span><span class="nv">args</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="nv">argparse</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-b</span><span class="o">!=</span><span class="w"> </span><span class="o">-</span>validate<span class="w"> </span><span class="k">{[</span><span class="nb">string</span><span class="w"> </span>is<span class="w"> </span>double<span class="w"> </span><span class="nv">$arg</span><span class="k">]}</span><span class="w"> </span><span class="o">-</span>errormsg<span class="w"> </span><span class="k">{</span><span class="nv">Value</span><span class="w"> </span>of<span class="w"> </span>switch<span class="w"> </span><span class="err">&#39;</span><span class="nv">$name</span><span class="err">&#39;</span><span class="w"> </span>must<span class="w"> </span>be<span class="w"> </span>double,<span class="w"> </span><span class="err">&#39;</span><span class="nv">$arg</span><span class="err">&#39;</span><span class="w"> </span>was<span class="w"> </span>provided<span class="k">}}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-n</span><span class="o">!=</span><span class="w"> </span><span class="o">-</span>validate<span class="w"> </span><span class="k">{[</span><span class="nb">string</span><span class="w"> </span>is<span class="w"> </span>double<span class="w"> </span><span class="nv">$arg</span><span class="k">]}</span><span class="w"> </span><span class="o">-</span>errormsg<span class="w"> </span><span class="k">{</span><span class="nv">Value</span><span class="w"> </span>of<span class="w"> </span>switch<span class="w"> </span><span class="err">&#39;</span><span class="nv">$name</span><span class="err">&#39;</span><span class="w"> </span>must<span class="w"> </span>be<span class="w"> </span>double,<span class="w"> </span><span class="err">&#39;</span><span class="nv">$arg</span><span class="err">&#39;</span><span class="w"> </span>was<span class="w"> </span>provided<span class="k">}}</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="k">[expr</span><span class="w"> </span><span class="k">{</span><span class="nv">$b</span><span class="o">**</span><span class="nv">$n</span><span class="k">}]</span>
+<span class="k">}</span>
+
+<span class="nv">exponentiation</span><span class="w"> </span><span class="o">-</span>b<span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">-</span>n<span class="w"> </span><span class="mi">4</span>t
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Value of switch &#39;-n&#39; must be double, &#39;4t&#39; was provided
+while executing
+&quot;argparse {
+    {-b!= -validate {[string is double $arg]} -errormsg {Value of switch &#39;$name&#39; must be double, &#39;$arg&#39; was provided}}
+    {-n!= -v...&quot;
+(procedure &quot;exponentiation&quot; line 2)
+</pre></div>
+</div>
+</section>
+<section id="forbid">
+<span id="r-argparse-forbid"></span><span id="r-3a3aargparseqzforbid"></span><h2>Forbid<a class="headerlink" href="#forbid" title="Link to this heading">¶</a></h2>
+<p>If the presence of an <a class="reference external" href="#element">element</a> should be forbidden in combination with certain other elements, use
+the <code class="docutils literal notranslate"><span class="pre">-forbid</span></code> <a class="reference external" href="#element-switch">switch</a> followed by a list of element names. In next example, we can forbid
+using arguments that logically incompatible:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">proc</span><span class="w"> </span>sheduleEvent<span class="w"> </span><span class="k">{</span><span class="nv">args</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="k">set</span><span class="w"> </span>arguments<span class="w"> </span><span class="k">[</span><span class="nv">argparse</span><span class="w"> </span><span class="o">-</span>inline<span class="w"> </span><span class="o">-</span>validate<span class="w"> </span><span class="k">[</span><span class="nb">dict</span><span class="w"> </span>create<span class="w"> </span>date<span class="w"> </span><span class="k">{[</span><span class="nb">regexp</span><span class="w"> </span><span class="k">{</span><span class="o">^</span><span class="k">(</span><span class="nv">0</span><span class="k">[</span><span class="nv">1-9</span><span class="k">]</span><span class="o">|</span><span class="k">[</span><span class="nv">12</span><span class="k">][</span><span class="nv">0-9</span><span class="k">]</span><span class="o">|</span><span class="mi">3</span><span class="k">[</span><span class="nv">01</span><span class="k">])</span><span class="nv">-</span><span class="k">(</span><span class="nv">0</span><span class="k">[</span><span class="nv">1-9</span><span class="k">]</span><span class="o">|</span><span class="mi">1</span><span class="k">[</span><span class="nv">0-2</span><span class="k">])</span><span class="o">-</span><span class="err">\</span>d<span class="k">{</span><span class="nv">4</span><span class="k">}</span><span class="err">$</span><span class="k">}</span><span class="w"> </span><span class="nv">$arg</span><span class="k">]}</span><span class="w"> </span>time<span class="w"> </span><span class="k">{[</span><span class="nb">regexp</span><span class="w"> </span><span class="k">{</span><span class="o">^</span><span class="k">([</span><span class="nv">01</span><span class="k">][</span><span class="nv">0-9</span><span class="k">]</span><span class="o">|</span><span class="nv">2</span><span class="k">[</span><span class="nv">0-3</span><span class="k">])</span><span class="o">:</span><span class="k">[</span><span class="nv">0-5</span><span class="k">][</span><span class="nv">0-9</span><span class="k">](</span><span class="o">?::</span><span class="k">[</span><span class="nv">0-5</span><span class="k">][</span><span class="nv">0-9</span><span class="k">])</span><span class="o">?</span><span class="err">$</span><span class="k">}</span><span class="w"> </span><span class="nv">$arg</span><span class="k">]}]</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">date</span><span class="w"> </span><span class="o">-</span>validate<span class="w"> </span>date<span class="k">}</span>
+<span class="w">        </span><span class="k">{</span><span class="nb">time</span><span class="w"> </span><span class="o">-</span>validate<span class="w"> </span>time<span class="k">}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-allday</span><span class="w"> </span><span class="o">-</span>forbid<span class="w"> </span><span class="k">{</span><span class="nv">duration</span><span class="w"> </span>endtime<span class="k">}}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-duration</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>forbid<span class="w"> </span><span class="k">{</span><span class="nv">allday</span><span class="w"> </span>endtime<span class="k">}</span><span class="w"> </span><span class="o">-</span>validate<span class="w"> </span>time<span class="k">}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-endtime</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>forbid<span class="w"> </span><span class="k">{</span><span class="nv">allday</span><span class="w"> </span>duration<span class="k">}</span><span class="w"> </span><span class="o">-</span>validate<span class="w"> </span>time<span class="k">}</span>
+<span class="w">    </span><span class="k">}]</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="k">{</span><span class="o">!</span><span class="k">[</span><span class="nb">dict</span><span class="w"> </span>exists<span class="w"> </span><span class="nv">$arguments</span><span class="w"> </span>allday<span class="k">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">!</span><span class="k">[</span><span class="nb">dict</span><span class="w"> </span>exists<span class="w"> </span><span class="nv">$arguments</span><span class="w"> </span>duration<span class="k">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">!</span><span class="k">[</span><span class="nb">dict</span><span class="w"> </span>exists<span class="w"> </span><span class="nv">$arguments</span><span class="w"> </span>endtime<span class="k">]}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="o">-</span>code<span class="w"> </span>error<span class="w"> </span><span class="s2">&quot;One of the switch must be presented: -allday, -duration or -endtime&quot;</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nv">$arguments</span>
+<span class="k">}</span>
+</pre></div>
+</div>
+<p>This procedure provides template for sheduling event. As input, date in format DD-MM-YYYY and time in format
+HH:MM of the event provides as <a class="reference external" href="#parameter">parameters</a>, and the duration of the event could be provided by
+different mutually exclusively <a class="reference external" href="#switch">switches</a>:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 50.0%" />
+<col style="width: 50.0%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>switch name</p></th>
+<th class="head"><p>description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-allday</p></td>
+<td><p>select the duration of event to the end of the day</p></td>
+</tr>
+<tr class="row-odd"><td><p>-duration</p></td>
+<td><p>set duration of the event in format HH:MM</p></td>
+</tr>
+<tr class="row-even"><td><p>-endtime</p></td>
+<td><p>set end time of the event in format HH:MM</p></td>
+</tr>
+</tbody>
+</table>
+<p>Additionaly, the validation expressions for the date format and time format regular expression is used. These
+expression are supplied as named expressions in dictionary argument to global switch <code class="docutils literal notranslate"><span class="pre">-validate</span></code>.</p>
+<p>One of the switches <code class="docutils literal notranslate"><span class="pre">-allday</span></code>, <code class="docutils literal notranslate"><span class="pre">-duration</span></code> or <code class="docutils literal notranslate"><span class="pre">-endtime</span></code> must be presented, so additional checking is done after
+argument processing.</p>
+<p>Normal operation:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">sheduleEvent</span><span class="w"> </span><span class="o">-</span>duration<span class="w"> </span><span class="mo">01</span><span class="o">:</span><span class="mi">30</span><span class="w"> </span><span class="mi">20</span><span class="o">-</span><span class="mi">12</span><span class="o">-</span><span class="mi">2024</span><span class="w"> </span><span class="mi">13</span><span class="o">:</span><span class="mi">30</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; duration 01:30 date 20-12-2024 time 13:30
+</pre></div>
+</div>
+<p>Error is issued in case of providing conflicting switches:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">sheduleEvent</span><span class="w"> </span><span class="o">-</span>allday<span class="w"> </span><span class="o">-</span>duration<span class="w"> </span><span class="mo">01</span><span class="o">:</span><span class="mi">30</span><span class="w"> </span><span class="mi">20</span><span class="o">-</span><span class="mi">12</span><span class="o">-</span><span class="mi">2024</span><span class="w"> </span><span class="mi">13</span><span class="o">:</span><span class="mi">30</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>-allday conflicts with -duration
+while executing
+&quot;argparse -inline -validate [dict create date {[regexp {^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$} $arg]} time {[regexp {^([01][0-9]|2[0-3]):[0-...&quot;
+(procedure &quot;sheduleEvent&quot; line 2)
+</pre></div>
+</div>
+</section>
+<section id="allow">
+<span id="r-argparse-allow"></span><span id="r-3a3aargparseqzallow"></span><h2>Allow<a class="headerlink" href="#allow" title="Link to this heading">¶</a></h2>
+<p><a class="reference external" href="#element-switch">Element switch</a> <code class="docutils literal notranslate"><span class="pre">-allow</span></code> is inverse of <code class="docutils literal notranslate"><span class="pre">-forbid</span></code> switch. Only elements from definition list
+could be presented if element is presented. As an example, we can use previous procedure but now implemented
+with <code class="docutils literal notranslate"><span class="pre">-allow</span></code> instead of forbid:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">proc</span><span class="w"> </span>sheduleEvent<span class="w"> </span><span class="k">{</span><span class="nv">args</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="k">set</span><span class="w"> </span>arguments<span class="w"> </span><span class="k">[</span><span class="nv">argparse</span><span class="w"> </span><span class="o">-</span>inline<span class="w"> </span><span class="o">-</span>validate<span class="w"> </span><span class="k">[</span><span class="nb">dict</span><span class="w"> </span>create<span class="w"> </span>date<span class="w"> </span><span class="k">{[</span><span class="nb">regexp</span><span class="w"> </span><span class="k">{</span><span class="o">^</span><span class="k">(</span><span class="nv">0</span><span class="k">[</span><span class="nv">1-9</span><span class="k">]</span><span class="o">|</span><span class="k">[</span><span class="nv">12</span><span class="k">][</span><span class="nv">0-9</span><span class="k">]</span><span class="o">|</span><span class="mi">3</span><span class="k">[</span><span class="nv">01</span><span class="k">])</span><span class="nv">-</span><span class="k">(</span><span class="nv">0</span><span class="k">[</span><span class="nv">1-9</span><span class="k">]</span><span class="o">|</span><span class="mi">1</span><span class="k">[</span><span class="nv">0-2</span><span class="k">])</span><span class="o">-</span><span class="err">\</span>d<span class="k">{</span><span class="nv">4</span><span class="k">}</span><span class="err">$</span><span class="k">}</span><span class="w"> </span><span class="nv">$arg</span><span class="k">]}</span><span class="w"> </span>time<span class="w"> </span><span class="k">{[</span><span class="nb">regexp</span><span class="w"> </span><span class="k">{</span><span class="o">^</span><span class="k">([</span><span class="nv">01</span><span class="k">][</span><span class="nv">0-9</span><span class="k">]</span><span class="o">|</span><span class="nv">2</span><span class="k">[</span><span class="nv">0-3</span><span class="k">])</span><span class="o">:</span><span class="k">[</span><span class="nv">0-5</span><span class="k">][</span><span class="nv">0-9</span><span class="k">](</span><span class="o">?::</span><span class="k">[</span><span class="nv">0-5</span><span class="k">][</span><span class="nv">0-9</span><span class="k">])</span><span class="o">?</span><span class="err">$</span><span class="k">}</span><span class="w"> </span><span class="nv">$arg</span><span class="k">]}]</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">date</span><span class="w"> </span><span class="o">-</span>validate<span class="w"> </span>date<span class="k">}</span>
+<span class="w">        </span><span class="k">{</span><span class="nb">time</span><span class="w"> </span><span class="o">-</span>validate<span class="w"> </span>time<span class="k">}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-allday</span><span class="w"> </span><span class="o">-</span>allow<span class="w"> </span><span class="k">{</span><span class="nv">date</span><span class="w"> </span>time<span class="k">}}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-duration</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>allow<span class="w"> </span><span class="k">{</span><span class="nv">date</span><span class="w"> </span>time<span class="k">}</span><span class="w"> </span><span class="o">-</span>validate<span class="w"> </span>time<span class="k">}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-endtime</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>allow<span class="w"> </span><span class="k">{</span><span class="nv">date</span><span class="w"> </span>time<span class="k">}</span><span class="w"> </span><span class="o">-</span>validate<span class="w"> </span>time<span class="k">}</span>
+<span class="w">    </span><span class="k">}]</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="k">{</span><span class="o">!</span><span class="k">[</span><span class="nb">dict</span><span class="w"> </span>exists<span class="w"> </span><span class="nv">$arguments</span><span class="w"> </span>allday<span class="k">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">!</span><span class="k">[</span><span class="nb">dict</span><span class="w"> </span>exists<span class="w"> </span><span class="nv">$arguments</span><span class="w"> </span>duration<span class="k">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">!</span><span class="k">[</span><span class="nb">dict</span><span class="w"> </span>exists<span class="w"> </span><span class="nv">$arguments</span><span class="w"> </span>endtime<span class="k">]}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="o">-</span>code<span class="w"> </span>error<span class="w"> </span><span class="s2">&quot;One of the switch must be presented: -allday, -duration or -endtime&quot;</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nv">$arguments</span>
+<span class="k">}</span>
+</pre></div>
+</div>
+<p>Normal operation:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">sheduleEvent</span><span class="w"> </span><span class="o">-</span>duration<span class="w"> </span><span class="mo">01</span><span class="o">:</span><span class="mi">30</span><span class="w"> </span><span class="mi">20</span><span class="o">-</span><span class="mi">12</span><span class="o">-</span><span class="mi">2024</span><span class="w"> </span><span class="mi">13</span><span class="o">:</span><span class="mi">30</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; duration 01:30 date 20-12-2024 time 13:30
+</pre></div>
+</div>
+<p>Error is issued in case of providing conflicting switches:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">sheduleEvent</span><span class="w"> </span><span class="o">-</span>allday<span class="w"> </span><span class="o">-</span>duration<span class="w"> </span><span class="mo">01</span><span class="o">:</span><span class="mi">30</span><span class="w"> </span><span class="mi">20</span><span class="o">-</span><span class="mi">12</span><span class="o">-</span><span class="mi">2024</span><span class="w"> </span><span class="mi">13</span><span class="o">:</span><span class="mi">30</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>allday doesn&#39;t allow duration
+while executing
+&quot;argparse -inline -validate [dict create date {[regexp {^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$} $arg]} time {[regexp {^([01][0-9]|2[0-3]):[0-...&quot;
+(procedure &quot;sheduleEvent&quot; line 2)
+</pre></div>
+</div>
+</section>
+<section id="reciprocal">
+<span id="r-argparse-reciprocal"></span><span id="r-3a3aargparseqzreciprocal"></span><h2>Reciprocal<a class="headerlink" href="#reciprocal" title="Link to this heading">¶</a></h2>
+<p>Swtich with name <code class="docutils literal notranslate"><span class="pre">-reciprocal</span></code> is presented both as <a class="reference external" href="#global-switch">global switch</a> and <a class="reference external" href="#element-switch">element
+switch</a>. In global case all <a class="reference external" href="#element">elements</a> with <code class="docutils literal notranslate"><span class="pre">-require</span></code> switch are reciprocal to
+elements with names in argument to <code class="docutils literal notranslate"><span class="pre">-require</span></code> switch. Let’s consider this definition:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">argparse</span><span class="w"> </span><span class="o">-</span>reciprocal<span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="k">{</span><span class="nv">-a</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>require<span class="w"> </span><span class="k">{</span><span class="nv">b</span><span class="w"> </span>c<span class="k">}}</span>
+<span class="w">    </span><span class="nv">-b</span>
+<span class="w">    </span><span class="nv">-c</span><span class="o">=</span>
+<span class="k">}</span>
+</pre></div>
+</div>
+<p>With <code class="docutils literal notranslate"><span class="pre">-reciprocal</span></code> global switch, the <code class="docutils literal notranslate"><span class="pre">-b</span></code> and <code class="docutils literal notranslate"><span class="pre">-c</span></code> switches also require <code class="docutils literal notranslate"><span class="pre">-a</span></code> switch, because <code class="docutils literal notranslate"><span class="pre">-a</span></code> switch
+requires them, so, it is equivalent to:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">argparse</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="k">{</span><span class="nv">-a</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>require<span class="w"> </span><span class="k">{</span><span class="nv">b</span><span class="w"> </span>c<span class="k">}}</span>
+<span class="w">    </span><span class="k">{</span><span class="nv">-b</span><span class="w"> </span><span class="o">-</span>require<span class="w"> </span>a<span class="k">}</span>
+<span class="w">    </span><span class="k">{</span><span class="nv">-c</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>require<span class="w"> </span>a<span class="k">}</span>
+<span class="k">}</span>
+</pre></div>
+</div>
+<p>Element switch <code class="docutils literal notranslate"><span class="pre">-reciprocal</span></code> do the same thing but only for that particular element.</p>
+</section>
+<section id="imply">
+<span id="r-argparse-imply"></span><span id="r-3a3aargparseqzimply"></span><h2>Imply<a class="headerlink" href="#imply" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">-imply</span></code> <a class="reference external" href="#element-switch">element switch</a> allows to specify additional argument to the <a class="reference external" href="#switch">switch</a>. Extra
+<a class="reference external" href="#argument">argument</a> will be assigned to different switch specified in argument to <code class="docutils literal notranslate"><span class="pre">-imply</span></code> switch. For
+example:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">proc</span><span class="w"> </span>implyTest<span class="w"> </span><span class="k">{</span><span class="nv">args</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="k">set</span><span class="w"> </span>arguments<span class="w"> </span><span class="k">[</span><span class="nv">argparse</span><span class="w"> </span><span class="o">-</span>inline<span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="nv">-a</span><span class="o">=</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-b</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>imply<span class="w"> </span><span class="o">-</span>c<span class="k">}</span>
+<span class="w">        </span><span class="nv">-c</span><span class="o">=</span>
+<span class="w">    </span><span class="k">}]</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nv">$arguments</span>
+<span class="k">}</span>
+</pre></div>
+</div>
+<p>If we provide an additional argument to <code class="docutils literal notranslate"><span class="pre">-b</span></code>, it will be assigned to <code class="docutils literal notranslate"><span class="pre">-c</span></code> <a class="reference external" href="#key">key</a>:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">implyTest</span><span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span>b<span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="mi">3</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; a 1 b 2 c 3
+</pre></div>
+</div>
+<p>If additional argument is not provided, the error is raised:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">implyTest</span><span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span>b<span class="w"> </span><span class="mi">2</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>-c requires an argument
+while executing
+&quot;argparse -inline {
+    -a=
+    {-b= -imply -c}
+    -c=
+}&quot;
+(procedure &quot;implyTest&quot; line 2)
+</pre></div>
+</div>
+<p>And if <code class="docutils literal notranslate"><span class="pre">-b</span></code> switch with argument is not provided at all, <code class="docutils literal notranslate"><span class="pre">-c</span></code> is also considered omitted:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">implyTest</span><span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; a 1
+</pre></div>
+</div>
+</section>
+<section id="passthrough-and-normalization">
+<span id="r-argparse-passthrough-and-normalization"></span><span id="r-3a3aargparseqzpassthrough20and20normalization"></span><h2>Passthrough and normalization<a class="headerlink" href="#passthrough-and-normalization" title="Link to this heading">¶</a></h2>
+<p>The per-element <code class="docutils literal notranslate"><span class="pre">-pass</span></code> <a class="reference external" href="#element-switch">switch</a> causes the <a class="reference external" href="#element">element</a> <a class="reference external" href="#argument">argument</a> or
+arguments to be appended to the value of the indicated pass-through result <a class="reference external" href="#key">key</a>. Many elements may use
+the same pass-through key. If <code class="docutils literal notranslate"><span class="pre">-normalize</span></code> is used, switch arguments are normalized to not use aliases,
+abbreviations, the <code class="docutils literal notranslate"><span class="pre">--</span></code> prefix, or the <code class="docutils literal notranslate"><span class="pre">=</span></code> argument delimiter; otherwise, switches will be expressed the same
+way they appear in the original input.</p>
+<p>Furthermore, <code class="docutils literal notranslate"><span class="pre">-normalize</span></code> causes omitted switches that accept arguments and have default <a class="reference external" href="#value">values</a>, as
+well as omitted <a class="reference external" href="#parameter">parameters</a> that have default values, to be explicitly included in the pass-through
+key. If <code class="docutils literal notranslate"><span class="pre">-mixed</span></code> is used, pass-through keys will list all switches first before listing any parameters. If the
+first parameter value for a pass-through key starts with <code class="docutils literal notranslate"><span class="pre">-</span></code>, its value will be preceded by <code class="docutils literal notranslate"><span class="pre">--</span></code> so that it will
+not appear to be a switch.  If no arguments are assigned to a pass-through key, its value will be empty
+string. The intention is that the value of a pass-through key can be parsed again to get the original data, and
+if <code class="docutils literal notranslate"><span class="pre">-normalize</span></code> is used, it will not be necessary to use <code class="docutils literal notranslate"><span class="pre">-mixed</span></code>, <code class="docutils literal notranslate"><span class="pre">-long</span></code>, <code class="docutils literal notranslate"><span class="pre">-equalarg</span></code>, <code class="docutils literal notranslate"><span class="pre">-alias</span></code>, or <code class="docutils literal notranslate"><span class="pre">-default</span></code>
+to get the correct result. However, pathological use of <code class="docutils literal notranslate"><span class="pre">-default</span></code> can conflict with this goal. For example, if
+the first optional parameter has no <code class="docutils literal notranslate"><span class="pre">-default</span></code> but the second one does, then parsing the result of <code class="docutils literal notranslate"><span class="pre">-normalize</span></code>
+can assign the default value to the first parameter rather than the second.</p>
+<p>The <a class="reference external" href="#global-switch">global switch</a> <code class="docutils literal notranslate"><span class="pre">-pass</span></code> switch may be used to collect unrecognized arguments into a
+pass-through key, rather than failing with an error. Normalization and unmixing will not be applied to these
+arguments because it is not possible to reliably determine if they are switches or parameters. In particular, it
+is not known if an undefined switch expects an argument.</p>
+</section>
+<section id="upvar-elements">
+<span id="r-argparse-upvar-elements"></span><span id="r-3a3aargparseqzupvar20elements"></span><h2>Upvar Elements<a class="headerlink" href="#upvar-elements" title="Link to this heading">¶</a></h2>
+<p><a class="reference external" href="#element">Elements</a> with <code class="docutils literal notranslate"><span class="pre">-upvar</span></code> are special. Rather than having normal <a class="reference external" href="#value">values</a>, they are bound to
+caller variables using the <code class="docutils literal notranslate"><span class="pre">[upvar]</span></code> command. <code class="docutils literal notranslate"><span class="pre">-upvar</span></code> conflicts with <code class="docutils literal notranslate"><span class="pre">-inline</span></code> because it is not possible to
+map a dict value to a variable. Due to limitations of arrays and <code class="docutils literal notranslate"><span class="pre">[upvar]</span></code>, <code class="docutils literal notranslate"><span class="pre">-upvar</span></code> cannot be used with
+<a class="reference external" href="#key">keys</a> whose <a class="reference external" href="#name">names</a> resemble array elements. <code class="docutils literal notranslate"><span class="pre">-upvar</span></code> conflicts with <code class="docutils literal notranslate"><span class="pre">-catchall</span></code> because the value
+must be a variable name, not a list. The combination <code class="docutils literal notranslate"><span class="pre">-switch</span> <span class="pre">-optional</span> <span class="pre">-upvar</span></code> is disallowed for the same
+reason. If <code class="docutils literal notranslate"><span class="pre">-upvar</span></code> is used with <a class="reference external" href="#switch">switches</a> or with optional <a class="reference external" href="#parameter">parameters</a>, <code class="docutils literal notranslate"><span class="pre">[info</span> <span class="pre">exists</span>
+<span class="pre">KEY]</span></code> returns 1 both when the element is not present and when its value is the name of a nonexistent
+variable. To tell the difference, check if <code class="docutils literal notranslate"><span class="pre">[info</span> <span class="pre">vars</span> <span class="pre">KEY]</span></code> returns an empty list; if so, the element is not
+present. Note that the argument to <code class="docutils literal notranslate"><span class="pre">[info</span> <span class="pre">vars]</span></code> is a <code class="docutils literal notranslate"><span class="pre">[string</span> <span class="pre">match]</span></code> pattern, so it may be necessary to
+precede <code class="docutils literal notranslate"><span class="pre">*?[]\</span></code> characters with backslashes.</p>
+</section>
+<section id="template">
+<span id="r-argparse-template"></span><span id="r-3a3aargparseqztemplate"></span><h2>Template<a class="headerlink" href="#template" title="Link to this heading">¶</a></h2>
+<p>Swtich with name <code class="docutils literal notranslate"><span class="pre">-template</span></code> is presented both as <a class="reference external" href="#global-switch">global switch</a> and <a class="reference external" href="#element-switch">element
+switch</a>.  In global case all <a class="reference external" href="#element">elements</a> names go through substitution before setting
+the caller variables or creating key of the dictionary if <code class="docutils literal notranslate"><span class="pre">-inline</span></code> is provided. As an element switch individual
+substitution templates could be provided.  The most important usage is to use template to create array where
+names of elements become keys of array. As a substitution mark <code class="docutils literal notranslate"><span class="pre">%</span></code> symbol is used.</p>
+<p>As an example let’s use our previous procedure:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">proc</span><span class="w"> </span>genNums<span class="w"> </span><span class="k">{</span><span class="nv">args</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="nv">argparse</span><span class="w"> </span><span class="o">-</span>template<span class="w"> </span>vars<span class="k">(</span><span class="o">%</span><span class="k">)</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="c"># {Optional sequence control switches}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-from</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>default<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span>type<span class="w"> </span>double<span class="k">}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-to</span><span class="o">=</span><span class="w">   </span><span class="o">-</span>default<span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="o">-</span>type<span class="w"> </span>double<span class="k">}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-step</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>default<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span>type<span class="w"> </span>double<span class="k">}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-prec</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>default<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span>type<span class="w"> </span>double<span class="k">}</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="k">{</span><span class="nv">$vars</span><span class="k">(</span><span class="nv">step</span><span class="k">)</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="nv">0</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">set</span><span class="w"> </span>op<span class="w"> </span><span class="o">::</span>tcl::mathop::<span class="o">&gt;</span>
+<span class="w">    </span><span class="k">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">set</span><span class="w"> </span>op<span class="w"> </span><span class="o">::</span>tcl::mathop::<span class="o">&lt;</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="k">{set</span><span class="w"> </span>n<span class="w"> </span><span class="nv">$vars</span><span class="k">(</span><span class="nv">from</span><span class="k">)}</span><span class="w"> </span><span class="k">{[</span><span class="nv">$op</span><span class="w"> </span><span class="nv">$n</span><span class="w"> </span><span class="nv">$vars</span><span class="k">(</span><span class="nv">to</span><span class="k">)]}</span><span class="w"> </span><span class="k">{set</span><span class="w"> </span>n<span class="w"> </span><span class="k">[expr</span><span class="w"> </span><span class="k">{</span><span class="nv">$n</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nv">$vars</span><span class="k">(</span><span class="nv">step</span><span class="k">)}]}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="nb">lappend</span><span class="w"> </span>result<span class="w"> </span><span class="k">[</span><span class="nb">format</span><span class="w"> </span><span class="o">%</span>.<span class="o">*</span>f<span class="w"> </span><span class="nv">$vars</span><span class="k">(</span><span class="nv">prec</span><span class="k">)</span><span class="w"> </span><span class="nv">$n</span><span class="k">]</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nv">$result</span>
+<span class="k">}</span>
+<span class="nv">genNums</span><span class="w"> </span><span class="o">-</span>from<span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">-</span>to<span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="o">-</span>step<span class="w"> </span><span class="mi">2</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; 0.0 2.0 4.0 6.0 8.0
+</pre></div>
+</div>
+<p>Here all switches are accesible as an array element.</p>
+<p>-template applies to elements using neither -key nor -pass. To protect “%” or “&quot; from replacement, precede it
+with “&quot;.</p>
+</section>
+<section id="help">
+<span id="r-argparse-help"></span><span id="r-3a3aargparseqzhelp"></span><h2>Help<a class="headerlink" href="#help" title="Link to this heading">¶</a></h2>
+<p>Package allows to generate help description of command for the user when <code class="docutils literal notranslate"><span class="pre">-help</span></code> switch is provided as
+argument. In that case, message with procedure and arguments description is put to stdout, and other arguments
+are ignored. So, we can provide interactive help for the user of the command. To activate, <a class="reference external" href="#global-switch">global
+switch</a> <code class="docutils literal notranslate"><span class="pre">-help</span></code> must be provided. Let’s take previous procedure <code class="docutils literal notranslate"><span class="pre">genNums</span></code> and add help to it:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">proc</span><span class="w"> </span>genNums<span class="w"> </span><span class="k">{</span><span class="nv">args</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="nv">argparse</span><span class="w"> </span><span class="o">-</span>template<span class="w"> </span>vars<span class="k">(</span><span class="o">%</span><span class="k">)</span><span class="w"> </span><span class="o">-</span>help<span class="w"> </span><span class="k">{</span><span class="nv">Procedure</span><span class="w"> </span>generates<span class="w"> </span>sequence<span class="w"> </span>of<span class="w"> </span>numbers.<span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="c"># {Optional sequence control switches}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-from</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>default<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span>type<span class="w"> </span>double<span class="w"> </span><span class="o">-</span>help<span class="w"> </span><span class="k">{</span><span class="nv">Provides</span><span class="w"> </span>start<span class="w"> </span>of<span class="w"> </span>sequence<span class="k">}}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-to</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>default<span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="o">-</span>type<span class="w"> </span>double<span class="w"> </span><span class="o">-</span>help<span class="w"> </span><span class="k">{</span><span class="nv">Provides</span><span class="w"> </span>end<span class="w"> </span>of<span class="w"> </span>sequence<span class="k">}}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-step</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>default<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span>type<span class="w"> </span>double<span class="w"> </span><span class="o">-</span>help<span class="w"> </span><span class="k">{</span><span class="nv">Provides</span><span class="w"> </span>step<span class="w"> </span>between<span class="w"> </span>adjacent<span class="w"> </span>numbers<span class="w"> </span>of<span class="w"> </span>sequence<span class="k">}}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-prec</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>default<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span>type<span class="w"> </span>double<span class="w"> </span><span class="o">-</span>help<span class="w"> </span><span class="k">{</span><span class="nv">Provides</span><span class="w"> </span>precision<span class="w"> </span>of<span class="w"> </span>numbers<span class="w"> </span><span class="ow">in</span><span class="w"> </span>the<span class="w"> </span>sequence<span class="k">}}</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="k">{</span><span class="nv">$vars</span><span class="k">(</span><span class="nv">step</span><span class="k">)</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="nv">0</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">set</span><span class="w"> </span>op<span class="w"> </span><span class="o">::</span>tcl::mathop::<span class="o">&gt;</span>
+<span class="w">    </span><span class="k">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">set</span><span class="w"> </span>op<span class="w"> </span><span class="o">::</span>tcl::mathop::<span class="o">&lt;</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="k">{set</span><span class="w"> </span>n<span class="w"> </span><span class="nv">$vars</span><span class="k">(</span><span class="nv">from</span><span class="k">)}</span><span class="w"> </span><span class="k">{[</span><span class="nv">$op</span><span class="w"> </span><span class="nv">$n</span><span class="w"> </span><span class="nv">$vars</span><span class="k">(</span><span class="nv">to</span><span class="k">)]}</span><span class="w"> </span><span class="k">{set</span><span class="w"> </span>n<span class="w"> </span><span class="k">[expr</span><span class="w"> </span><span class="k">{</span><span class="nv">$n</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nv">$vars</span><span class="k">(</span><span class="nv">step</span><span class="k">)}]}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="nb">lappend</span><span class="w"> </span>result<span class="w"> </span><span class="k">[</span><span class="nb">format</span><span class="w"> </span><span class="o">%</span>.<span class="o">*</span>f<span class="w"> </span><span class="nv">$vars</span><span class="k">(</span><span class="nv">prec</span><span class="k">)</span><span class="w"> </span><span class="nv">$n</span><span class="k">]</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nv">$result</span>
+<span class="k">}</span>
+<span class="nv">genNums</span><span class="w"> </span><span class="o">-</span>help
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Procedure generates sequence of numbers.. Can accepts unambiguous prefixes
+instead of switches names. Accepts switches only before parameters.
+    Switches:
+        -from value - Provides start of sequence. Default value is 1. Type
+            double.
+        -to value - Provides end of sequence. Default value is 10. Type double.
+        -step value - Provides step between adjacent numbers of sequence.
+            Default value is 1. Type double.
+        -prec value - Provides precision of numbers in the sequence. Default
+            value is 1. Type double.
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.
+</pre></div>
+</div>
+<p>Generated message contains information important for the user of the command, not all information that is in
+definition of elements. Individual description for each parameter can be added as end argument to <a class="reference external" href="#element-switch">element
+switch</a> <code class="docutils literal notranslate"><span class="pre">-help</span></code>.</p>
+<p>Let’s use another procedure, this time with switches and parameters presented:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">proc</span><span class="w"> </span>sheduleEvent<span class="w"> </span><span class="k">{</span><span class="nv">args</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="k">set</span><span class="w"> </span>arguments<span class="w"> </span><span class="k">[</span><span class="nv">argparse</span><span class="w"> </span><span class="o">-</span>help<span class="w"> </span><span class="k">{</span><span class="nv">Procedure</span><span class="w"> </span>shedules<span class="w"> </span>event<span class="w"> </span>at<span class="w"> </span>cetain<span class="w"> </span>date.<span class="w"> </span>At<span class="w"> </span>least<span class="w"> </span>one<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>switches<span class="w"> </span>must<span class="w"> </span>be<span class="w"> </span>provided:<span class="w"> </span><span class="o">-</span>allday,<span class="w"> </span><span class="o">-</span>duration<span class="w"> </span>or<span class="w"> </span><span class="o">-</span>endtime<span class="k">}</span><span class="w"> </span><span class="o">-</span>inline<span class="w"> </span><span class="o">-</span>validate<span class="w"> </span><span class="k">[</span><span class="nb">dict</span><span class="w"> </span>create<span class="w"> </span>date<span class="w"> </span><span class="k">{[</span><span class="nb">regexp</span><span class="w"> </span><span class="k">{</span><span class="o">^</span><span class="k">(</span><span class="nv">0</span><span class="k">[</span><span class="nv">1-9</span><span class="k">]</span><span class="o">|</span><span class="k">[</span><span class="nv">12</span><span class="k">][</span><span class="nv">0-9</span><span class="k">]</span><span class="o">|</span><span class="mi">3</span><span class="k">[</span><span class="nv">01</span><span class="k">])</span><span class="nv">-</span><span class="k">(</span><span class="nv">0</span><span class="k">[</span><span class="nv">1-9</span><span class="k">]</span><span class="o">|</span><span class="mi">1</span><span class="k">[</span><span class="nv">0-2</span><span class="k">])</span><span class="o">-</span><span class="err">\</span>d<span class="k">{</span><span class="nv">4</span><span class="k">}</span><span class="err">$</span><span class="k">}</span><span class="w"> </span><span class="nv">$arg</span><span class="k">]}</span><span class="w"> </span>time<span class="w"> </span><span class="k">{[</span><span class="nb">regexp</span><span class="w"> </span><span class="k">{</span><span class="o">^</span><span class="k">([</span><span class="nv">01</span><span class="k">][</span><span class="nv">0-9</span><span class="k">]</span><span class="o">|</span><span class="nv">2</span><span class="k">[</span><span class="nv">0-3</span><span class="k">])</span><span class="o">:</span><span class="k">[</span><span class="nv">0-5</span><span class="k">][</span><span class="nv">0-9</span><span class="k">](</span><span class="o">?::</span><span class="k">[</span><span class="nv">0-5</span><span class="k">][</span><span class="nv">0-9</span><span class="k">])</span><span class="o">?</span><span class="err">$</span><span class="k">}</span><span class="w"> </span><span class="nv">$arg</span><span class="k">]}]</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">date</span><span class="w"> </span><span class="o">-</span>validate<span class="w"> </span>date<span class="w"> </span><span class="o">-</span>help<span class="w"> </span><span class="k">{</span><span class="nv">Provides</span><span class="w"> </span>date<span class="w"> </span><span class="ow">in</span><span class="w"> </span>format<span class="w"> </span>DD-MM-YY<span class="k">}}</span>
+<span class="w">        </span><span class="k">{</span><span class="nb">time</span><span class="w"> </span><span class="o">-</span>validate<span class="w"> </span>time<span class="w"> </span><span class="o">-</span>help<span class="w"> </span><span class="k">{</span><span class="nv">Provides</span><span class="w"> </span>time<span class="w"> </span><span class="ow">in</span><span class="w"> </span>format<span class="w"> </span>HH:MM<span class="k">}}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-allday</span><span class="w"> </span><span class="o">-</span>allow<span class="w"> </span><span class="k">{</span><span class="nv">date</span><span class="w"> </span>time<span class="k">}</span><span class="w"> </span><span class="o">-</span>help<span class="w"> </span><span class="k">{</span><span class="nv">Set</span><span class="w"> </span>event<span class="w"> </span>duration<span class="w"> </span>for<span class="w"> </span>the<span class="w"> </span>rest<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>day<span class="k">}}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-duration</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>allow<span class="w"> </span><span class="k">{</span><span class="nv">date</span><span class="w"> </span>time<span class="k">}</span><span class="w"> </span><span class="o">-</span>validate<span class="w"> </span>time<span class="w"> </span><span class="o">-</span>help<span class="w"> </span><span class="k">{</span><span class="nv">Set</span><span class="w"> </span>event<span class="w"> </span>duration<span class="w"> </span><span class="ow">in</span><span class="w"> </span>format<span class="w"> </span>HH:MM<span class="k">}}</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-endtime</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>allow<span class="w"> </span><span class="k">{</span><span class="nv">date</span><span class="w"> </span>time<span class="k">}</span><span class="w"> </span><span class="o">-</span>validate<span class="w"> </span>time<span class="w"> </span><span class="o">-</span>help<span class="w"> </span><span class="k">{</span><span class="nv">Set</span><span class="w"> </span>end<span class="w"> </span>time<span class="w"> </span>of<span class="w"> </span>event<span class="w"> </span><span class="ow">in</span><span class="w"> </span>format<span class="w"> </span>HH:MM<span class="k">}}</span>
+<span class="w">    </span><span class="k">}]</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="k">{</span><span class="o">!</span><span class="k">[</span><span class="nb">dict</span><span class="w"> </span>exists<span class="w"> </span><span class="nv">$arguments</span><span class="w"> </span>allday<span class="k">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">!</span><span class="k">[</span><span class="nb">dict</span><span class="w"> </span>exists<span class="w"> </span><span class="nv">$arguments</span><span class="w"> </span>duration<span class="k">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">!</span><span class="k">[</span><span class="nb">dict</span><span class="w"> </span>exists<span class="w"> </span><span class="nv">$arguments</span><span class="w"> </span>endtime<span class="k">]}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="o">-</span>code<span class="w"> </span>error<span class="w"> </span><span class="s2">&quot;One of the switch must be presented: -allday, -duration or -endtime&quot;</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nv">$arguments</span>
+<span class="k">}</span>
+<span class="nv">sheduleEvent</span><span class="w"> </span><span class="o">-</span>help
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Procedure shedules event at cetain date. At least one of the switches must be
+provided: -allday, -duration or -endtime. Can accepts unambiguous prefixes
+instead of switches names. Accepts switches only before parameters.
+    Switches:
+        -allday - Set event duration for the rest of the day. Allows date or
+            time.
+        -duration value - Set event duration in format HH:MM. Allows date or
+            time.
+        -endtime value - Set end time of event in format HH:MM. Allows date or
+            time.
+        -help - Help switch, when provided, forces ignoring all other switches
+            and parameters, prints the help message to stdout, and returns up to 2
+            levels above the current level.
+    Parameters:
+        date - Provides date in format DD-MM-YY.
+        time - Provides time in format HH:MM.
+</pre></div>
+</div>
+</section>
+<section id="argument-processing-sequence">
+<span id="r-argparse-argument-processing-sequence"></span><span id="r-3a3aargparseqzargument20processing20sequence"></span><h2>Argument Processing Sequence<a class="headerlink" href="#argument-processing-sequence" title="Link to this heading">¶</a></h2>
+<p><a class="reference external" href="#argument">Argument</a> processing is performed in three stages: <a class="reference external" href="#switch">switch</a> processing,
+<a class="reference external" href="#parameter">parameter</a> allocation, and parameter assignment. Each argument processing stage and pass is
+performed left-to-right.</p>
+<section id="normal-processing">
+<span id="r-argparse-normal-processing"></span><span id="r-3a3aargparseqznormal20processing"></span><h3>Normal processing<a class="headerlink" href="#normal-processing" title="Link to this heading">¶</a></h3>
+<p>All switches must normally appear in the argument list before any parameters. Switch processing terminates with
+the first argument (besides arguments to switches) that does not start with <code class="docutils literal notranslate"><span class="pre">-</span></code> (or <code class="docutils literal notranslate"><span class="pre">--</span></code>, if <code class="docutils literal notranslate"><span class="pre">-long</span></code> is
+used). The special switch <code class="docutils literal notranslate"><span class="pre">--</span></code> can be used to force switch termination if the first parameter happens to start
+with <code class="docutils literal notranslate"><span class="pre">-</span></code>. If no switches are defined, the first argument is known to be a parameter even if it starts with <code class="docutils literal notranslate"><span class="pre">-</span></code>.</p>
+<p>When <code class="docutils literal notranslate"><span class="pre">-mixed</span></code> is not used, the required parameters are counted, then that number of arguments at the <strong>end</strong> of
+the argument list are treated as parameters even if they begin with <code class="docutils literal notranslate"><span class="pre">-</span></code>. This avoids the need for <code class="docutils literal notranslate"><span class="pre">--</span></code> in many
+cases.</p>
+<p>After switch processing, parameter allocation determines how many arguments to assign to each
+parameter. Arguments assigned to switches are not used in parameter processing. First, arguments are allocated
+to required parameters; second, to optional, non-catchall parameters; and last to catchall parameters. Finally,
+each parameter is assigned the allocated number of arguments.</p>
+<p>Let’s look at normal operation in the next example:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">proc</span><span class="w"> </span>argProcSeq<span class="w"> </span><span class="k">{</span><span class="nv">args</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="k">set</span><span class="w"> </span>arguments<span class="w"> </span><span class="k">[</span><span class="nv">argparse</span><span class="w"> </span><span class="o">-</span>inline<span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="nv">-a</span><span class="o">=</span>
+<span class="w">        </span><span class="nv">-b</span><span class="o">=</span>
+<span class="w">        </span><span class="nv">-c</span>
+<span class="w">        </span><span class="nv">d</span>
+<span class="w">        </span><span class="nv">e</span><span class="o">?</span>
+<span class="w">    </span><span class="k">}]</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nv">$arguments</span>
+<span class="k">}</span>
+<span class="nv">argProcSeq</span><span class="w"> </span><span class="o">-</span>c<span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; c {} a 1 d 2
+</pre></div>
+</div>
+<p>First switches are processed, and there one argument left and it is assigned to required parameter <code class="docutils literal notranslate"><span class="pre">r</span></code>. If we
+provided another additional argument, it will be assigned to optional parameter <code class="docutils literal notranslate"><span class="pre">e</span></code>:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">argProcSeq</span><span class="w"> </span><span class="o">-</span>c<span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="mi">3</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; c {} a 1 d 2 e 3
+</pre></div>
+</div>
+<p>More complicated example:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">proc</span><span class="w"> </span>argProcSeq<span class="w"> </span><span class="k">{</span><span class="nv">args</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="k">set</span><span class="w"> </span>arguments<span class="w"> </span><span class="k">[</span><span class="nv">argparse</span><span class="w"> </span><span class="o">-</span>inline<span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="nv">-a</span><span class="o">=</span>
+<span class="w">        </span><span class="nv">-b</span><span class="o">=</span>
+<span class="w">        </span><span class="nv">-c</span>
+<span class="w">        </span><span class="nv">d</span>
+<span class="w">        </span><span class="nv">e</span><span class="o">?</span>
+<span class="w">        </span><span class="nv">f</span>
+<span class="w">    </span><span class="k">}]</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nv">$arguments</span>
+<span class="k">}</span>
+<span class="nv">argProcSeq</span><span class="w"> </span><span class="o">-</span>c<span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="mi">3</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; c {} a 1 d 2 f 3
+</pre></div>
+</div>
+<p>In that case the last two arguments is assigned to <em>two</em> required parameters. If we provide two arguments after
+switch <code class="docutils literal notranslate"><span class="pre">-a</span></code>, then again they are assigned to required parameters, but because <code class="docutils literal notranslate"><span class="pre">-a</span></code> require argument, the error
+is thrown:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">argProcSeq</span><span class="w"> </span><span class="o">-</span>c<span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>-a requires an argument
+while executing
+&quot;argparse -inline {
+    -a=
+    -b=
+    -c
+    d
+    e?
+    f
+}&quot;
+(procedure &quot;argProcSeq&quot; line 2)
+</pre></div>
+</div>
+<p>If we provide four arguments after <code class="docutils literal notranslate"><span class="pre">-a</span></code>:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">argProcSeq</span><span class="w"> </span><span class="o">-</span>c<span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="mi">4</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; c {} a 1 d 2 e 3 f 4
+</pre></div>
+</div>
+<p>All three arguments are assigned to parameters in order presented in definition. So, if only two remaining
+arguments are there - they are assigned to two required parameters, <strong>but</strong> if three parameters presented,
+optional parameter also gets the value in <em>order in definition</em>.</p>
+<p>There is a special case when argument to parameter looks like a switch:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">argProcSeq</span><span class="w"> </span><span class="o">-</span>c<span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span><span class="mi">2</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="mi">4</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>bad switch &quot;-2&quot;: must be -a, -b, or -c
+while executing
+&quot;argparse -inline {
+    -a=
+    -b=
+    -c
+    d
+    e?
+    f
+}&quot;
+(procedure &quot;argProcSeq&quot; line 2)
+</pre></div>
+</div>
+<p>The error is appeared because after counting required parameters (two required), last two arguments are assigned
+to that parameters, and the -2 looks like a switch, so argparse tries to parse it as a switch. To fix that we
+can use <code class="docutils literal notranslate"><span class="pre">--</span></code>:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">argProcSeq</span><span class="w"> </span><span class="o">-</span>c<span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">--</span><span class="w"> </span><span class="o">-</span><span class="mi">2</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="mi">4</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; c {} a 1 d -2 e 3 f 4
+</pre></div>
+</div>
+<p>If one of the last two switches appears with <code class="docutils literal notranslate"><span class="pre">-</span></code>, all is processed as it should:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">argProcSeq</span><span class="w"> </span><span class="o">-</span>c<span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">--</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">-</span><span class="mi">3</span><span class="w"> </span><span class="mi">4</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; c {} a 1 d 2 e -3 f 4
+</pre></div>
+</div>
+</section>
+<section id="processing-with-parameters-first">
+<span id="r-argparse-processing-with-parameters-first"></span><span id="r-3a3aargparseqzprocessing20with20parameters20first"></span><h3>Processing with parameters first<a class="headerlink" href="#processing-with-parameters-first" title="Link to this heading">¶</a></h3>
+<p>If <code class="docutils literal notranslate"><span class="pre">-mixed</span></code> is not used and <code class="docutils literal notranslate"><span class="pre">-pfirst</span></code> is used, the required parameters are counted, then that number of
+arguments at the <strong>start</strong> of the argument list are treated as parameters even if they begin with <code class="docutils literal notranslate"><span class="pre">-</span></code>.</p>
+<p>The global switch <code class="docutils literal notranslate"><span class="pre">-pfirst</span></code> allows to assign first <code class="docutils literal notranslate"><span class="pre">n</span></code> arguments to <code class="docutils literal notranslate"><span class="pre">n</span></code> <strong>required</strong> parameters irrespectively
+of how these arguments looks like. Then switches and optional parameters are processed.</p>
+<p>But, even if number arguments are enough to assign to both required and optional parameters, required parameters
+are assigned first - it is different to how it works when parameters arguments are provided after
+switches. These two examples demonstrating that:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">proc</span><span class="w"> </span>argProcSeq<span class="w"> </span><span class="k">{</span><span class="nv">args</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="k">set</span><span class="w"> </span>arguments<span class="w"> </span><span class="k">[</span><span class="nv">argparse</span><span class="w"> </span><span class="o">-</span>inline<span class="w"> </span><span class="o">-</span>pfirst<span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="nv">-a</span><span class="o">=</span>
+<span class="w">        </span><span class="nv">-b</span><span class="o">=</span>
+<span class="w">        </span><span class="nv">-c</span>
+<span class="w">        </span><span class="nv">d</span>
+<span class="w">        </span><span class="nv">e</span><span class="o">?</span>
+<span class="w">        </span><span class="nv">f</span>
+<span class="w">    </span><span class="k">}]</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nv">$arguments</span>
+<span class="k">}</span>
+<span class="nv">argProcSeq</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">-</span>c<span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; c {} a 1 d 1 f 2
+</pre></div>
+</div>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">argProcSeq</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="o">-</span>c<span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; c {} a 1 d 1 f 2 e 3
+</pre></div>
+</div>
+<p>Also, the remaining parameters could be provided after switches:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">argProcSeq</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">-</span>c<span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">3</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; c {} a 1 d 1 f 2 e 3
+</pre></div>
+</div>
+<p>But it doesn’t work in case of parameter argument looking like a switch:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">argProcSeq</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">-</span>c<span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span><span class="mi">3</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>bad switch &quot;-3&quot;: must be -a, -b, or -c
+while executing
+&quot;argparse -inline -pfirst {
+    -a=
+    -b=
+    -c
+    d
+    e?
+    f
+}&quot;
+(procedure &quot;argProcSeq&quot; line 2)
+</pre></div>
+</div>
+<p>In that case we can use the same trick with <code class="docutils literal notranslate"><span class="pre">--</span></code> termination of switch processing:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">argProcSeq</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">-</span>c<span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">--</span><span class="w"> </span><span class="o">-</span><span class="mi">3</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; c {} a 1 d 1 f 2 e -3
+</pre></div>
+</div>
+<p>Also there is a special treatment of <code class="docutils literal notranslate"><span class="pre">-catchall</span></code> parameter:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">proc</span><span class="w"> </span>argProcSeq<span class="w"> </span><span class="k">{</span><span class="nv">args</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="k">set</span><span class="w"> </span>arguments<span class="w"> </span><span class="k">[</span><span class="nv">argparse</span><span class="w"> </span><span class="o">-</span>inline<span class="w"> </span><span class="o">-</span>pfirst<span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="nv">-a</span><span class="o">=</span>
+<span class="w">        </span><span class="nv">-b</span><span class="o">=</span>
+<span class="w">        </span><span class="nv">-c</span>
+<span class="w">        </span><span class="nv">d</span>
+<span class="w">        </span><span class="nv">e</span><span class="o">?</span>
+<span class="w">        </span><span class="nv">f</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">g</span><span class="w"> </span><span class="o">-</span>catchall<span class="k">}</span>
+<span class="w">    </span><span class="k">}]</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nv">$arguments</span>
+<span class="k">}</span>
+<span class="nv">argProcSeq</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">-</span>c<span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="mi">4</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; c {} a 1 d 1 f 2 e 3 g 4
+</pre></div>
+</div>
+<p>Catchall parameters are treated after required and optional parameters.</p>
+</section>
+<section id="processing-with-mixed">
+<span id="r-argparse-processing-with-mixed"></span><span id="r-3a3aargparseqzprocessing20with20mixed"></span><h3>Processing with mixed<a class="headerlink" href="#processing-with-mixed" title="Link to this heading">¶</a></h3>
+<p>When the <code class="docutils literal notranslate"><span class="pre">-mixed</span></code> switch is used, switch processing continues after encountering arguments that start with <code class="docutils literal notranslate"><span class="pre">-</span></code>
+or <code class="docutils literal notranslate"><span class="pre">--</span></code>. This is convenient but may be ambiguous in cases where parameters look like switches. To resolve
+ambiguity, the special <code class="docutils literal notranslate"><span class="pre">--</span></code> switch terminates switch processing and forces all remaining arguments to be
+parameters.</p>
+<p>Let’s see in example:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">proc</span><span class="w"> </span>argProcSeq<span class="w"> </span><span class="k">{</span><span class="nv">args</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="k">set</span><span class="w"> </span>arguments<span class="w"> </span><span class="k">[</span><span class="nv">argparse</span><span class="w"> </span><span class="o">-</span>inline<span class="w"> </span><span class="o">-</span>mixed<span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="nv">-a</span><span class="o">=</span>
+<span class="w">        </span><span class="nv">-b</span><span class="o">=</span>
+<span class="w">        </span><span class="nv">-c</span>
+<span class="w">        </span><span class="nv">d</span>
+<span class="w">        </span><span class="nv">e</span><span class="o">?</span>
+<span class="w">        </span><span class="nv">f</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">g</span><span class="w"> </span><span class="o">-</span>catchall<span class="k">}</span>
+<span class="w">    </span><span class="k">}]</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nv">$arguments</span>
+<span class="k">}</span>
+<span class="nv">argProcSeq</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">-</span>c<span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="mi">4</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; c {} a 1 d 1 e 2 f 3 g 4
+</pre></div>
+</div>
+<p>The result is different from the last example from <a class="reference external" href="#processing-with-parameters-first">chapter</a> example because
+in this case the process is going as usual, but can be interrupted by providing switch with possible arguments.</p>
+<p>The processing could be altered multiple times:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">proc</span><span class="w"> </span>argProcSeq<span class="w"> </span><span class="k">{</span><span class="nv">args</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="k">set</span><span class="w"> </span>arguments<span class="w"> </span><span class="k">[</span><span class="nv">argparse</span><span class="w"> </span><span class="o">-</span>inline<span class="w"> </span><span class="o">-</span>mixed<span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="nv">-a</span><span class="o">=</span>
+<span class="w">        </span><span class="nv">-b</span><span class="o">=</span>
+<span class="w">        </span><span class="nv">-c</span>
+<span class="w">        </span><span class="nv">d</span>
+<span class="w">        </span><span class="nv">e</span><span class="o">?</span>
+<span class="w">        </span><span class="nv">f</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">g</span><span class="w"> </span><span class="o">-</span>catchall<span class="k">}</span>
+<span class="w">    </span><span class="k">}]</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nv">$arguments</span>
+<span class="k">}</span>
+<span class="nv">argProcSeq</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span>c<span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="mi">4</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; c {} a 1 d 1 e 2 f 3 g 4
+</pre></div>
+</div>
+<p>Result is exact the same as in the previous example. Problems started when parameter looks like a switch, in
+that case only <code class="docutils literal notranslate"><span class="pre">--</span></code> can force the rest of arguments considered as parameters arguments:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">argProcSeq</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span>c<span class="w"> </span><span class="o">-</span><span class="mi">2</span><span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="mi">4</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>bad switch &quot;-2&quot;: must be -a, -b, or -c
+while executing
+&quot;argparse -inline -mixed {
+    -a=
+    -b=
+    -c
+    d
+    e?
+    f
+    {g -catchall}
+}&quot;
+(procedure &quot;argProcSeq&quot; line 2)
+</pre></div>
+</div>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">argProcSeq</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span>c<span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">--</span><span class="w"> </span><span class="o">-</span><span class="mi">2</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="mi">4</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>==&gt; c {} a 1 d -2 e 3 f 4 g {}
+</pre></div>
+</div>
+<p>in that case the arguments before switch <code class="docutils literal notranslate"><span class="pre">--</span></code> that are not arguments to switches and does not look like a switch
+are ignored.</p>
+</section>
+</section>
+<section id="return-value">
+<span id="r-argparse-return-value"></span><span id="r-3a3aargparseqzreturn20value"></span><h2>Return Value<a class="headerlink" href="#return-value" title="Link to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">[argparse]</span></code> produces a set of <a class="reference external" href="#key">keys</a> and <a class="reference external" href="#value">values</a>. The keys are the names of caller variables
+into which the values are stored, unless <code class="docutils literal notranslate"><span class="pre">-inline</span></code> is used, in which case the key-value pairs are returned as a
+dict. The <a class="reference external" href="#element">element</a> <a class="reference external" href="#name">names</a> default to the key names, unless overridden by <code class="docutils literal notranslate"><span class="pre">-key</span></code>, <code class="docutils literal notranslate"><span class="pre">-pass</span></code>, or
+<code class="docutils literal notranslate"><span class="pre">-template</span></code>. If both <code class="docutils literal notranslate"><span class="pre">-key</span></code> and <code class="docutils literal notranslate"><span class="pre">-pass</span></code> are used, two keys are defined: one having the element value, the other
+having the pass-through elements. Unless <code class="docutils literal notranslate"><span class="pre">-keep</span></code> or <code class="docutils literal notranslate"><span class="pre">-inline</span></code> are used, the caller variables for omitted
+switches and parameters are unset.</p>
+</section>
+<section id="author-s">
+<span id="r-argparse-author-s"></span><span id="r-3a3aargparseqzauthor28s29"></span><h2>Author(s)<a class="headerlink" href="#author-s" title="Link to this heading">¶</a></h2>
+<p>Andy Goth <a class="reference external" href="mailto:andrew&#46;m&#46;goth&#37;&#52;&#48;gmail&#46;com">mailto:andrew<span>&#46;</span>m<span>&#46;</span>goth<span>&#64;</span>gmail<span>&#46;</span>com</a> - all code and most of documentation</p>
+<p>George Yashin <a class="reference external" href="mailto:georgtree&#37;&#52;&#48;gmail&#46;com">mailto:georgtree<span>&#64;</span>gmail<span>&#46;</span>com</a> - some documentation, test suite and new features, C implementation</p>
+<p>Ashok P. Nadkarni <a class="reference external" href="mailto:apnmbx-wits&#37;&#52;&#48;yahoo&#46;com">mailto:apnmbx-wits<span>&#64;</span>yahoo<span>&#46;</span>com</a> - fix of C implementation and valuable advices about the code
+architecture</p>
+<hr class="docutils" />
+<p class="centered">
+<strong>Copyright (c) George Yashin</strong></p></section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">argparse</a><ul>
+<li><a class="reference internal" href="#installation">Installation</a><ul>
+<li><a class="reference internal" href="#from-git-repo">From git repo</a></li>
+<li><a class="reference internal" href="#from-archive">From archive</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#synopsys">Synopsys</a></li>
+<li><a class="reference internal" href="#description">Description</a></li>
+<li><a class="reference internal" href="#quick-start">Quick Start</a></li>
+<li><a class="reference internal" href="#concepts">Concepts</a><ul>
+<li><a class="reference internal" href="#r-argparse-argument">Argument</a></li>
+<li><a class="reference internal" href="#r-argparse-definition">Definition</a></li>
+<li><a class="reference internal" href="#global-switch">Global Switch</a></li>
+<li><a class="reference internal" href="#r-argparse-element">Element</a></li>
+<li><a class="reference internal" href="#r-argparse-element-switch">Element Switch</a></li>
+<li><a class="reference internal" href="#r-argparse-name">Name</a></li>
+<li><a class="reference internal" href="#key">Key</a></li>
+<li><a class="reference internal" href="#r-argparse-switch">Switch</a></li>
+<li><a class="reference internal" href="#r-argparse-parameter">Parameter</a></li>
+<li><a class="reference internal" href="#value">Value</a></li>
+<li><a class="reference internal" href="#alias">Alias</a></li>
+<li><a class="reference internal" href="#r-argparse-shorthand-flag">Shorthand flag</a></li>
+<li><a class="reference internal" href="#r-argparse-comment">Comment</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#r-argparse-global-switches">Global Switches</a></li>
+<li><a class="reference internal" href="#r-argparse-element-switches">Element Switches</a></li>
+<li><a class="reference internal" href="#collecting-unassigned-arguments">Collecting unassigned arguments</a></li>
+<li><a class="reference internal" href="#default-values">Default values</a></li>
+<li><a class="reference internal" href="#validation">Validation</a></li>
+<li><a class="reference internal" href="#forbid">Forbid</a></li>
+<li><a class="reference internal" href="#allow">Allow</a></li>
+<li><a class="reference internal" href="#reciprocal">Reciprocal</a></li>
+<li><a class="reference internal" href="#imply">Imply</a></li>
+<li><a class="reference internal" href="#passthrough-and-normalization">Passthrough and normalization</a></li>
+<li><a class="reference internal" href="#upvar-elements">Upvar Elements</a></li>
+<li><a class="reference internal" href="#template">Template</a></li>
+<li><a class="reference internal" href="#help">Help</a></li>
+<li><a class="reference internal" href="#argument-processing-sequence">Argument Processing Sequence</a><ul>
+<li><a class="reference internal" href="#normal-processing">Normal processing</a></li>
+<li><a class="reference internal" href="#processing-with-parameters-first">Processing with parameters first</a></li>
+<li><a class="reference internal" href="#processing-with-mixed">Processing with mixed</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#return-value">Return Value</a></li>
+<li><a class="reference internal" href="#author-s">Author(s)</a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="index.html"
+                          title="previous chapter">&lt;no title&gt;</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/argparse.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="Related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="index.html" title="&lt;no title&gt;"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">argparse  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">argparse</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright George Yashin.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    </div>
+  </body>
+</html>
