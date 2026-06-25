@@ -36,6 +36,14 @@ class MyTclLexer(TclLexer):
         for i, t, v in super().get_tokens_unprocessed(text):
             if v == "=":
                 yield i, Operator, v   # or Name.Builtin
+            elif v == "$":
+                yield i, Operator, v   # or Name.Builtin
+            elif v == "\\":
+                yield i, Operator, v   # or Name.Builtin
+            elif v == "%":
+                yield i, Operator, v   # or Name.Builtin
+            elif v == "'":
+                yield i, Operator, v   # or Name.Builtin
             else:
                 yield i, t, v
 
