@@ -21,6 +21,8 @@ HAVE_TCL_ONLY = @HAVE_TCL_ONLY@
 ifeq ($(HAVE_TCL_ONLY),0)
 PKG_SOURCES = @PKG_SOURCES@
 PKG_OBJECTS = @PKG_OBJECTS@
+DOC_HTML_FILES = @DOC_HTML_FILES@
+DIST_TEST_FILES = @DIST_TEST_FILES@
 
 PKG_STUB_SOURCES = @PKG_STUB_SOURCES@
 PKG_STUB_OBJECTS = @PKG_STUB_OBJECTS@
@@ -68,6 +70,7 @@ INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_LIBRARY = @INSTALL_LIBRARY@
+DOC_INSTALL_DIR = $(DESTDIR)/usr/local/share/$(PACKAGE_NAME)$(PACKAGE_VERSION)/doc
 
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
@@ -258,6 +261,18 @@ install-doc:
 	    echo "Installing $$i"; \
 	    $(INSTALL_DATA) $$i "$(DESTDIR)$(mandir)/mann" ; \
 	done
+	@$(INSTALL_DATA_DIR) "$(DOC_INSTALL_DIR)"
+	@echo "Installing html documentation in $(DOC_INSTALL_DIR)"
+	@list='$(DOC_HTML_FILES)'; for p in $$list; do \
+	  if test -f "$(srcdir)/docs/$$p"; then \
+	    d=`dirname "$$p"`; \
+	    if test "x$$d" != "x."; then \
+	      $(INSTALL_DATA_DIR) "$(DOC_INSTALL_DIR)/$$d"; \
+	    fi; \
+	    echo " Install $(srcdir)/docs/$$p $(DOC_INSTALL_DIR)/$$p"; \
+	    $(INSTALL_DATA) "$(srcdir)/docs/$$p" "$(DOC_INSTALL_DIR)/$$p"; \
+	  fi; \
+	done
 
 #========================================================================
 # Distribution creation
@@ -282,17 +297,32 @@ dist: dist-clean
 	mkdir -p $(DIST_DIR)
 	cp -p $(srcdir)/README.md $(DIST_DIR)/
 	cp -p $(srcdir)/LICENSE* $(DIST_DIR)/
-	cp -p $(srcdir)/pkgIndex.tcl $(DIST_DIR)/
 	cp -p $(srcdir)/$(PKG_LIB_FILE) $(DIST_DIR)/
-	for i in $(srcdir)/*.tcl; do \
+	@for i in $(srcdir)/*.tcl; do \
 	    if [ -f $$i ]; then \
 		cp -p $$i $(DIST_DIR)/ ; \
 	    fi; \
 	done;
-	mkdir -p $(DIST_DIR)/test
-	cp -p $(srcdir)/test/all.tcl $(DIST_DIR)/test/
-	cp -p $(srcdir)/test/argparse.test $(DIST_DIR)/test/
-
+	@list='$(DIST_TEST_FILES)'; for p in $$list; do \
+	  if test -f "$(srcdir)/$$p"; then \
+	    d=`dirname "$$p"`; \
+	    $(INSTALL_DATA_DIR) "$(DIST_DIR)/$$d"; \
+	    echo " Copy $(srcdir)/$$p $(DIST_DIR)/$$p"; \
+	    $(INSTALL_DATA) "$(srcdir)/$$p" "$(DIST_DIR)/$$p"; \
+	  fi; \
+	done
+	@$(INSTALL_DATA_DIR) "$(DIST_DIR)/docs"
+	@echo "Copying html documentation to $(DIST_DIR)/docs"
+	@list='$(DOC_HTML_FILES)'; for p in $$list; do \
+	  if test -f "$(srcdir)/docs/$$p"; then \
+	    d=`dirname "$$p"`; \
+	    if test "x$$d" != "x."; then \
+	      $(INSTALL_DATA_DIR) "$(DIST_DIR)/docs/$$d"; \
+	    fi; \
+	    echo " Copy $(srcdir)/docs/$$p $(DIST_DIR)/docs/$$p"; \
+	    $(INSTALL_DATA) "$(srcdir)/docs/$$p" "$(DIST_DIR)/docs/$$p"; \
+	  fi; \
+	done
 	(cd $(DIST_ROOT); $(COMPRESS); $(COMPRESS_ZIP))
 else
 dist: dist-clean
@@ -315,6 +345,10 @@ clean:
 	-test -z "$(BINARIES)" || rm -f $(BINARIES)
 	-rm -f *.$(OBJEXT) core *.core
 	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
+	-rm -rf docs/sphinx
+	-rm -rf docs/.doctrees
+	-rm -rf docs/_sources
+	-rm -f docs/.buildinfo
 
 distclean: clean
 	-rm -f *.tab.c

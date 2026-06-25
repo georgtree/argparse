@@ -8,3 +8,9 @@ configure~
 *.tpj
 *.html
 \#README.md#
+/docs/_sources
+/docs/sphinx
+/docs/.doctrees
+/docs/*.bak
+*.so
+*.dll

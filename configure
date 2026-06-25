@@ -678,6 +678,8 @@ SHARED_BUILD
 TCL_THREADS
 TCL_INCLUDES
 HAVE_TCL_ONLY
+DIST_TEST_FILES
+DOC_HTML_FILES
 PKG_OBJECTS
 PKG_SOURCES
 RANLIB
@@ -5412,6 +5414,47 @@ printf "%s\n" "$ac_cv_c_bigendian" >&6; }
 	fi
 	PKG_TCL_SOURCES="$PKG_TCL_SOURCES $i"
     done
+
+
+
+DOC_HTML_FILES="index.html objects.inv search.html searchindex.js genindex.html"
+DOC_SRCDIR="${srcdir}/docs"
+if test -d "$DOC_SRCDIR"; then
+    # Add all top-level *.html files from docs/, not subdirectories.
+    for f in "$DOC_SRCDIR"/*.html; do
+        test -f "$f" || continue
+
+        b=`basename "$f"`
+
+        case " $DOC_HTML_FILES " in
+            *" $b "*) ;;
+            *) DOC_HTML_FILES="$DOC_HTML_FILES $b" ;;
+        esac
+    done
+    # Add everything from docs/_static and docs/assets recursively.
+    for d in _static assets; do
+        if test -d "$DOC_SRCDIR/$d"; then
+            for f in `find "$DOC_SRCDIR/$d" -type f -print`; do
+                rel=`echo "$f" | sed "s|^$DOC_SRCDIR/||"`
+
+                case " $DOC_HTML_FILES " in
+                    *" $rel "*) ;;
+                    *) DOC_HTML_FILES="$DOC_HTML_FILES $rel" ;;
+                esac
+            done
+        fi
+    done
+
+else
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: documentation directory not found: $DOC_SRCDIR" >&5
+printf "%s\n" "$as_me: WARNING: documentation directory not found: $DOC_SRCDIR" >&2;}
+fi
+#AC_MSG_NOTICE([DOC_HTML_FILES = $DOC_HTML_FILES])
+
+
+# Test files to include in the distribution.
+# Paths are relative to $srcdir.
+DIST_TEST_FILES="test/all.tcl test/argparse.test"
 
 
 # Check whether --enable-tcl-only was given.
