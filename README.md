@@ -27,6 +27,13 @@ During installation manpages are also installed.
 
 For test package in place run `make test`.
 
+`test/memory.test` checks that repeated parsing releases input values in both
+variable-setting and `-inline` modes, including failed calls. Reference-count
+checks use `::tcl::unsupported::representation` when available. Additional live
+allocation checks run when Tcl was built with `--enable-symbols=mem`; they are
+skipped on ordinary builds. These checks measure live Tcl allocations, not
+process RSS, which may remain high because the allocator reuses freed memory.
+
 For package uninstall run `sudo make uninstall`.
 
 To install Tcl-only version, the sequence is the same, except the flag `--enable-tcl-only` provided to `./configure`

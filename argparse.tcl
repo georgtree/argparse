@@ -7,7 +7,7 @@
 # See the file "LICENSE" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 package require Tcl 8.6-
-package provide argparse 0.61
+package provide argparse 0.65
 # argparse --
 # Parses an argument list according to a definition list.  The result may be
 # stored into caller variables or returned as a dict.

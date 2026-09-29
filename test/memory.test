@@ -1,0 +1,104 @@
+package require tcltest
+namespace import ::tcltest::*
+package require argparse
+
+
+proc refs {value} {
+    regexp {refcount of ([0-9]+)} [::tcl::unsupported::representation $value] -> n
+    return $n
+}
+proc parse {mode value} {
+    switch $mode {
+        variables {argparse {{-data=}} [list -data $value]}
+        inline {argparse -inline {{-data=}} [list -data $value]}
+        implicit {
+            set args [list -data $value]
+            argparse {{-data=}}
+        }
+        mixed {argparse -mixed {{-data=} {rest*}} [list first -data $value last]}
+        parameter {argparse {{data}} [list $value]}
+        catchall {argparse {{data*}} [list $value]}
+        ignored {argparse {{data* -ignore}} [list $value]}
+        unknown {catch {argparse {{-data=}} [list -data $value -unknown]}}
+        missing {catch {argparse {{-data=} {-required= -required}} [list -data $value]}}
+        invalid {catch {argparse {{-data=} {-n= -type integer}} [list -data $value -n bad]}}
+        conflict {catch {argparse {{-data= -forbid other} {-other}} [list -data $value -other]}}
+    }
+    return
+}
+
+testConstraint refcounts [expr {[info commands ::tcl::unsupported::representation] ne {}}]
+testConstraint memoryDebug [expr {[info commands memory] ne {}}]
+
+foreach mode {variables inline implicit mixed parameter catchall ignored unknown missing invalid conflict} {
+    test memory-retention-$mode {arguments are released on success and error} -constraints refcounts -body {
+        set value [dict create x {0 1 2} y {0 2 4} unused [string repeat z 100000]]
+        parse $mode $value
+        set before [refs $value]
+        for {set i 0} {$i < 50} {incr i} {
+            parse $mode $value
+        }
+        expr {[refs $value] == $before}
+    } -cleanup {
+        unset -nocomplain value before i
+    } -result 1
+}
+
+proc bytes {} {
+    regexp {current bytes allocated\s+([0-9]+)} [memory info] -> n
+    return $n
+}
+proc batch {mode} {
+    for {set i 0} {$i < 100} {incr i} {
+        parse $mode [dict create data [string repeat x 100000]]
+    }
+}
+foreach mode {variables inline} {
+    test memory-growth-$mode {fresh large values and parser temporaries are freed} -constraints memoryDebug -body {
+        bytes
+        batch $mode
+        set before [bytes]
+        batch $mode
+        set growth [expr {[bytes] - $before}]
+        # Allow bounded interpreter bookkeeping, not per-call allocations.
+        expr {$growth < 16384}
+    } -cleanup {
+        unset -nocomplain before growth
+    } -result 1
+}
+# Exercise allocator reuse and destruction of cached catchall definitions.
+# Run with a normal Tcl build too: memory-debug allocation can mask stale refs.
+test memory-catchall-lifetime-1 {mixed catchall calls survive allocator reuse} -body {
+    apply {{} {
+        for {set i 0} {$i < 1000} {incr i} {
+            set r [argparse -inline -mixed {{-data=} {rest*}} \
+                       [list first -data $i last]]
+            if {[dict get $r data] != $i || [dict get $r rest] ne {first last}} {
+                return 0
+            }
+        }
+        return 1
+    }}
+} -result 1
+
+test memory-catchall-lifetime-2 {cache destruction owns the catchall name} -body {
+    for {set i 0} {$i < 20} {incr i} {
+        set child [interp create]
+        try {
+            $child eval [list set auto_path $::auto_path]
+            $child eval {
+                package require argparse
+                argparse -inline {{rest*}} {a b c}
+                # Also exercise cleanup of a partially built definition.
+                catch {argparse -inline {{a -catchall} {b -catchall}} {x y}}
+            }
+        } finally {
+            interp delete $child
+        }
+    }
+    set result ok
+} -cleanup {
+    unset -nocomplain child i result
+} -result ok
+
+cleanupTests
