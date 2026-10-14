@@ -71,8 +71,7 @@ foreach mode {variables inline} {
 test memory-catchall-lifetime-1 {mixed catchall calls survive allocator reuse} -body {
     apply {{} {
         for {set i 0} {$i < 1000} {incr i} {
-            set r [argparse -inline -mixed {{-data=} {rest*}} \
-                       [list first -data $i last]]
+            set r [argparse -inline -mixed {{-data=} {rest*}} [list first -data $i last]]
             if {[dict get $r data] != $i || [dict get $r rest] ne {first last}} {
                 return 0
             }

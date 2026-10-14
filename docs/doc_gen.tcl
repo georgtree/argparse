@@ -1,12 +1,15 @@
 package require ruff
 package require fileutil
+package require argparse
 
 set docDir [file dirname [file normalize [info script]]]
 set sourceDir [file join $docDir ..]
 source [file join $docDir argparse.ruff]
 
-set packageVersion [package versions argparse]
-puts $packageVersion
+set packageVersion [package provide argparse]
+if {$packageVersion eq {}} {
+    return -code error "Package version is empty"
+}
 set title "argparse package"
 
 set commonSphinx [list -title $title -sortnamespaces false -pagesplit namespace -recurse false\
@@ -28,6 +31,10 @@ ruff::document $namespaces -format nroff -outdir $docDir -outfile argparse.n {*}
 extensions = [
     "sphinx.ext.githubpages",
 ]
+html_theme = "classic"
+html_theme_options = {
+    "stickysidebar": True,
+}
 from pygments.lexers.tcl import TclLexer
 from pygments.token import Operator
 
