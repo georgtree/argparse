@@ -3385,8 +3385,9 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 Tcl_Obj *optionsDict = Tcl_NewDictObj();
                 PARSE_CHECK(Tcl_DictObjPut(interp, optionsDict, Tcl_NewStringObj("-level", -1), helpLevel));
                 Tcl_SetObjResult(interp, finalDescrList);
-                PARSE_CHECK(Tcl_SetReturnOptions(interp, optionsDict));
-                code = TCL_RETURN;
+                /* TCL_RETURN is successful help control flow, not a parse error.
+                 * Propagate TCL_OK for level zero and TCL_ERROR for invalid options too. */
+                code = Tcl_SetReturnOptions(interp, optionsDict);
                 goto cleanup;
             } else {
                 Tcl_Obj *cmd[2];
@@ -3396,8 +3397,9 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
                 Tcl_ResetResult(interp);
                 Tcl_Obj *optionsDict = Tcl_NewDictObj();
                 PARSE_CHECK(Tcl_DictObjPut(interp, optionsDict, Tcl_NewStringObj("-level", -1), helpLevel));
-                PARSE_CHECK(Tcl_SetReturnOptions(interp, optionsDict));
-                code = TCL_RETURN;
+                /* TCL_RETURN is successful help control flow, not a parse error.
+                 * Propagate TCL_OK for level zero and TCL_ERROR for invalid options too. */
+                code = Tcl_SetReturnOptions(interp, optionsDict);
                 goto cleanup;
             }
         }

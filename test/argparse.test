@@ -2136,4 +2136,69 @@ test bugTest-17-2 "Crash on invalid argument format" -body {
 } -result {unmatched open brace in list} -returnCodes error
 
 
+# Existing text-only help tests catch every completion code, so they cannot
+# distinguish successful help from a parser error containing the same text.
+foreach level {0 1 3} {
+    test help-return-code-$level {returned help preserves Tcl's completion code and return level} -body {
+        set code [catch {
+            argparse -help {Return-code regression} -helpret -helplevel $level {} {-help}
+        } message options]
+        list $code [dict get $options -level] [string match {Return-code regression.*} $message]
+    } -result [list [expr {$level == 0 ? 0 : 2}] $level 1]
+
+    test help-print-code-$level {printed help preserves Tcl's completion code and return level} -body {
+        set code [catch {
+            argparse -help {Printed regression} -helplevel $level {} {-help}
+        } message options]
+        list $code [dict get $options -level] $message
+    } -match glob -output {Printed regression.*} -result [list [expr {$level == 0 ? 0 : 2}] $level {}]
+}
+
+test help-default-return-level {default help retains the documented return level of two} -body {
+    set code [catch {argparse -help {Default regression} -helpret {} {-help}} message options]
+    list $code [dict get $options -level] [string match {Default regression.*} $message]
+} -result {2 2 1}
+
+test help-wrapper-return {level one returns normally from a thin native-parser wrapper without executing its body}\
+        -setup {
+    proc helpWrapper {args} {
+        argparse -help {Wrapper regression} -helpret -helplevel 1 {{required}} $args
+        error {help incorrectly continued into the command body}
+    }
+} -body {
+    set code [catch {helpWrapper -help} message]
+    list $code [string match {Wrapper regression.*} $message]
+} -cleanup {rename helpWrapper {}} -result {0 1}
+
+test help-wrapper-print {printed help returns normally and skips the wrapper body} -setup {
+    proc helpWrapper {args} {
+        argparse -help {Wrapper print regression} -helplevel 1 {{required}} $args
+        error {help incorrectly continued into the command body}
+    }
+} -body {
+    list [catch {helpWrapper -help} message] $message
+} -cleanup {rename helpWrapper {}} -match glob -output {Wrapper print regression.*} -result {0 {}}
+
+test help-nested-return {default level unwinds two wrapper procedures} -setup {
+    proc helpInner {args} {
+        argparse -help {Nested regression} -helpret {{required}} $args
+        error {inner body executed}
+    }
+    proc helpOuter {} {
+        helpInner -help
+        error {outer body executed}
+    }
+} -body {
+    set code [catch {helpOuter} message]
+    list $code [string match {Nested regression.*} $message]
+} -cleanup {
+    rename helpInner {}
+    rename helpOuter {}
+} -result {0 1}
+
+test help-invalid-return-level {invalid return options remain errors} -body {
+    list [catch {argparse -help {Invalid level} -helpret -helplevel -1 {} {-help}}]\
+            [catch {argparse -help {Invalid level} -helpret -helplevel invalid {} {-help}}]
+} -result {1 1}
+
 cleanupTests
