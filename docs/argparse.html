@@ -475,6 +475,24 @@ after <code class="docutils literal notranslate"><span class="pre">-</span></cod
 </tbody>
 </table>
 </section>
+<section id="help-return-depth">
+<span id="r-argparse-help-return-depth"></span><span id="r-3a3aargparseqzhelp20return20depth"></span><h2>Help Return Depth<a class="headerlink" href="#help-return-depth" title="Link to this heading">¶</a></h2>
+<p>The Tcl and native implementations use the same <code class="docutils literal notranslate"><span class="pre">-helplevel</span></code> convention. The default is <code class="docutils literal notranslate"><span class="pre">2</span></code>:
+stop parsing, return from the procedure or constructor that called argparse, and skip its remaining body.
+The level includes the argparse procedure itself, even when using the native implementation.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">1</span></code>: stop parsing and return to the caller, which continues after the argparse call.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">2</span></code> (default): return from the immediate calling procedure, method or constructor.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">3</span></code>: return through two calling procedures or methods.</p></li>
+</ul>
+<p>Without <code class="docutils literal notranslate"><span class="pre">-helpret</span></code>, help is printed to stdout and the result is empty. With <code class="docutils literal notranslate"><span class="pre">-helpret</span></code>, help is returned
+as the result at the requested depth. Help ignores required arguments and does not assign parsed variables.
+Zero, negative, noninteger and out-of-range levels are errors.</p>
+<p>Earlier native versions did not account for the Tcl implementation’s procedure frame. If native-only
+calling code used <code class="docutils literal notranslate"><span class="pre">-helplevel</span> <span class="pre">1</span></code> to exit its own procedure, use the default <code class="docutils literal notranslate"><span class="pre">2</span></code> instead. More generally,
+increase an explicit positive level by one when preserving that earlier native behavior. Replace earlier
+<code class="docutils literal notranslate"><span class="pre">-helplevel</span> <span class="pre">0</span></code> uses with <code class="docutils literal notranslate"><span class="pre">-helplevel</span> <span class="pre">1</span></code> to return to the caller without exiting it.</p>
+</section>
 <section id="element-switches">
 <span id="r-argparse-element-switches"></span><span id="r-3a3aargparseqzelement20switches"></span><h2>Element Switches<a class="headerlink" href="#element-switches" title="Link to this heading">¶</a></h2>
 <table class="docutils align-default">
@@ -1382,6 +1400,7 @@ architecture</p>
 </ul>
 </li>
 <li><a class="reference internal" href="#global-switches">Global Switches</a></li>
+<li><a class="reference internal" href="#help-return-depth">Help Return Depth</a></li>
 <li><a class="reference internal" href="#element-switches">Element Switches</a></li>
 <li><a class="reference internal" href="#collecting-unassigned-arguments">Collecting unassigned arguments</a></li>
 <li><a class="reference internal" href="#default-values">Default values</a></li>

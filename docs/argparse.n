@@ -1,7 +1,7 @@
 '\"
 '\" '\" Copyright (c) George Yashin
 '\"
-.TH "argparse" 3tcl 0\&.65 "argparse" "argparse package"
+.TH "argparse" 3tcl 0\&.66 "argparse" "argparse package"
 .SH NAME
 Introduction - argparse package
 .SH ARGPARSE
@@ -494,6 +494,29 @@ Comment is the \fIelement\fP started with # at the start of definition in the de
 └──────────────────────────┴───────────────────────────────────────────────────────────────────────────────────────────┘
 .fi
 .RE
+.SH "HELP RETURN DEPTH"
+.PP
+The Tcl and native implementations use the same -helplevel convention\&. The default is 2:
+stop parsing, return from the procedure or constructor that called argparse, and skip its remaining body\&.
+The level includes the argparse procedure itself, even when using the native implementation\&.
+.TP
+\(bu
+1: stop parsing and return to the caller, which continues after the argparse call\&.
+.TP
+\(bu
+2 (default): return from the immediate calling procedure, method or constructor\&.
+.TP
+\(bu
+3: return through two calling procedures or methods\&.
+.PP
+Without -helpret, help is printed to stdout and the result is empty\&. With -helpret, help is returned
+as the result at the requested depth\&. Help ignores required arguments and does not assign parsed variables\&.
+Zero, negative, noninteger and out-of-range levels are errors\&.
+.PP
+Earlier native versions did not account for the Tcl implementation's procedure frame\&. If native-only
+calling code used -helplevel 1 to exit its own procedure, use the default 2 instead\&. More generally,
+increase an explicit positive level by one when preserving that earlier native behavior\&. Replace earlier
+-helplevel 0 uses with -helplevel 1 to return to the caller without exiting it\&.
 .SH "ELEMENT SWITCHES"
 .PP
 .RS 4n

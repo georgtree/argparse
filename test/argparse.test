@@ -2138,31 +2138,31 @@ test bugTest-17-2 "Crash on invalid argument format" -body {
 
 # Existing text-only help tests catch every completion code, so they cannot
 # distinguish successful help from a parser error containing the same text.
-foreach level {0 1 3} {
+foreach level {1 2 3} {
     test help-return-code-$level {returned help preserves Tcl's completion code and return level} -body {
         set code [catch {
             argparse -help {Return-code regression} -helpret -helplevel $level {} {-help}
         } message options]
         list $code [dict get $options -level] [string match {Return-code regression.*} $message]
-    } -result [list [expr {$level == 0 ? 0 : 2}] $level 1]
+    } -result [list [expr {$level == 1 ? 0 : 2}] [expr {$level-1}] 1]
 
     test help-print-code-$level {printed help preserves Tcl's completion code and return level} -body {
         set code [catch {
             argparse -help {Printed regression} -helplevel $level {} {-help}
         } message options]
         list $code [dict get $options -level] $message
-    } -match glob -output {Printed regression.*} -result [list [expr {$level == 0 ? 0 : 2}] $level {}]
+    } -match glob -output {Printed regression.*} -result [list [expr {$level == 1 ? 0 : 2}] [expr {$level-1}] {}]
 }
 
-test help-default-return-level {default help retains the documented return level of two} -body {
+test help-default-return-level {default help consumes the parser frame and leaves one caller level} -body {
     set code [catch {argparse -help {Default regression} -helpret {} {-help}} message options]
     list $code [dict get $options -level] [string match {Default regression.*} $message]
-} -result {2 2 1}
+} -result {2 1 1}
 
-test help-wrapper-return {level one returns normally from a thin native-parser wrapper without executing its body}\
+test help-wrapper-return {default level returns normally from a parser wrapper without executing its body}\
         -setup {
     proc helpWrapper {args} {
-        argparse -help {Wrapper regression} -helpret -helplevel 1 {{required}} $args
+        argparse -help {Wrapper regression} -helpret {{required}} $args
         error {help incorrectly continued into the command body}
     }
 } -body {
@@ -2172,16 +2172,16 @@ test help-wrapper-return {level one returns normally from a thin native-parser w
 
 test help-wrapper-print {printed help returns normally and skips the wrapper body} -setup {
     proc helpWrapper {args} {
-        argparse -help {Wrapper print regression} -helplevel 1 {{required}} $args
+        argparse -help {Wrapper print regression} {{required}} $args
         error {help incorrectly continued into the command body}
     }
 } -body {
     list [catch {helpWrapper -help} message] $message
 } -cleanup {rename helpWrapper {}} -match glob -output {Wrapper print regression.*} -result {0 {}}
 
-test help-nested-return {default level unwinds two wrapper procedures} -setup {
+test help-nested-return {level three unwinds two wrapper procedures} -setup {
     proc helpInner {args} {
-        argparse -help {Nested regression} -helpret {{required}} $args
+        argparse -help {Nested regression} -helpret -helplevel 3 {{required}} $args
         error {inner body executed}
     }
     proc helpOuter {} {
@@ -2200,5 +2200,106 @@ test help-invalid-return-level {invalid return options remain errors} -body {
     list [catch {argparse -help {Invalid level} -helpret -helplevel -1 {} {-help}}]\
             [catch {argparse -help {Invalid level} -helpret -helplevel invalid {} {-help}}]
 } -result {1 1}
+
+# Compare the installed implementation with the reference Tcl implementation.
+# In a native build this covers both backends; in a Tcl-only build it stays runnable.
+set reference [file join [file dirname [file dirname [file normalize [info script]]]] argparse.tcl]
+foreach backend {installed reference} {
+    interp create $backend
+    $backend eval [list set auto_path $auto_path]
+    if {$backend eq "installed"} {
+        $backend eval {package require argparse}
+    } else {
+        $backend eval [list source $reference]
+    }
+    $backend eval {
+        rename puts realPuts
+        proc puts {message} {lappend ::printed $message}
+        proc invoke {options} {
+            set value [argparse -help {Parity probe} {*}$options {{required}} {-help}]
+            return [list continued $value]
+        }
+        proc outer {options} {
+            set value [invoke $options]
+            return [list outerContinued $value]
+        }
+        proc outcome {script} {
+            set ::printed {}
+            set code [catch {uplevel 1 $script} result options]
+            return [list $code [dict get $options -level] $result $::printed]
+        }
+    }
+}
+
+test help-parity-levels {codes, levels, values and stdout agree at every supported depth} -body {
+    set equal 1
+    foreach level {1 2 3} {
+        foreach output {{} -helpret} {
+            set options [concat $output [list -helplevel $level]]
+            foreach script [list [list argparse -help {Parity probe} {*}$options {{required}} {-help}]\
+                                    [list invoke $options] [list outer $options]] {
+                if {[installed eval [list outcome $script]] ne [reference eval [list outcome $script]]} {
+                    set equal 0
+                }
+            }
+        }
+    }
+    set equal
+} -result 1
+
+test help-parity-default {default exits the immediate caller and lets its caller continue} -body {
+    set outcomes {}
+    foreach backend {installed reference} {
+        lassign [$backend eval {outcome {outer {-helpret}}}] code level result printed
+        lappend outcomes [list $code $level [lindex $result 0] [string match {Parity probe.*} [lindex $result 1]]\
+                                  $printed]
+    }
+    set outcomes
+} -result {{0 0 outerContinued 1 {}} {0 0 outerContinued 1 {}}}
+
+test help-parity-invalid {invalid levels produce matching errors} -body {
+    set equal 1
+    foreach level {0 -1 invalid 2147483648} {
+        set script [list argparse -help {Parity probe} -helpret -helplevel $level {} {-help}]
+        set a [installed eval [list outcome $script]]
+        set b [reference eval [list outcome $script]]
+        if {$a ne $b || [lindex $a 0] != 1} {set equal 0}
+    }
+    set equal
+} -result 1
+
+test help-parity-zero {zero is rejected without printing or returning help} -body {
+    set outcomes {}
+    foreach backend {installed reference} {
+        foreach output {{} -helpret} {
+            lappend outcomes [$backend eval [list outcome [list argparse -help {Parity probe} \
+                {*}$output -helplevel 0 {{required}} {-help}]]]
+        }
+    }
+    set outcomes
+} -result {{1 0 {-helplevel must be at least 1} {}} {1 0 {-helplevel must be at least 1} {}}\
+                   {1 0 {-helplevel must be at least 1} {}} {1 0 {-helplevel must be at least 1} {}}}
+
+test help-parity-constructor {default returns normally from a TclOO constructor before initialization} -body {
+    set results {}
+    foreach backend {installed reference} {
+        lappend results [$backend eval {
+            oo::class create Probe {
+                constructor {args} {
+                    argparse -help {Constructor probe} {{required}}
+                    error {constructor continued after help}
+                }
+            }
+            set object [Probe new -help]
+            set result [info object isa object $object]
+            $object destroy
+            Probe destroy
+            set result
+        }]
+    }
+    set results
+} -result {1 1}
+
+interp delete installed reference
 
 cleanupTests

@@ -3100,6 +3100,7 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     Tcl_Obj *globalKey = NULL, *cacheKey = NULL;
     Tcl_Obj *parameterValue = NULL, *presentedNames = NULL, *helpSwitch = NULL;
     Tcl_Obj *matchedName = NULL;
+    Tcl_Obj *helpLevel = NULL, *helpOptions = NULL, *helpText = NULL, *putsCommand = NULL;
     Tcl_Obj *definition = NULL;                                     // stores input definition list
     Tcl_Obj *argv = NULL;                                           // stores arguments to target procedure
     ArgumentDefinition *argDefCtx = NULL;                           // arguments definition structure
@@ -3374,34 +3375,39 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
             helpSwitchPresented = InList(interp, helpSwitch, argv);
         }
         if (helpSwitchPresented == 1) {
-            Tcl_Obj *helpLevel = NULL;
-            if (!HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_HELPLEVEL)) {
-                helpLevel = Tcl_NewStringObj("2", -1);
-            } else {
-                helpLevel = GLOBAL_SWITCH_ARG(&ctx, GLOBAL_SWITCH_HELPLEVEL);
-            }
-            Tcl_Obj *finalDescrList = BuildHelpMessage(interp, &ctx, argDefCtx, helpLevel, interpCtx);
-            if (HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_HELPRET)) {
-                Tcl_Obj *optionsDict = Tcl_NewDictObj();
-                PARSE_CHECK(Tcl_DictObjPut(interp, optionsDict, Tcl_NewStringObj("-level", -1), helpLevel));
-                Tcl_SetObjResult(interp, finalDescrList);
-                /* TCL_RETURN is successful help control flow, not a parse error.
-                 * Propagate TCL_OK for level zero and TCL_ERROR for invalid options too. */
-                code = Tcl_SetReturnOptions(interp, optionsDict);
+            ReplaceOwnedObj(&helpLevel, HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_HELPLEVEL)
+                                ? GLOBAL_SWITCH_ARG(&ctx, GLOBAL_SWITCH_HELPLEVEL) : Tcl_NewIntObj(2));
+            ReplaceOwnedObj(&helpOptions, Tcl_NewDictObj());
+            PARSE_CHECK(Tcl_DictObjPut(interp, helpOptions, Tcl_NewStringObj("-level", -1), helpLevel));
+            /* Validate using Tcl's return machinery, including negative and oversized levels. */
+            code = Tcl_SetReturnOptions(interp, helpOptions);
+            if (code == TCL_ERROR) {
                 goto cleanup;
+            }
+            int level;
+            PARSE_CHECK(Tcl_GetIntFromObj(interp, helpLevel, &level));
+            if (level == 0) {
+                Tcl_SetObjResult(interp, Tcl_NewStringObj("-helplevel must be at least 1", -1));
+                goto cleanupOnError;
+            }
+            /* The Tcl implementation consumes one level when its argparse procedure exits.
+             * Native commands have no such frame, so subtract that parser level. */
+            PARSE_CHECK(Tcl_DictObjPut(interp, helpOptions, Tcl_NewStringObj("-level", -1),
+                                      Tcl_NewIntObj(level - 1)));
+            ReplaceOwnedObj(&helpText, BuildHelpMessage(interp, &ctx, argDefCtx, helpLevel, interpCtx));
+            if (helpText == NULL) {
+                goto cleanupOnError;
+            }
+            if (HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_HELPRET)) {
+                Tcl_SetObjResult(interp, helpText);
             } else {
-                Tcl_Obj *cmd[2];
-                cmd[0] = Tcl_NewStringObj("puts", -1);
-                cmd[1] = finalDescrList;
+                ReplaceOwnedObj(&putsCommand, Tcl_NewStringObj("puts", -1));
+                Tcl_Obj *cmd[2] = {putsCommand, helpText};
                 PARSE_CHECK(Tcl_EvalObjv(interp, 2, cmd, 0));
                 Tcl_ResetResult(interp);
-                Tcl_Obj *optionsDict = Tcl_NewDictObj();
-                PARSE_CHECK(Tcl_DictObjPut(interp, optionsDict, Tcl_NewStringObj("-level", -1), helpLevel));
-                /* TCL_RETURN is successful help control flow, not a parse error.
-                 * Propagate TCL_OK for level zero and TCL_ERROR for invalid options too. */
-                code = Tcl_SetReturnOptions(interp, optionsDict);
-                goto cleanup;
             }
+            code = Tcl_SetReturnOptions(interp, helpOptions);
+            goto cleanup;
         }
 
     }
@@ -4236,6 +4242,10 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
 cleanupOnError:
     code = TCL_ERROR;
 cleanup:
+    SAFE_DECR_REF(putsCommand);
+    SAFE_DECR_REF(helpText);
+    SAFE_DECR_REF(helpOptions);
+    SAFE_DECR_REF(helpLevel);
     SAFE_DECR_REF(matchedName);
     SAFE_DECR_REF(helpSwitch);
     SAFE_DECR_REF(presentedNames);

@@ -7,7 +7,7 @@
 # See the file "LICENSE" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 package require Tcl 8.6-
-package provide argparse 0.65
+package provide argparse 0.66
 # argparse --
 # Parses an argument list according to a definition list.  The result may be
 # stored into caller variables or returned as a dict.
@@ -396,6 +396,14 @@ proc ::argparse {args} {
             if {![info exists helplevel]} {
                 set helplevel 2
             }
+            # Validate as Tcl return does, then reject zero: help must exit at
+            # least the argparse procedure rather than continue normal parsing.
+            if {[catch {return -level $helplevel} levelResult levelOptions] == 1} {
+                return -options $levelOptions $levelResult
+            }
+            if {[dict get $levelOptions -level] == 0} {
+                return -code error {-helplevel must be at least 1}
+            }
             if {$help ne {}} {
                 set providedHelp [adjust $help -length 80].
                 lappend description $providedHelp
@@ -529,9 +537,10 @@ proc ::argparse {args} {
                 set finalHelpStr [string totitle [string map {{,;} {;} {,.} {.}} $providedHelp] 0 1]
             }
             if {[info exists helpret]} {
-                return -level $helplevel $finalHelpStr
+                return -options $levelOptions $finalHelpStr
             } else {
-                return -level $helplevel
+                puts $finalHelpStr
+                return -options $levelOptions
             }
         }
     }

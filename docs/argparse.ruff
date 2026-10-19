@@ -501,6 +501,25 @@ namespace eval ::argparse {
         ```
         #ruffopt excludedformats {}
 
+        ## Help Return Depth
+
+        The Tcl and native implementations use the same `-helplevel` convention. The default is `2`:
+        stop parsing, return from the procedure or constructor that called argparse, and skip its remaining body.
+        The level includes the argparse procedure itself, even when using the native implementation.
+
+        * `1`: stop parsing and return to the caller, which continues after the argparse call.
+        * `2` (default): return from the immediate calling procedure, method or constructor.
+        * `3`: return through two calling procedures or methods.
+
+        Without `-helpret`, help is printed to stdout and the result is empty. With `-helpret`, help is returned
+        as the result at the requested depth. Help ignores required arguments and does not assign parsed variables.
+        Zero, negative, noninteger and out-of-range levels are errors.
+
+        Earlier native versions did not account for the Tcl implementation's procedure frame. If native-only
+        calling code used `-helplevel 1` to exit its own procedure, use the default `2` instead. More generally,
+        increase an explicit positive level by one when preserving that earlier native behavior. Replace earlier
+        `-helplevel 0` uses with `-helplevel 1` to return to the caller without exiting it.
+
         ## Element Switches
 
         #ruffopt excludedformats nroff
