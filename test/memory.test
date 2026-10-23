@@ -66,6 +66,46 @@ foreach mode {variables inline} {
         unset -nocomplain before growth
     } -result 1
 }
+# A shared definition name must remain borrowed during validation. The former
+# copy-on-write duplicate was never modified or released on the plain/enum paths.
+proc parseScalar {mode args} {
+    switch $mode {
+        parameter {argparse -inline {{value}}}
+        mixed {argparse -inline -mixed {{value}}}
+        enum {argparse -inline {{value -enum {hello world}}}}
+        switch {argparse -inline {{-value=}}}
+    }
+}
+proc scalarBatch {mode} {
+    for {set i 0} {$i < 1000} {incr i} {
+        if {$mode eq "switch"} {
+            parseScalar $mode -value hello
+        } else {
+            parseScalar $mode hello
+        }
+    }
+}
+proc scalarGrowth {mode} {
+    set before [bytes]
+    scalarBatch $mode
+    expr {[bytes] - $before}
+}
+foreach mode {parameter mixed enum switch} {
+    test memory-scalar-growth-$mode {scalar validation does not retain argument-name copies} \
+            -constraints memoryDebug -body {
+        # Warm parser caches and the measurement procedure's bytecode first.
+        scalarBatch $mode
+        scalarGrowth $mode
+        expr {[scalarGrowth $mode] < 4096}
+    } -result 1
+}
+
+test memory-scalar-behavior {shared names retain validation results and diagnostics} -body {
+    list [parseScalar parameter hello] [parseScalar mixed hello] \
+            [parseScalar enum he] [parseScalar switch -val hello] \
+            [catch {parseScalar enum bad} message] $message
+} -result {{value hello} {value hello} {value hello} {value hello} 1 {bad value value "bad": must be hello or world}}
+
 # Exercise allocator reuse and destruction of cached catchall definitions.
 # Run with a normal Tcl build too: memory-debug allocation can mask stale refs.
 test memory-catchall-lifetime-1 {mixed catchall calls survive allocator reuse} -body {

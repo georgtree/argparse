@@ -33,6 +33,9 @@ checks use `::tcl::unsupported::representation` when available. Additional live
 allocation checks run when Tcl was built with `--enable-symbols=mem`; they are
 skipped on ordinary builds. These checks measure live Tcl allocations, not
 process RSS, which may remain high because the allocator reuses freed memory.
+Scalar regression cases cover positional parameters, mixed parsing, enum prefixes,
+and switch values, detecting leaked argument-name copies even when input values
+themselves are correctly released.
 
 For package uninstall run `sudo make uninstall`.
 

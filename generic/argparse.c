@@ -1963,9 +1963,7 @@ int ValidateHelper(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *name
     Tcl_Obj *validateMsgObj = NULL;
     Tcl_Obj *enumPrefixListObj = NULL;
     const char **table = NULL;
-    if (Tcl_IsShared(nameObj)) {
-        nameObj = Tcl_DuplicateObj(nameObj);
-    }
+    /* nameObj is borrowed and never modified; duplicating it here leaked one object per value. */
     if (DICT_GET_IF_EXISTS(interp, optDictObj, interpCtx->elswitch_enum, &enumList)) {
         enumExists = 1;
         Tcl_Size enumListLen;
