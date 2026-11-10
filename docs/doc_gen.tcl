@@ -27,14 +27,22 @@ ruff::document $namespaces -format sphinx -outfile argparse.rst -outdir [file jo
         {*}$commonSphinx
 ruff::document $namespaces -format nroff -outdir $docDir -outfile argparse.n {*}$commonNroff
 
-::fileutil::appendToFile [file join $docDir sphinx conf.py] {html_theme = "classic"
-extensions = [
+::fileutil::appendToFile [file join $docDir sphinx conf.py] {
+extensions = list(dict.fromkeys(globals().get("extensions", []) + [
+    "sphinx_rtd_theme",
     "sphinx.ext.githubpages",
-]
-html_theme = "classic"
+]))
+html_theme = "sphinx_rtd_theme"
 html_theme_options = {
-    "stickysidebar": True,
+    "collapse_navigation": False,
+    "sticky_navigation": True,
+    "navigation_depth": 4,
+    "includehidden": True,
+    "titles_only": False,
 }
+# Custom CSS is staged by doc_gen.tcl; the source lives inside the HTML outdir.
+html_static_path = []
+html_css_files = list(globals().get("html_css_files", [])) + ["manual.css"]
 from pygments.lexers.tcl import TclLexer
 from pygments.token import Operator
 
@@ -59,6 +67,12 @@ def setup(app):
     lexers["tcl"] = MyTclLexer()
 }
 
-catch {exec sphinx-build -b html [file join $docDir sphinx] [file join $docDir]} errorStr
-puts $errorStr
+# Use one Python environment for Sphinx and the RTD theme; propagate failures.
+set python python
+if {[info exists ::env(DOC_PYTHON)] && $::env(DOC_PYTHON) ne {}} {
+    set python $::env(DOC_PYTHON)
+}
+file mkdir [file join $docDir _static]
+file copy -force [file join $docDir theme manual.css] [file join $docDir _static manual.css]
+exec -- $python -m sphinx -E -a -b html [file join $docDir sphinx] $docDir >@stdout 2>@stderr
 

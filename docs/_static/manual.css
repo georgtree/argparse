@@ -1,0 +1,126 @@
+/* Shared table and field-list layout for the RTD manual. */
+
+/* RTD's responsive wrapper normally forces table cells onto one line.
+ * Allow prose and inline option names to wrap within the content column. */
+.rst-content table.docutils {
+    width: 100%;
+    max-width: 100%;
+}
+
+.rst-content .wy-table-responsive table.docutils th,
+.rst-content .wy-table-responsive table.docutils td,
+.rst-content table.docutils th,
+.rst-content table.docutils td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    vertical-align: top;
+}
+
+.rst-content table.docutils code.literal,
+.rst-content table.docutils code.literal .pre {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* Ruff Options/Properties and Sphinx C parameter documentation use HTML5
+ * field lists. RTD reserves
+ * 80--95% for the description in addition to the label's intrinsic width.
+ * Use two bounded columns instead, with no grid stretching inside labels. */
+html.writer-html5 .rst-content dl.field-list {
+    grid-template-columns: minmax(0, 30%) minmax(0, 1fr);
+    column-gap: 1.25rem;
+    row-gap: 0.5rem;
+}
+
+html.writer-html5 .rst-content dl.field-list > dt {
+    display: block;
+    align-self: start;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+html.writer-html5 .rst-content dl.field-list > dd {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.rst-content dl.field-list code.literal,
+.rst-content dl.field-list code.literal .pre {
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* Stack labels and descriptions on phones, and when the desktop sidebar
+ * leaves too little width for two useful columns. */
+@media (max-width: 600px), (min-width: 769px) and (max-width: 1000px) {
+    html.writer-html5 .rst-content dl.field-list {
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: 0;
+    }
+
+    html.writer-html5 .rst-content dl.field-list > dt {
+        margin-bottom: 0.25rem;
+    }
+
+    html.writer-html5 .rst-content dl.field-list > dd {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Shared source stylesheet for the RTD manual. */
+
+/* Keep small diagrams/GIFs at their natural size; shrink only to fit. */
+.rst-content img {
+    max-width: 100%;
+    height: auto;
+}
+
+.rst-content details {
+    margin: 1em 0;
+    padding: 0;
+    border: none;
+}
+
+.rst-content details > summary {
+    display: list-item;
+    box-sizing: border-box;
+    padding: 0.6em 1em;
+    border: 1px solid #9aa7b4;
+    border-radius: 6px;
+    cursor: pointer;
+    background-color: #edf4fa;
+    color: #175a92;
+    font-weight: bold;
+}
+
+.rst-content details > summary:hover,
+.rst-content details > summary:focus-visible {
+    background-color: #e0edf7;
+    text-decoration: underline;
+}
+
+.rst-content details[open] > summary {
+    margin-bottom: 0.8em;
+}
+
+.rst-content details > summary:focus-visible {
+    outline: 2px solid #175a92;
+    outline-offset: 2px;
+}
+
+.rst-content details > summary::marker {
+    color: #175a92;
+}
+
+/* Standalone ECharts documents keep their own scripts and styles. */
+.rst-content iframe.doc-chart {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    border: 0;
+    margin: 1em 0;
+}

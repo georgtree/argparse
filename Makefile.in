@@ -263,7 +263,7 @@ install-doc:
 	done
 	@$(INSTALL_DATA_DIR) "$(DOC_INSTALL_DIR)"
 	@echo "Installing html documentation in $(DOC_INSTALL_DIR)"
-	@list='$(DOC_HTML_FILES)'; for p in $$list; do \
+	@list='$(DOC_HTML_FILES) .nojekyll'; for p in $$list; do \
 	  if test -f "$(srcdir)/docs/$$p"; then \
 	    d=`dirname "$$p"`; \
 	    if test "x$$d" != "x."; then \
@@ -271,6 +271,15 @@ install-doc:
 	    fi; \
 	    echo " Install $(srcdir)/docs/$$p $(DOC_INSTALL_DIR)/$$p"; \
 	    $(INSTALL_DATA) "$(srcdir)/docs/$$p" "$(DOC_INSTALL_DIR)/$$p"; \
+	  fi; \
+	done
+	@set -e; for directory in _static assets images _images; do \
+	  if test -d "$(srcdir)/docs/$$directory"; then \
+	    (cd "$(srcdir)/docs" && find "$$directory" -type f -print) | \
+	    while IFS= read -r file; do \
+	      $(INSTALL_DATA_DIR) "$(DOC_INSTALL_DIR)/`dirname "$$file"`"; \
+	      $(INSTALL_DATA) "$(srcdir)/docs/$$file" "$(DOC_INSTALL_DIR)/$$file"; \
+	    done; \
 	  fi; \
 	done
 
@@ -313,7 +322,7 @@ dist: dist-clean
 	done
 	@$(INSTALL_DATA_DIR) "$(DIST_DIR)/docs"
 	@echo "Copying html documentation to $(DIST_DIR)/docs"
-	@list='$(DOC_HTML_FILES)'; for p in $$list; do \
+	@list='$(DOC_HTML_FILES) .nojekyll'; for p in $$list; do \
 	  if test -f "$(srcdir)/docs/$$p"; then \
 	    d=`dirname "$$p"`; \
 	    if test "x$$d" != "x."; then \
@@ -321,6 +330,15 @@ dist: dist-clean
 	    fi; \
 	    echo " Copy $(srcdir)/docs/$$p $(DIST_DIR)/docs/$$p"; \
 	    $(INSTALL_DATA) "$(srcdir)/docs/$$p" "$(DIST_DIR)/docs/$$p"; \
+	  fi; \
+	done
+	@set -e; for directory in _static assets images _images; do \
+	  if test -d "$(srcdir)/docs/$$directory"; then \
+	    (cd "$(srcdir)/docs" && find "$$directory" -type f -print) | \
+	    while IFS= read -r file; do \
+	      $(INSTALL_DATA_DIR) "$(DIST_DIR)/docs/`dirname "$$file"`"; \
+	      $(INSTALL_DATA) "$(srcdir)/docs/$$file" "$(DIST_DIR)/docs/$$file"; \
+	    done; \
 	  fi; \
 	done
 	(cd $(DIST_ROOT); $(COMPRESS); $(COMPRESS_ZIP))
