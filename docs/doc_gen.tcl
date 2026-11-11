@@ -40,7 +40,8 @@ html_theme_options = {
     "includehidden": True,
     "titles_only": False,
 }
-# Custom CSS is staged by doc_gen.tcl; the source lives inside the HTML outdir.
+# manual.css is maintained directly in the published _static directory.
+# Do not ask Sphinx to copy that directory onto itself.
 html_static_path = []
 html_css_files = list(globals().get("html_css_files", [])) + ["manual.css"]
 from pygments.lexers.tcl import TclLexer
@@ -72,7 +73,8 @@ set python python
 if {[info exists ::env(DOC_PYTHON)] && $::env(DOC_PYTHON) ne {}} {
     set python $::env(DOC_PYTHON)
 }
-file mkdir [file join $docDir _static]
-file copy -force [file join $docDir theme manual.css] [file join $docDir _static manual.css]
+if {![file readable [file join $docDir _static manual.css]]} {
+    error "missing documentation stylesheet: [file join $docDir _static manual.css]"
+}
 exec -- $python -m sphinx -E -a -b html [file join $docDir sphinx] $docDir >@stdout 2>@stderr
 
