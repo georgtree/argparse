@@ -12,4 +12,6 @@ configure~
 /docs/.doctrees
 /docs/*.bak
 *.so
+*.o
 *.dll
+/autom4te.cache

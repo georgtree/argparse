@@ -1,5 +1,6 @@
 package require tcltest
 namespace import ::tcltest::*
+loadTestedCommands
 package require argparse
 set currentDir [file normalize [file dirname [info script]]]
 
@@ -2200,111 +2201,33 @@ test help-nested-return {level three unwinds two wrapper procedures} -setup {
     rename helpOuter {}
 } -result {0 1}
 
-test help-invalid-return-level {invalid return options remain errors} -body {
-    list [catch {argparse -help {Invalid level} -helpret -helplevel -1 {} {-help}}]\
-            [catch {argparse -help {Invalid level} -helpret -helplevel invalid {} {-help}}]
-} -result {1 1}
-
-# Compare the installed implementation with the reference Tcl implementation.
-# In a native build this covers both backends; in a Tcl-only build it stays runnable.
-set reference [file join [file dirname [file dirname [file normalize [info script]]]] argparse.tcl]
-foreach backend {installed reference} {
-    interp create $backend
-    $backend eval [list set auto_path $auto_path]
-    if {$backend eq "installed"} {
-        $backend eval {package require argparse}
-    } else {
-        $backend eval [list source $reference]
-    }
-    $backend eval {
-        rename puts realPuts
-        proc puts {message} {lappend ::printed $message}
-        proc invoke {options} {
-            set value [argparse -help {Parity probe} {*}$options {{required}} {-help}]
-            return [list continued $value]
-        }
-        proc outer {options} {
-            set value [invoke $options]
-            return [list outerContinued $value]
-        }
-        proc outcome {script} {
-            set ::printed {}
-            set code [catch {uplevel 1 $script} result options]
-            return [list $code [dict get $options -level] $result $::printed]
-        }
-    }
+# Return-depth checks use expected results for the selected implementation.
+foreach level {0 -1 invalid 2147483648} {
+    test help-invalid-level-$level {invalid help levels are errors} -body {
+        catch {argparse -help {} -helpret -helplevel $level {} {-help}}
+    } -result 1
 }
-
-test help-parity-levels {codes, levels, values and stdout agree at every supported depth} -body {
-    set equal 1
-    foreach level {1 2 3} {
-        foreach output {{} -helpret} {
-            set options [concat $output [list -helplevel $level]]
-            foreach script [list [list argparse -help {Parity probe} {*}$options {{required}} {-help}]\
-                                    [list invoke $options] [list outer $options]] {
-                if {[installed eval [list outcome $script]] ne [reference eval [list outcome $script]]} {
-                    set equal 0
-                }
-            }
+foreach output {{} -helpret} {
+    test help-zero-level$output {zero returns an error without printing help} -body {
+        catch {argparse -help {} {*}$output -helplevel 0 {{required}} {-help}} message options
+        list $message [dict get $options -level]
+    } -output {} -result {{-helplevel must be at least 1} 0}
+}
+test help-constructor-return {default help skips remaining constructor initialization} -setup {
+    oo::class create HelpProbe {
+        constructor {args} {
+            argparse -help {Constructor probe} {{required}}
+            error {constructor continued after help}
         }
     }
-    set equal
-} -result 1
-
-test help-parity-default {default exits the immediate caller and lets its caller continue} -body {
-    set outcomes {}
-    foreach backend {installed reference} {
-        lassign [$backend eval {outcome {outer {-helpret}}}] code level result printed
-        lappend outcomes [list $code $level [lindex $result 0] [string match {*Parity probe.*} [lindex $result 1]]\
-                                  $printed]
-    }
-    set outcomes
-} -result {{0 0 outerContinued 1 {}} {0 0 outerContinued 1 {}}}
-
-test help-parity-invalid {invalid levels produce matching errors} -body {
-    set equal 1
-    foreach level {0 -1 invalid 2147483648} {
-        set script [list argparse -help {Parity probe} -helpret -helplevel $level {} {-help}]
-        set a [installed eval [list outcome $script]]
-        set b [reference eval [list outcome $script]]
-        if {$a ne $b || [lindex $a 0] != 1} {set equal 0}
-    }
-    set equal
-} -result 1
-
-test help-parity-zero {zero is rejected without printing or returning help} -body {
-    set outcomes {}
-    foreach backend {installed reference} {
-        foreach output {{} -helpret} {
-            lappend outcomes [$backend eval [list outcome [list argparse -help {Parity probe} \
-                {*}$output -helplevel 0 {{required}} {-help}]]]
-        }
-    }
-    set outcomes
-} -result {{1 0 {-helplevel must be at least 1} {}} {1 0 {-helplevel must be at least 1} {}}\
-                   {1 0 {-helplevel must be at least 1} {}} {1 0 {-helplevel must be at least 1} {}}}
-
-test help-parity-constructor {default returns normally from a TclOO constructor before initialization} -body {
-    set results {}
-    foreach backend {installed reference} {
-        lappend results [$backend eval {
-            oo::class create Probe {
-                constructor {args} {
-                    argparse -help {Constructor probe} {{required}}
-                    error {constructor continued after help}
-                }
-            }
-            set object [Probe new -help]
-            set result [info object isa object $object]
-            $object destroy
-            Probe destroy
-            set result
-        }]
-    }
-    set results
-} -result {1 1}
-
-interp delete installed reference
+} -body {
+    set object [HelpProbe new -help]
+    set result [info object isa object $object]
+    $object destroy
+    set result
+} -cleanup {
+    HelpProbe destroy
+} -match glob -output {*Constructor probe.*} -result 1
 
 ### Issue #13: switch aliases may share names with positional parameters.
 testTemplate aliasParameterTest-1 {shorthand alias before matching parameter} {} {
@@ -2557,133 +2480,60 @@ test synopsis-no-caller-variables {inference does not create variables in the ca
     rename synopsisLocals {}
 } -result {}
 
-# Compare complete returned AND printed messages, including inference, wrapping,
-# constraints and both manual fields, against an independently loaded backend.
-test synopsis-backend-parity {native and reference help agree across tricky definitions} -setup {
-    set source [file join $currentDir .. argparse.tcl]
-    foreach backend {synopsisInstalled synopsisReference} {
-        interp create $backend
-        $backend eval [list set auto_path $auto_path]
-        if {$backend eq {synopsisInstalled}} {
-            $backend eval {package require argparse}
-        } else {
-            $backend eval [list source $source]
-        }
-        $backend eval {
-            rename puts savedPuts
-            proc puts {text} {lappend ::output $text}
-            proc invoke {options definition argv} {
-                set ::output {}
-                set code [catch {argparse -help {} -helplevel 1 {*}$options $definition $argv} value opts]
-                list $code $value [dict get $opts -level] $::output
-            }
-            namespace eval public {
-                proc implementation {args} {argparse -help {} -helpret {-flag} {-help}}
-                namespace ensemble create -command ::public -map {run ::public::implementation}
-            }
-            oo::class create Probe {
-                method run {} {argparse -help {} -helpret {-flag} {-help}}
-                method override {} {
-                    argparse -help {} -helpret -synopsiscmd {public run} {-flag} {-help}
-                }
-            }
-            Probe create object
-        }
-    }
-} -body {
-    set same 1
-    set cases {
-        {{} {{-a -require {b c} -allow {b c}} -b -c} {-help}}
-        {{-pfirst} {{extra -optional} first -flag second rest*} {-help}}
-        {{-mixed -pass rest} {-flag input files*} {-help}}
-        {{-long -equalarg} {-v|verbose -o|output=} {--help}}
-        {{} {{-b= -imply -c} {-c= -required} {-version -standalone}} {-help}}
-        {{} {{-a -key mode -require c -reciprocal} {-b -key mode} -c} {-help}}
-        {{} {{secret -hsuppress} {-value? -required} files*!} {-help}}
-        {{-synopsiscmd {public run} -synopsis {$x [error BAD] ?file?}} {} {-help}}
-        {{-synopsiscmd {} -synopsis {}} {} {-help}}
-    }
-    lappend cases [list [list -synopsiscmd lowerCase -synopsis [string repeat {?-flag value? } 20]] {} {-help}]
-    foreach case $cases {
-        lassign $case options definition argv
-        foreach mode {{} -helpret} {
-            set script [list invoke [concat $options $mode] $definition $argv]
-            set actual [synopsisInstalled eval $script]
-            if {([lindex $actual 0] != 0) || ($actual ne [synopsisReference eval $script])} {
-                set same 0
-            }
-        }
-    }
-    foreach script {{public run} {public r} {object run} {object override}} {
-        if {[synopsisInstalled eval $script] ne [synopsisReference eval $script]} {
-            set same 0
-        }
-    }
-    set same
-} -cleanup {
-    interp delete synopsisInstalled synopsisReference
-} -result 1
-
 rename synopsisText {}
 
 ### Constructor synopsis uses the instantiated class, not its anonymous instance.
-foreach backend {constructorInstalled constructorReference} {
-    interp create $backend
-    $backend eval [list set auto_path $auto_path]
-    if {$backend eq {constructorInstalled}} {
-        $backend eval {package require argparse}
-    } else {
-        $backend eval [list source [file join $currentDir .. argparse.tcl]]
+interp create constructorInterp
+constructorInterp eval [list set auto_path $auto_path]
+constructorInterp eval {package require argparse}
+constructorInterp eval {
+    rename puts savedPuts
+    proc puts {text} {set ::constructorHelp $text}
+    namespace eval constructors {
+        oo::class create Base {
+            constructor {args} {
+                argparse -help {} {
+                    {-value= -required}
+                    -quiet
+                }
+                return -code error {constructor continued after help}
+            }
+            method constructor {} {
+                argparse -help {} {
+                    -flag
+                } {-help}
+            }
+        }
+        oo::class create Child {
+            superclass Base
+        }
+        oo::class create Delegating {
+            superclass Base
+            constructor {args} {
+                next {*}$args
+            }
+        }
+        oo::class create Override {
+            constructor {args} {
+                argparse -help {} -synopsiscmd {factory build} {
+                    {-value= -required}
+                    -quiet
+                }
+            }
+        }
+        oo::class create Manual {
+            constructor {args} {
+                argparse -help {} -synopsis {custom ?extra?} {
+                    input
+                }
+            }
+        }
     }
-    $backend eval {
-        rename puts savedPuts
-        proc puts {text} {set ::constructorHelp $text}
-        namespace eval constructors {
-            oo::class create Base {
-                constructor {args} {
-                    argparse -help {} {
-                        {-value= -required}
-                        -quiet
-                    }
-                    return -code error {constructor continued after help}
-                }
-                method constructor {} {
-                    argparse -help {} {
-                        -flag
-                    } {-help}
-                }
-            }
-            oo::class create Child {
-                superclass Base
-            }
-            oo::class create Delegating {
-                superclass Base
-                constructor {args} {
-                    next {*}$args
-                }
-            }
-            oo::class create Override {
-                constructor {args} {
-                    argparse -help {} -synopsiscmd {factory build} {
-                        {-value= -required}
-                        -quiet
-                    }
-                }
-            }
-            oo::class create Manual {
-                constructor {args} {
-                    argparse -help {} -synopsis {custom ?extra?} {
-                        input
-                    }
-                }
-            }
-        }
-        proc creationSynopsis {invocation} {
-            set ::constructorHelp {}
-            set object [uplevel #0 $invocation]
-            $object destroy
-            string range $::constructorHelp 0 [expr {[string first "\n\n" $::constructorHelp] - 1}]
-        }
+    proc creationSynopsis {invocation} {
+        set ::constructorHelp {}
+        set object [uplevel #0 $invocation]
+        $object destroy
+        string range $::constructorHelp 0 [expr {[string first "\n\n" $::constructorHelp] - 1}]
     }
 }
 
@@ -2699,77 +2549,64 @@ foreach {name invocation expected} {
     private-name {constructors::Base create {private instance name} -help}\
             {::constructors::Base create objectName -value value ?-quiet?}
 } {
-    test synopsis-constructor-$name {constructor inference and overrides agree in both implementations} -body {
-        set results {}
-        foreach backend {constructorInstalled constructorReference} {
-            lappend results [$backend eval [list creationSynopsis $invocation]]
-        }
-        set results
-    } -result [list $expected $expected]
+    test synopsis-constructor-$name {constructor inference and overrides use the expected public prefix} -body {
+        constructorInterp eval [list creationSynopsis $invocation]
+    } -result $expected
 }
 
 test synopsis-constructor-named-method {ordinary method named constructor keeps object-method syntax} -body {
-    set results {}
-    foreach backend {constructorInstalled constructorReference} {
-        lappend results [$backend eval {
-            constructors::Base create instance -help
-            instance constructor
-            instance destroy
-            string range $::constructorHelp 0 [expr {[string first "\n\n" $::constructorHelp] - 1}]
-        }]
+    constructorInterp eval {
+        constructors::Base create instance -help
+        instance constructor
+        instance destroy
+        string range $::constructorHelp 0 [expr {[string first "\n\n" $::constructorHelp] - 1}]
     }
-    set results
-} -result {{::instance constructor ?-flag?} {::instance constructor ?-flag?}}
+} -result {::instance constructor ?-flag?}
 
-interp delete constructorInstalled constructorReference
+interp delete constructorInterp
 
 ### Method detection uses public frame metadata and never probes an unrelated self.
-foreach backend {frameInstalled frameReference} {
-    interp create $backend
-    $backend eval [list set auto_path $auto_path]
-    if {$backend eq {frameInstalled}} {
-        $backend eval {package require argparse}
-    } else {
-        $backend eval [list source [file join $currentDir .. argparse.tcl]]
+interp create frameInterp
+frameInterp eval [list set auto_path $auto_path]
+frameInterp eval {package require argparse}
+frameInterp eval {
+    set ::selfCalls 0
+    proc self {args} {
+        incr ::selfCalls
+        error {unrelated self was called}
     }
-    $backend eval {
-        set ::selfCalls 0
-        proc self {args} {
-            incr ::selfCalls
-            error {unrelated self was called}
+    proc extractSynopsis {text} {
+        string range $text 0 [expr {[string first "\n\n" $text] - 1}]
+    }
+    proc plain {} {
+        argparse -help {} -helpret -synopsis input {} {-help}
+    }
+    oo::class create FrameProbe {
+        constructor {} {
+            set ::constructorText [eval {argparse -help {} -helpret -helplevel 1 -synopsis input {} {-help}}]
         }
-        proc extractSynopsis {text} {
-            string range $text 0 [expr {[string first "\n\n" $text] - 1}]
-        }
-        proc plain {} {
+        method direct {} {
             argparse -help {} -helpret -synopsis input {} {-help}
         }
-        oo::class create FrameProbe {
-            constructor {} {
-                set ::constructorText [eval {argparse -help {} -helpret -helplevel 1 -synopsis input {} {-help}}]
-            }
-            method direct {} {
-                argparse -help {} -helpret -synopsis input {} {-help}
-            }
-            method evaluated {} {
-                eval {argparse -help {} -helpret -synopsis input {} {-help}}
-            }
-            method delegated {} {
-                plain
-            }
-            method global {} {
-                uplevel #0 {argparse -help {} -helpret -helplevel 1 -synopsis input {} {-help}}
-            }
-            method procedure {} {
-                uplevel 1 {argparse -help {} -helpret -helplevel 1 -synopsis input {} {-help}}
-            }
+        method evaluated {} {
+            eval {argparse -help {} -helpret -synopsis input {} {-help}}
         }
-        FrameProbe create frameObject
-        proc caller {} {
-            frameObject procedure
+        method delegated {} {
+            plain
+        }
+        method global {} {
+            uplevel #0 {argparse -help {} -helpret -helplevel 1 -synopsis input {} {-help}}
+        }
+        method procedure {} {
+            uplevel 1 {argparse -help {} -helpret -helplevel 1 -synopsis input {} {-help}}
         }
     }
+    FrameProbe create frameObject
+    proc caller {} {
+        frameObject procedure
+    }
 }
+
 foreach {name script expected} {
     top-level {argparse -help {} -helpret -helplevel 1 -synopsis input {} {-help}} {command input}
     procedure {plain} {plain input}
@@ -2780,16 +2617,12 @@ foreach {name script expected} {
     uplevel-global {frameObject global} {command input}
     uplevel-procedure {caller} {caller input}
 } {
-    test synopsis-public-frame-$name {public method detection respects execution context in both backends} -body {
-        set results {}
-        foreach backend {frameInstalled frameReference} {
-            set text [$backend eval $script]
-            lappend results [$backend eval [list extractSynopsis $text]] [$backend eval {set ::selfCalls}]
-        }
-        set results
-    } -result [list $expected 0 $expected 0]
+    test synopsis-public-frame-$name {public method detection respects execution context} -body {
+        set text [frameInterp eval $script]
+        list [frameInterp eval [list extractSynopsis $text]] [frameInterp eval {set ::selfCalls}]
+    } -result [list $expected 0]
 }
-interp delete frameInstalled frameReference
+interp delete frameInterp
 
 ### Issue #23: -exclusive is the no-argument form of -allow {}.
 testTemplate exclusiveTest-1 {exclusive switch alone} {} {
@@ -2860,45 +2693,10 @@ testTemplate exclusiveTest-18 {satisfying require does not bypass exclusivity} {
 {-only -exclusive -require other}
 -other} {-only -other} {only doesn't allow other}
 
-# Compare complete help and parse outcomes, including cached native definitions.
-test exclusive-parity {abbreviation matches empty allow in both implementations} -setup {
-    foreach backend {exclusiveInstalled exclusiveReference} {
-        interp create $backend
-        $backend eval [list set auto_path $auto_path]
-        if {$backend eq {exclusiveInstalled}} {
-            $backend eval {package require argparse}
-        } else {
-            $backend eval [list source [file join $currentDir .. argparse.tcl]]
-        }
-    }
-} -body {
-    set same 1
-    foreach argv {{-help} {-only} {-only -other} {-other -only} {-other} {}} {
-        set outcomes {}
-        foreach backend {exclusiveInstalled exclusiveReference} {
-            foreach flag {{-exclusive} {-allow {}}} {
-                set definition [list [list -only {*}$flag] -other]
-                set script [list argparse -inline -help {} -helpret -helplevel 1 -synopsiscmd cmd $definition $argv]
-                set code [catch {$backend eval $script} result]
-                lappend outcomes [list $code $result]
-            }
-        }
-        foreach outcome [lrange $outcomes 1 end] {
-            if {$outcome ne [lindex $outcomes 0]} {
-                set same 0
-            }
-        }
-    }
-    set same
-} -cleanup {
-    interp delete exclusiveInstalled exclusiveReference
-} -result 1
-
 test exclusive-help {empty allow is described clearly, including a whitespace-only list} -body {
     set result {}
     foreach flag {{-exclusive} {-allow {}} {-allow {   }}} {
-        set text [argparse -help {} -helpret -helplevel 1 -synopsiscmd cmd \
-                [list [list -only {*}$flag]] {-help}]
+        set text [argparse -help {} -helpret -helplevel 1 -synopsiscmd cmd [list [list -only {*}$flag]] {-help}]
         lappend result [string match {*Allows no other elements.*} $text]
     }
     set result

@@ -21,13 +21,13 @@ HAVE_TCL_ONLY = @HAVE_TCL_ONLY@
 ifeq ($(HAVE_TCL_ONLY),0)
 PKG_SOURCES = @PKG_SOURCES@
 PKG_OBJECTS = @PKG_OBJECTS@
-DOC_HTML_FILES = @DOC_HTML_FILES@
-DIST_TEST_FILES = @DIST_TEST_FILES@
 
 PKG_STUB_SOURCES = @PKG_STUB_SOURCES@
 PKG_STUB_OBJECTS = @PKG_STUB_OBJECTS@
 endif
 
+DOC_HTML_FILES = @DOC_HTML_FILES@
+DIST_TEST_FILES = @DIST_TEST_FILES@
 PKG_TCL_SOURCES = @PKG_TCL_SOURCES@
 
 ifeq ($(HAVE_TCL_ONLY),0)
@@ -70,7 +70,7 @@ INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_LIBRARY = @INSTALL_LIBRARY@
-DOC_INSTALL_DIR = $(DESTDIR)/usr/local/share/$(PACKAGE_NAME)$(PACKAGE_VERSION)/doc
+DOC_INSTALL_DIR = $(DESTDIR)$(pkgdatadir)/doc
 
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
@@ -199,18 +199,18 @@ gdb:
 
 gdb-test: binaries libraries
 	$(TCLSH_ENV) $(PKG_ENV) $(GDB) \
-	    --args $(TCLSH_PROG) `@CYGPATH@ $(srcdir)/test/all.tcl` \
-	    $(TESTFLAGS) -singleproc 1 \
-	    -load "package ifneeded $(PACKAGE_NAME) $(PACKAGE_VERSION) \
-		[list load `@CYGPATH@ $(PKG_LIB_FILE)` [string totitle $(PACKAGE_NAME)]]"
+	    --args $(TCLSH_PROG) "`@CYGPATH@ $(srcdir)/test/all.tcl`" -backend c \
+	    -packagefile "`@CYGPATH@ $(top_builddir)/$(PKG_LIB_FILE)`" $(TESTFLAGS) -singleproc 1
 
 valgrind: binaries libraries
 	$(TCLSH_ENV) $(PKG_ENV) $(VALGRIND) $(VALGRINDARGS) $(TCLSH_PROG) \
-	    `@CYGPATH@ $(srcdir)/test/all.tcl` $(TESTFLAGS)
+	    "`@CYGPATH@ $(srcdir)/test/all.tcl`" -backend c \
+	    -packagefile "`@CYGPATH@ $(top_builddir)/$(PKG_LIB_FILE)`" $(TESTFLAGS)
 
 callgrind: binaries libraries
 	$(TCLSH_ENV) $(PKG_ENV) $(VALGRIND) $(CALLGRINDARGS) $(TCLSH_PROG) \
-	    `@CYGPATH@ $(srcdir)/test/all.tcl` $(TESTFLAGS)
+	    "`@CYGPATH@ $(srcdir)/test/all.tcl`" -backend c \
+	    -packagefile "`@CYGPATH@ $(top_builddir)/$(PKG_LIB_FILE)`" $(TESTFLAGS)
 
 callgrindperf: binaries libraries
 	$(TCLSH_ENV) $(PKG_ENV) $(VALGRIND) $(CALLGRINDARGS) $(TCLSH_PROG) \
@@ -224,14 +224,28 @@ endif
 # Test recipes
 #========================================================================
 ifeq ($(HAVE_TCL_ONLY),0)
-test: binaries libraries
-	$(TCLSH) `@CYGPATH@ $(srcdir)/test/all.tcl` $(TESTFLAGS) \
-	    -load "package ifneeded $(PACKAGE_NAME) $(PACKAGE_VERSION) \
-		[list load `@CYGPATH@ $(PKG_LIB_FILE)` [string totitle $(PACKAGE_NAME)]]"
+test:
+	@status=0; \
+	$(MAKE) test-c || status=1; \
+	$(MAKE) test-tcl || status=1; \
+	exit $$status
+
+test-c: binaries libraries
+	$(TCLSH) "`@CYGPATH@ $(srcdir)/test/all.tcl`" -backend c \
+	    -packagefile "`@CYGPATH@ $(top_builddir)/$(PKG_LIB_FILE)`" $(TESTFLAGS)
 else
-test: libraries
-	$(TCLSH) `@CYGPATH@ $(srcdir)/test/all.tcl` $(TESTFLAGS)
+test: test-tcl
+
+test-c:
+	@echo "The C backend is unavailable in a --enable-tcl-only build." >&2
+	@exit 1
 endif
+
+test-tcl: libraries
+	$(TCLSH) "`@CYGPATH@ $(srcdir)/test/all.tcl`" -backend tcl \
+	    -packagefile "`@CYGPATH@ $(srcdir)/argparse.tcl`" $(TESTFLAGS)
+
+.PHONY: test-c test-tcl
 
 #========================================================================
 # Package installing recipes
@@ -441,8 +455,21 @@ uninstall-libraries:
 	done
 endif
 
-uninstall:
+uninstall: uninstall-doc
 	rm -rf "$(DESTDIR)$(pkglibdir)"
+
+uninstall-doc:
+	@set -e; for p in "$(srcdir)"/docs/*.n; do \
+	  if test -f "$$p"; then \
+	    name=`basename "$$p"`; \
+	    echo " Remove $(DESTDIR)$(mandir)/mann/$$name"; \
+	    rm -f "$(DESTDIR)$(mandir)/mann/$$name"; \
+	  fi; \
+	done
+	@echo " Remove $(DOC_INSTALL_DIR)"
+	rm -rf "$(DOC_INSTALL_DIR)"
+
+.PHONY: uninstall uninstall-doc
 
 #========================================================================
 # Flag PHONY recipes

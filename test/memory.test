@@ -1,5 +1,6 @@
 package require tcltest
 namespace import ::tcltest::*
+loadTestedCommands
 package require argparse
 
 
