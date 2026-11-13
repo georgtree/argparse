@@ -2626,4 +2626,169 @@ test synopsis-backend-parity {native and reference help agree across tricky defi
 
 rename synopsisText {}
 
+### Constructor synopsis uses the instantiated class, not its anonymous instance.
+foreach backend {constructorInstalled constructorReference} {
+    interp create $backend
+    $backend eval [list set auto_path $auto_path]
+    if {$backend eq {constructorInstalled}} {
+        $backend eval {package require argparse}
+    } else {
+        $backend eval [list source [file join $currentDir .. argparse.tcl]]
+    }
+    $backend eval {
+        rename puts savedPuts
+        proc puts {text} {set ::constructorHelp $text}
+        namespace eval constructors {
+            oo::class create Base {
+                constructor {args} {
+                    argparse -help {} {
+                        {-value= -required}
+                        -quiet
+                    }
+                    return -code error {constructor continued after help}
+                }
+                method constructor {} {
+                    argparse -help {} {
+                        -flag
+                    } {-help}
+                }
+            }
+            oo::class create Child {
+                superclass Base
+            }
+            oo::class create Delegating {
+                superclass Base
+                constructor {args} {
+                    next {*}$args
+                }
+            }
+            oo::class create Override {
+                constructor {args} {
+                    argparse -help {} -synopsiscmd {factory build} {
+                        {-value= -required}
+                        -quiet
+                    }
+                }
+            }
+            oo::class create Manual {
+                constructor {args} {
+                    argparse -help {} -synopsis {custom ?extra?} {
+                        input
+                    }
+                }
+            }
+        }
+        proc creationSynopsis {invocation} {
+            set ::constructorHelp {}
+            set object [uplevel #0 $invocation]
+            $object destroy
+            string range $::constructorHelp 0 [expr {[string first "\n\n" $::constructorHelp] - 1}]
+        }
+    }
+}
+
+foreach {name invocation expected} {
+    new {constructors::Base new -help} {::constructors::Base new -value value ?-quiet?}
+    create {constructors::Base create named -help} {::constructors::Base create objectName -value value ?-quiet?}
+    inherited-new {constructors::Child new -help} {::constructors::Child new -value value ?-quiet?}
+    inherited-create {constructors::Child create named -help}\
+            {::constructors::Child create objectName -value value ?-quiet?}
+    next-fallback {constructors::Delegating create named -help} {::constructors::Delegating new -value value ?-quiet?}
+    override {constructors::Override create named -help} {factory build -value value ?-quiet?}
+    manual-arguments {constructors::Manual create named -help} {::constructors::Manual create objectName custom ?extra?}
+    private-name {constructors::Base create {private instance name} -help}\
+            {::constructors::Base create objectName -value value ?-quiet?}
+} {
+    test synopsis-constructor-$name {constructor inference and overrides agree in both implementations} -body {
+        set results {}
+        foreach backend {constructorInstalled constructorReference} {
+            lappend results [$backend eval [list creationSynopsis $invocation]]
+        }
+        set results
+    } -result [list $expected $expected]
+}
+
+test synopsis-constructor-named-method {ordinary method named constructor keeps object-method syntax} -body {
+    set results {}
+    foreach backend {constructorInstalled constructorReference} {
+        lappend results [$backend eval {
+            constructors::Base create instance -help
+            instance constructor
+            instance destroy
+            string range $::constructorHelp 0 [expr {[string first "\n\n" $::constructorHelp] - 1}]
+        }]
+    }
+    set results
+} -result {{::instance constructor ?-flag?} {::instance constructor ?-flag?}}
+
+interp delete constructorInstalled constructorReference
+
+### Method detection uses public frame metadata and never probes an unrelated self.
+foreach backend {frameInstalled frameReference} {
+    interp create $backend
+    $backend eval [list set auto_path $auto_path]
+    if {$backend eq {frameInstalled}} {
+        $backend eval {package require argparse}
+    } else {
+        $backend eval [list source [file join $currentDir .. argparse.tcl]]
+    }
+    $backend eval {
+        set ::selfCalls 0
+        proc self {args} {
+            incr ::selfCalls
+            error {unrelated self was called}
+        }
+        proc extractSynopsis {text} {
+            string range $text 0 [expr {[string first "\n\n" $text] - 1}]
+        }
+        proc plain {} {
+            argparse -help {} -helpret -synopsis input {} {-help}
+        }
+        oo::class create FrameProbe {
+            constructor {} {
+                set ::constructorText [eval {argparse -help {} -helpret -helplevel 1 -synopsis input {} {-help}}]
+            }
+            method direct {} {
+                argparse -help {} -helpret -synopsis input {} {-help}
+            }
+            method evaluated {} {
+                eval {argparse -help {} -helpret -synopsis input {} {-help}}
+            }
+            method delegated {} {
+                plain
+            }
+            method global {} {
+                uplevel #0 {argparse -help {} -helpret -helplevel 1 -synopsis input {} {-help}}
+            }
+            method procedure {} {
+                uplevel 1 {argparse -help {} -helpret -helplevel 1 -synopsis input {} {-help}}
+            }
+        }
+        FrameProbe create frameObject
+        proc caller {} {
+            frameObject procedure
+        }
+    }
+}
+foreach {name script expected} {
+    top-level {argparse -help {} -helpret -helplevel 1 -synopsis input {} {-help}} {command input}
+    procedure {plain} {plain input}
+    method {frameObject direct} {::frameObject direct input}
+    eval-method {frameObject evaluated} {::frameObject evaluated input}
+    eval-constructor {set ::constructorText} {::FrameProbe create objectName input}
+    method-wrapper {frameObject delegated} {plain input}
+    uplevel-global {frameObject global} {command input}
+    uplevel-procedure {caller} {caller input}
+} {
+    test synopsis-public-frame-$name {public method detection respects execution context in both backends} -body {
+        set results {}
+        foreach backend {frameInstalled frameReference} {
+            set text [$backend eval $script]
+            lappend results [$backend eval [list extractSynopsis $text]] [$backend eval {set ::selfCalls}]
+        }
+        set results
+    } -result [list $expected 0 $expected 0]
+}
+interp delete frameInstalled frameReference
+
 cleanupTests

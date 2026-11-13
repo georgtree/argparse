@@ -1297,11 +1297,25 @@ namespace eval ::argparse {
         `parseOptions` calls argparse, the inferred command is `parseOptions`.
 
         In a normal TclOO method, inference uses the fully qualified object name and the current method name.
-        Constructors and destructors use the ordinary first-invocation-word fallback, which may not describe the
-        public creation command; use `-synopsiscmd` there. At top level there is no caller procedure, so the fallback
-        is `command`, not the script filename. Other dispatch mechanisms, aliases, and forwarding commands may
-        expose implementation names rather than the user-facing command. Explicit names are recommended whenever
-        the public invocation matters.
+        In a constructor, it uses the fully qualified class of the object being constructed, including when the
+        constructor is inherited from a superclass. A directly identifiable `Class create name` invocation is shown
+        as `Class create objectName`; `objectName` is a placeholder, never the actual instance name. Other
+        constructor invocations use `Class new`. This fallback also applies when a superclass constructor is
+        reached through `next`, because its immediate invocation no longer identifies the original creation form.
+        Custom factories, aliases, and forwarding commands may likewise need an explicit `-synopsiscmd` override.
+        A manual `-synopsis` still replaces only the argument portion; class-name inference remains active.
+
+        For example, if `::Solver` defines the constructor and `::SpecialSolver` inherits it, help requested with
+        `SpecialSolver new -help` begins with `::SpecialSolver new`, while `SpecialSolver create mySolver -help`
+        begins with `::SpecialSolver create objectName`. Neither form exposes an anonymous object name such as
+        `::oo::Obj38` or TclOO's internal `<constructor>` method marker. An explicit
+        `-synopsiscmd {solverFactory build}` replaces either inferred prefix with `solverFactory build`.
+
+        Destructors use the ordinary first-invocation-word fallback. At top level there is no caller procedure,
+        so the fallback is `command`, not the script filename. Other dispatch mechanisms may expose implementation
+        names rather than the user-facing command. Explicit names are recommended whenever the public invocation
+        matters. Ordinary methods named `constructor` or `destructor` are still displayed as object methods; TclOO
+        identifies the special lifecycle methods with the distinct markers `<constructor>` and `<destructor>`.
 
         Ensemble dispatch generally exposes the mapped implementation command. Its public name cannot be recovered
         reliably: several ensembles or subcommands can map to the same procedure, and the procedure may also be

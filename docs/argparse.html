@@ -1257,11 +1257,23 @@ that invocation, preserving the spelling Tcl exposes there, including namespace 
 values are never included. A wrapper procedure is not skipped: if <code class="docutils literal notranslate"><span class="pre">convert</span></code> calls <code class="docutils literal notranslate"><span class="pre">parseOptions</span></code>, and
 <code class="docutils literal notranslate"><span class="pre">parseOptions</span></code> calls argparse, the inferred command is <code class="docutils literal notranslate"><span class="pre">parseOptions</span></code>.</p>
 <p>In a normal TclOO method, inference uses the fully qualified object name and the current method name.
-Constructors and destructors use the ordinary first-invocation-word fallback, which may not describe the
-public creation command; use <code class="docutils literal notranslate"><span class="pre">-synopsiscmd</span></code> there. At top level there is no caller procedure, so the fallback
-is <code class="docutils literal notranslate"><span class="pre">command</span></code>, not the script filename. Other dispatch mechanisms, aliases, and forwarding commands may
-expose implementation names rather than the user-facing command. Explicit names are recommended whenever
-the public invocation matters.</p>
+In a constructor, it uses the fully qualified class of the object being constructed, including when the
+constructor is inherited from a superclass. A directly identifiable <code class="docutils literal notranslate"><span class="pre">Class</span> <span class="pre">create</span> <span class="pre">name</span></code> invocation is shown
+as <code class="docutils literal notranslate"><span class="pre">Class</span> <span class="pre">create</span> <span class="pre">objectName</span></code>; <code class="docutils literal notranslate"><span class="pre">objectName</span></code> is a placeholder, never the actual instance name. Other
+constructor invocations use <code class="docutils literal notranslate"><span class="pre">Class</span> <span class="pre">new</span></code>. This fallback also applies when a superclass constructor is
+reached through <code class="docutils literal notranslate"><span class="pre">next</span></code>, because its immediate invocation no longer identifies the original creation form.
+Custom factories, aliases, and forwarding commands may likewise need an explicit <code class="docutils literal notranslate"><span class="pre">-synopsiscmd</span></code> override.
+A manual <code class="docutils literal notranslate"><span class="pre">-synopsis</span></code> still replaces only the argument portion; class-name inference remains active.</p>
+<p>For example, if <code class="docutils literal notranslate"><span class="pre">::Solver</span></code> defines the constructor and <code class="docutils literal notranslate"><span class="pre">::SpecialSolver</span></code> inherits it, help requested with
+<code class="docutils literal notranslate"><span class="pre">SpecialSolver</span> <span class="pre">new</span> <span class="pre">-help</span></code> begins with <code class="docutils literal notranslate"><span class="pre">::SpecialSolver</span> <span class="pre">new</span></code>, while <code class="docutils literal notranslate"><span class="pre">SpecialSolver</span> <span class="pre">create</span> <span class="pre">mySolver</span> <span class="pre">-help</span></code>
+begins with <code class="docutils literal notranslate"><span class="pre">::SpecialSolver</span> <span class="pre">create</span> <span class="pre">objectName</span></code>. Neither form exposes an anonymous object name such as
+<code class="docutils literal notranslate"><span class="pre">::oo::Obj38</span></code> or TclOO’s internal <code class="docutils literal notranslate"><span class="pre">&lt;constructor&gt;</span></code> method marker. An explicit
+<code class="docutils literal notranslate"><span class="pre">-synopsiscmd</span> <span class="pre">{solverFactory</span> <span class="pre">build}</span></code> replaces either inferred prefix with <code class="docutils literal notranslate"><span class="pre">solverFactory</span> <span class="pre">build</span></code>.</p>
+<p>Destructors use the ordinary first-invocation-word fallback. At top level there is no caller procedure,
+so the fallback is <code class="docutils literal notranslate"><span class="pre">command</span></code>, not the script filename. Other dispatch mechanisms may expose implementation
+names rather than the user-facing command. Explicit names are recommended whenever the public invocation
+matters. Ordinary methods named <code class="docutils literal notranslate"><span class="pre">constructor</span></code> or <code class="docutils literal notranslate"><span class="pre">destructor</span></code> are still displayed as object methods; TclOO
+identifies the special lifecycle methods with the distinct markers <code class="docutils literal notranslate"><span class="pre">&lt;constructor&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&lt;destructor&gt;</span></code>.</p>
 <p>Ensemble dispatch generally exposes the mapped implementation command. Its public name cannot be recovered
 reliably: several ensembles or subcommands can map to the same procedure, and the procedure may also be
 called directly. The original source text may contain variable substitutions rather than command names.

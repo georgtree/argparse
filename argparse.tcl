@@ -546,16 +546,31 @@ proc ::argparse {args} {
             }
             ####  Infer only the immediate caller; ensemble mappings are not reversible.
             if {![info exists synopsiscmd]} {
-                set synopsiscmd [uplevel 1 {
-                    if {([namespace which -command self] eq {::oo::Helpers::self}) && ![catch {self method}]\
-                                && ([self method] ni {constructor destructor})} {
-                        list [self object] [self method]
-                    } elseif {[info level] > 0} {
+                # Inspect the caller before uplevel adds its evaluation frame. Only method frames
+                # may use self; an unrelated procedure named self must never be invoked here.
+                # uplevel may retain method metadata from a different scope, so require level 1.
+                set callerFrame [info frame -1]
+                set callerIsMethod [expr {[dict exists $callerFrame method] && [dict exists $callerFrame level]\
+                                                  && [dict get $callerFrame level] == 1}]
+                set synopsiscmd [uplevel 1 [list if $callerIsMethod {
+                    if {[self method] eq {<constructor>}} {
+                        if {([lindex [info level 0] 1] eq {create}) &&\
+                                    ([namespace which -command [lindex [info level 0] 0]] eq\
+                                             [info object class [self object]])} {
+                            list [info object class [self object]] create objectName
+                        } else {
+                            list [info object class [self object]] new
+                        }
+                    } elseif {[self method] eq {<destructor>}} {
                         lrange [info level 0] 0 0
                     } else {
-                        list command
+                        list [self object] [self method]
                     }
-                }]
+                } elseif {[info level] > 0} {
+                    lrange [info level 0] 0 0
+                } else {
+                    list command
+                }]]
             }
             ####  Describe structure, without solving cross-element constraints.
             if {![info exists synopsis]} {

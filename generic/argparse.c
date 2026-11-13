@@ -1610,6 +1610,7 @@ static void AppendSynopsisPart(Tcl_DString *parts, const char *text, Tcl_Size le
  *
  *      Builds the synopsis paragraph from the processed argument definitions and global switches. The command
  *      prefix is taken from -synopsiscmd when supplied; otherwise it is inferred from the immediate caller.
+ *      Constructors use the instantiated class with create objectName when directly identifiable, or new otherwise.
  *      The native command executes in the caller's frame, corresponding to one level above the Tcl implementation.
  *
  *      The argument portion is taken from -synopsis when supplied; otherwise it is generated using Tcl-style
@@ -1654,10 +1655,32 @@ static Tcl_Obj *BuildSynopsis(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Ar
     if (HAS_GLOBAL_SWITCH(ctx, GLOBAL_SWITCH_SYNOPSISCMD)) {
         commandName = GLOBAL_SWITCH_ARG(ctx, GLOBAL_SWITCH_SYNOPSISCMD);
     } else {
-        const char *inferCaller = "if {[namespace which -command self] eq {::oo::Helpers::self} "
-                                  "&& ![catch {self method}] && [self method] ni {constructor destructor}} {"
-                                  "list [self object] [self method]"
-                                  "} elseif {[info level] > 0} {lrange [info level 0] 0 0} else {list command}";
+        /* Constructor identity comes from the instance, including inherited constructors.
+         * Only a direct class create invocation reliably identifies the creation form.
+         * The native command adds no procedure frame: info frame -1 in this evaluation
+         * describes its caller. Require level 0 as well as method metadata: uplevel may
+         * retain a method's source metadata while evaluating in another scope. */
+        const char *inferCaller =
+            "if {[dict exists [info frame -1] method] && [dict exists [info frame -1] level]\n"
+            "        && [dict get [info frame -1] level] == 0} {\n"
+            "    if {[self method] eq {<constructor>}} {\n"
+            "        if {[lindex [info level 0] 1] eq {create}\n"
+            "                && [namespace which -command [lindex [info level 0] 0]]\n"
+            "                eq [info object class [self object]]} {\n"
+            "            list [info object class [self object]] create objectName\n"
+            "        } else {\n"
+            "            list [info object class [self object]] new\n"
+            "        }\n"
+            "    } elseif {[self method] eq {<destructor>}} {\n"
+            "        lrange [info level 0] 0 0\n"
+            "    } else {\n"
+            "        list [self object] [self method]\n"
+            "    }\n"
+            "} elseif {[info level] > 0} {\n"
+            "    lrange [info level 0] 0 0\n"
+            "} else {\n"
+            "    list command\n"
+            "}\n";
         if (Tcl_EvalEx(interp, inferCaller, -1, 0) != TCL_OK) {
             goto cleanup;
         }
