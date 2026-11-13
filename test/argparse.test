@@ -24,13 +24,16 @@ set templateProcStr {proc templateProc {args} {
     return $resultDict
 }}
 
-proc testTemplate {testName descr arguments definitionsStr inputStr refStr} {
+proc testTemplate {testName descr arguments definitionsStr inputStr refStr {resultCommand {}}} {
     variable templateProcStr
     test $testName $descr -body {
         eval [string map [list @definitions@ $definitionsStr @additionalArgs@ $arguments] $templateProcStr]
         if {[catch {set result [templateProc {*}$inputStr]} errorStr]} {
             return $errorStr
         } else {
+            if {$resultCommand ne {}} {
+                return [{*}$resultCommand $result]
+            }
             return $result
         }
     } -result $refStr -cleanup {
@@ -1635,7 +1638,8 @@ testTemplate allowTest-8 {} {} {
 g} {-c 2 -a 1 5} {a doesn't allow c}
 
 ### Check -help global switch
-testTemplate helpTest-1 {} {-help {Description of procedure} -helpret} {
+# These exact body-format tests suppress the synopsis; dedicated cases follow below.
+testTemplate helpTest-1 {} {-help {Description of procedure} -helpret -synopsiscmd {} -synopsis {}} {
 {-a -required -help {Description 1} -type double -validate {\[string is double \$arg\]}}
 {-b -help {Description 2} -require h -forbid e}
 {-hjk|por|res|h= -help {Description 3} -require {a b} -imply y}
@@ -1652,9 +1656,9 @@ names. Accepts switches only before parameters.
     Switches:
         -a value - Required. Description 1. Type double.
         -b - Description 2. Requires h. Forbids e.
-        -h value - Description 3. Requires a or b. Aliases are hjk, por or res.
+        -h value - Description 3. Requires a and b. Aliases are hjk, por or res.
             Expects two arguments.
-        -c ?value? - Description 4. Requires a, b or c.
+        -c ?value? - Description 4. Requires a, b and c.
         -d ?value? - Required. Description 5.
         -ty value - Description 5. Links caller variable.
         -e - Boolean. Description 3.
@@ -1668,7 +1672,7 @@ names. Accepts switches only before parameters.
         p - Allows b or h.
         y - Optional. Description 9.}
 
-testTemplate helpTest-2 {} {-help {Description of procedure} -helpret} {
+testTemplate helpTest-2 {} {-help {Description of procedure} -helpret -synopsiscmd {} -synopsis {}} {
 {-exact      -key match}
 {-glob       -key match -default glob}
 {-regexp     -key match}
@@ -1716,7 +1720,7 @@ names. Accepts switches only before parameters.
         list
         pattern}
 
-testTemplate helpTest-3 {} {-help {Procedure generates sequence of numbers} -helpret} {
+testTemplate helpTest-3 {} {-help {Procedure generates sequence of numbers} -helpret -synopsiscmd {} -synopsis {}} {
 # {Optional sequence control switches}
 {-from= -default 1 -type double -help {Provides start of sequence}}
 {-to= -default 10 -type double -help {Provides end of sequence}}
@@ -1736,7 +1740,7 @@ instead of switches names. Accepts switches only before parameters.
             and parameters, prints the help message to stdout, and returns up to 2
             levels above the current level.}
 
-testTemplate helpTest-4 {} {-help {} -helpret} {
+testTemplate helpTest-4 {} {-help {} -helpret -synopsiscmd {} -synopsis {}} {
 # {Optional sequence control switches}
 {-from= -default 1 -type double -help {Provides start of sequence}}
 {-to= -default 10 -type double}
@@ -1756,7 +1760,7 @@ only before parameters.
             and parameters, prints the help message to stdout, and returns up to 2
             levels above the current level.}
 
-testTemplate helpTest-5 {} {-help {} -helpret -inline\
+testTemplate helpTest-5 {} {-help {} -helpret -synopsiscmd {} -synopsis {} -inline\
                                     -validate {date {\[string is double \$arg\]}\
                                                        time {\[string is double \$arg\]}}} {
         {date -validate date}
@@ -1777,7 +1781,7 @@ only before parameters.
         date
         time}
 
-testTemplate helpTest-6 {} {-helplevel 3 -help {} -helpret -inline\
+testTemplate helpTest-6 {} {-helplevel 3 -help {} -helpret -synopsiscmd {} -synopsis {} -inline\
                                           -validate {date {\[string is double \$arg\]}\
                                                              time {\[string is double \$arg\]}}} {
         {date -validate date}
@@ -1798,7 +1802,7 @@ only before parameters.
         date
         time}
 
-testTemplate helpTest-7 {} {-help {} -helpret -inline -pfirst\
+testTemplate helpTest-7 {} {-help {} -helpret -synopsiscmd {} -synopsis {} -inline -pfirst\
                                           -validate {date {\[string is double \$arg\]}\
                                                              time {\[string is double \$arg\]}}} {
         {date -validate date}
@@ -1819,7 +1823,7 @@ must appear before switches.
         date
         time}
 
-testTemplate helpTest-8 {} {-help {} -helpret -inline -pfirst\
+testTemplate helpTest-8 {} {-help {} -helpret -synopsiscmd {} -synopsis {} -inline -pfirst\
                                           -validate {date {\[string is double \$arg\]}\
                                                              time {\[string is double \$arg\]}}} {
         {date -validate date -hsuppress}
@@ -1839,7 +1843,7 @@ must appear before switches.
     Parameters:
         time}
 
-testTemplate helpTest-9 {} {-help {} -helpret -inline -pfirst\
+testTemplate helpTest-9 {} {-help {} -helpret -synopsiscmd {} -synopsis {} -inline -pfirst\
                                           -validate {date {\[string is double \$arg\]}\
                                                              time {\[string is double \$arg\]}}} {
         {date -validate date -hsuppress}
@@ -1858,21 +1862,21 @@ must appear before switches.
     Parameters:
         time}
 
-testTemplate helpTest-10 {} {-help {Help information string} -helpret} {} {-help} {Help information string.\
+testTemplate helpTest-10 {} {-help {Help information string} -helpret -synopsiscmd {} -synopsis {}} {} {-help} {Help information string.\
 Can accepts unambiguous prefixes instead of switches
 names. Accepts switches only before parameters.
     Switches:
         -help - Help switch, when provided, forces ignoring all other switches
             and parameters, prints the help message to stdout, and returns up to 2
             levels above the current level.}
-testTemplate helpTest-11 {} {-help {Help information string} -helpret} { } {-help} {Help information string.\
+testTemplate helpTest-11 {} {-help {Help information string} -helpret -synopsiscmd {} -synopsis {}} { } {-help} {Help information string.\
 Can accepts unambiguous prefixes instead of switches
 names. Accepts switches only before parameters.
     Switches:
         -help - Help switch, when provided, forces ignoring all other switches
             and parameters, prints the help message to stdout, and returns up to 2
             levels above the current level.}
-testTemplate helpTest-12 {} {-help {Help information string} -helpret} {   
+testTemplate helpTest-12 {} {-help {Help information string} -helpret -synopsiscmd {} -synopsis {}} {
 } {-help} {Help information string. Can accepts unambiguous prefixes instead of switches
 names. Accepts switches only before parameters.
     Switches:
@@ -2143,7 +2147,7 @@ foreach level {1 2 3} {
         set code [catch {
             argparse -help {Return-code regression} -helpret -helplevel $level {} {-help}
         } message options]
-        list $code [dict get $options -level] [string match {Return-code regression.*} $message]
+        list $code [dict get $options -level] [string match {*Return-code regression.*} $message]
     } -result [list [expr {$level == 1 ? 0 : 2}] [expr {$level-1}] 1]
 
     test help-print-code-$level {printed help preserves Tcl's completion code and return level} -body {
@@ -2151,12 +2155,12 @@ foreach level {1 2 3} {
             argparse -help {Printed regression} -helplevel $level {} {-help}
         } message options]
         list $code [dict get $options -level] $message
-    } -match glob -output {Printed regression.*} -result [list [expr {$level == 1 ? 0 : 2}] [expr {$level-1}] {}]
+    } -match glob -output {*Printed regression.*} -result [list [expr {$level == 1 ? 0 : 2}] [expr {$level-1}] {}]
 }
 
 test help-default-return-level {default help consumes the parser frame and leaves one caller level} -body {
     set code [catch {argparse -help {Default regression} -helpret {} {-help}} message options]
-    list $code [dict get $options -level] [string match {Default regression.*} $message]
+    list $code [dict get $options -level] [string match {*Default regression.*} $message]
 } -result {2 1 1}
 
 test help-wrapper-return {default level returns normally from a parser wrapper without executing its body}\
@@ -2167,7 +2171,7 @@ test help-wrapper-return {default level returns normally from a parser wrapper w
     }
 } -body {
     set code [catch {helpWrapper -help} message]
-    list $code [string match {Wrapper regression.*} $message]
+    list $code [string match {*Wrapper regression.*} $message]
 } -cleanup {rename helpWrapper {}} -result {0 1}
 
 test help-wrapper-print {printed help returns normally and skips the wrapper body} -setup {
@@ -2177,7 +2181,7 @@ test help-wrapper-print {printed help returns normally and skips the wrapper bod
     }
 } -body {
     list [catch {helpWrapper -help} message] $message
-} -cleanup {rename helpWrapper {}} -match glob -output {Wrapper print regression.*} -result {0 {}}
+} -cleanup {rename helpWrapper {}} -match glob -output {*Wrapper print regression.*} -result {0 {}}
 
 test help-nested-return {level three unwinds two wrapper procedures} -setup {
     proc helpInner {args} {
@@ -2190,7 +2194,7 @@ test help-nested-return {level three unwinds two wrapper procedures} -setup {
     }
 } -body {
     set code [catch {helpOuter} message]
-    list $code [string match {Nested regression.*} $message]
+    list $code [string match {*Nested regression.*} $message]
 } -cleanup {
     rename helpInner {}
     rename helpOuter {}
@@ -2251,7 +2255,7 @@ test help-parity-default {default exits the immediate caller and lets its caller
     set outcomes {}
     foreach backend {installed reference} {
         lassign [$backend eval {outcome {outer {-helpret}}}] code level result printed
-        lappend outcomes [list $code $level [lindex $result 0] [string match {Parity probe.*} [lindex $result 1]]\
+        lappend outcomes [list $code $level [lindex $result 0] [string match {*Parity probe.*} [lindex $result 1]]\
                                   $printed]
     }
     set outcomes
@@ -2318,5 +2322,308 @@ testTemplate aliasParameterTest-3 {explicit aliases before matching parameter} {
 testTemplate aliasParameterTest-4 {explicit aliases after matching parameter} {} {
 {p -parameter}
 {path -switch -argument -alias {p f}}} {-p switch-value positional-value} {p positional-value path switch-value}
+
+
+### Structural synopsis (issue #11).
+# Select only the leading synopsis paragraph; other tests verify the full help.
+proc synopsisText {help} {
+    set end [string first "\n\n" $help]
+    string range $help 0 [expr {$end - 1}]
+}
+
+testTemplate synopsisTest-1 {required values and optional switches} {-help {} -helpret -synopsiscmd convert} {
+{-output= -required}
+-format=
+-compress
+input
+{columns -catchall}} {-help} {convert -output value ?-format value? ?-compress? input ?columns ...?} synopsisText
+
+testTemplate synopsisTest-2 {optional value is nested inside optional switch} {-help {} -helpret -synopsiscmd cmd} {
+-value?
+{-required? -required}
+{file -optional}} {-help} {cmd ?-value ?value?? -required ?value? ?file?} synopsisText
+
+testTemplate synopsisTest-3 {catchall switch consumes zero or more values} {-help {} -helpret -synopsiscmd cmd} {
+-rest*} {-help} {cmd ?-rest ?value ...??} synopsisText
+
+testTemplate synopsisTest-4 {required catchall switch still permits zero values} {-help {} -helpret -synopsiscmd cmd} {
+{-rest* -required}} {-help} {cmd -rest ?value ...?} synopsisText
+
+testTemplate synopsisTest-5 {required positional catchall needs at least one value}\
+        {-help {} -helpret -synopsiscmd cmd} {
+{files -catchall -required}} {-help} {cmd files ?files ...?} synopsisText
+
+testTemplate synopsisTest-6 {pfirst stably partitions parameters around switches}\
+        {-help {} -helpret -synopsiscmd cmd -pfirst} {
+{before -optional}
+first
+-flag
+second
+{rest -catchall}} {-help} {cmd first second ?-flag? ?before? ?rest ...?} synopsisText
+
+testTemplate synopsisTest-7 {mixed uses representative switches-first order}\
+        {-help {} -helpret -synopsiscmd cmd -mixed} {
+{before -optional}
+first
+-flag
+second} {-help} {cmd ?-flag? ?before? first second} synopsisText
+
+testTemplate synopsisTest-8 {aliases long syntax equalarg and defaults do not change canonical spelling}\
+        {-help {} -helpret -synopsiscmd cmd -long -equalarg -boolean} {
+{-o|output= -default default.txt}
+-quiet} {--help} {cmd ?-output value? ?-quiet?} synopsisText
+
+testTemplate synopsisTest-9 {hidden required elements are omitted from synopsis too}\
+        {-help {} -helpret -synopsiscmd cmd} {
+{-secret= -required -hsuppress}
+{hidden -hsuppress}
+visible} {-help} {cmd visible} synopsisText
+
+testTemplate synopsisTest-10 {explicit pass-through suffix} {-help {} -helpret -synopsiscmd cmd -pass rest} {
+-flag
+input} {-help} {cmd ?-flag? input ?arg ...?} synopsisText
+
+testTemplate synopsisTest-11 {overlapping constraints do not invent alternatives} {-help {} -helpret -synopsiscmd cmd} {
+{-a -forbid b}
+{-b -forbid c}
+-c} {-help} {cmd ?-a? ?-b? ?-c?} synopsisText
+
+testTemplate synopsisTest-12 {contradictory required and allow rules are not solved}\
+        {-help {} -helpret -synopsiscmd cmd} {
+{-a= -required}
+{-b -allow {}}} {-help} {cmd -a value ?-b?} synopsisText
+
+testTemplate synopsisTest-13 {shared keys and reciprocal requirements remain detailed constraints}\
+        {-help {} -helpret -synopsiscmd cmd -reciprocal} {
+{-a -key mode -require c}
+{-b -key mode}
+-c} {-help} {cmd ?-a? ?-b? ?-c?} synopsisText
+
+testTemplate synopsisTest-14 {imply and standalone do not rewrite the structural form}\
+        {-help {} -helpret -synopsiscmd cmd} {
+{-b= -imply -c}
+{-c= -required}
+{-version -standalone}} {-help} {cmd ?-b value? -c value ?-version?} synopsisText
+
+testTemplate synopsisTest-15 {manual arguments keep automatic caller name}\
+        {-help {} -helpret -synopsis {input ?output?}} {
+-flag} {-help} {templateProc input ?output?} synopsisText
+
+testTemplate synopsisTest-16 {explicit multiword command with manual argument form}\
+        {-help {} -helpret -synopsiscmd {tools convert} -synopsis {?-o file? input}} {
+-output=
+input} {-help} {tools convert ?-o file? input} synopsisText
+
+testTemplate synopsisTest-17 {empty manual arguments retain explicit command}\
+        {-help {} -helpret -synopsiscmd {tools convert} -synopsis {}} {
+input} {-help} {tools convert} synopsisText
+
+testTemplate synopsisTest-18 {empty command retains generated argument form} {-help {} -helpret -synopsiscmd {}} {
+-flag
+input} {-help} {?-flag? input} synopsisText
+
+testTemplate synopsisTest-19 {empty definition retains automatic name} {-help {} -helpret} {} {-help} {templateProc}\
+        synopsisText
+
+testTemplate synopsisTest-20 {manual text is data, not evaluated or title-cased}\
+        {-help {} -helpret -synopsiscmd {$cmd; [error BOOM]} -synopsis {$args [error BOOM]}}\
+        {} {-help} {$cmd; [error BOOM] $args [error BOOM]} synopsisText
+
+testTemplate synopsisTest-21 {manual synopsis requires enabled help even on normal calls}\
+        {-synopsis text} {} {} {-synopsis requires -help}
+
+testTemplate synopsisTest-22 {explicit command requires enabled help even on normal calls}\
+        {-synopsiscmd cmd} {} {} {-synopsiscmd requires -help}
+
+testTemplate synopsisTest-23 {synopsis options do not affect ordinary parsing}\
+        {-help {} -synopsis {custom text} -synopsiscmd {tools convert}} {
+-output=
+input} {-output out in} {input in output out}
+
+# Invocation contexts
+test synopsis-inference-contexts {top level, namespaced proc, wrapper, ensemble and method} -setup {
+    interp create synopsisInterp
+    synopsisInterp eval [list set auto_path $auto_path]
+    synopsisInterp eval {package require argparse}
+} -body {
+    synopsisInterp eval {
+        proc prefix {text} {
+            string range $text 0 [expr {[string first "\n\n" $text] - 1}]
+        }
+        namespace eval tools {
+            proc impl {args} {
+                argparse -help {} -helpret -synopsis {input} {} {-help}
+            }
+            namespace ensemble create -command ::tools -map {convert ::tools::impl}
+        }
+        proc wrapper {} {
+            tools::impl
+        }
+        oo::class create Converter {
+            method convert {} {
+                argparse -help {} -helpret -synopsis {input} {} {-help}
+            }
+        }
+        Converter create obj
+        set results [list [prefix [argparse -help {} -helpret -helplevel 1 -synopsis {input} {} {-help}]]\
+                             [prefix [tools::impl]] [prefix [wrapper]] [prefix [tools convert]]\
+                             [prefix [tools conv]] [prefix [obj convert]]]
+        set results
+    }
+} -cleanup {
+    interp delete synopsisInterp
+} -result {{command input} {tools::impl input} {tools::impl input} {::tools::impl input} {::tools::impl input}\
+                   {::obj convert input}}
+
+test synopsis-inference-wrapper {immediate parser wrapper is not skipped} -setup {
+    proc synopsisWrapper {} {
+        argparse -help {} -helpret -synopsis {input} {} {-help}
+    }
+    proc synopsisPublic {} {
+        synopsisWrapper
+    }
+} -body {
+    synopsisText [synopsisPublic]
+} -cleanup {
+    rename synopsisWrapper {}
+    rename synopsisPublic {}
+} -result {synopsisWrapper input}
+
+test synopsis-constraints-description {all requirements and simultaneous allow rule are visible} -body {
+    set text [argparse -help {} -helpret -helplevel 1 -synopsiscmd cmd {
+        {-a -require {b c} -allow {b c}}
+        -b
+        -c
+    } {-help}]
+    list [string match {*Requires b and c.*} $text] [string match {*Allows b or c.*} $text]
+} -result {1 1}
+
+test synopsis-wrap {long synopsis wraps with four-space continuation and preserves case} -body {
+    set text [synopsisText [argparse -help {} -helpret -helplevel 1 -synopsiscmd lowerCase\
+                                    -synopsis [join [lrepeat 20 {?-option value?}]] {} {-help}]]
+    set lines [split $text \n]
+    set valid [expr {[llength $lines] > 1 && [string match {lowerCase *} [lindex $lines 0]]}]
+    foreach line [lrange $lines 1 end] {
+        if {![string match {    *} $line] || [string length $line] > 80} {
+            set valid 0
+        }
+    }
+    set valid
+} -result 1
+
+test synopsis-missing-values {both new switches diagnose missing values} -body {
+    set results {}
+    foreach option {-synopsis -synopsiscmd} {
+        catch {argparse $option} message
+        lappend results $message
+    }
+    set results
+} -result {{-synopsis requires an argument} {-synopsiscmd requires an argument}}
+
+test synopsis-cache-callers {cached definitions do not cache caller names or override text} -setup {
+    proc synopsisOne {} {
+        argparse -help {} -helpret {-flag} {-help}
+    }
+    proc synopsisTwo {} {
+        argparse -help {} -helpret {-flag} {-help}
+    }
+} -body {
+    set results [list [synopsisText [synopsisOne]] [synopsisText [synopsisTwo]]]
+    foreach name {first second} text {{arg ?arg?} {input ...}} {
+        lappend results [synopsisText [argparse -help {} -helpret -helplevel 1 -synopsiscmd $name -synopsis $text\
+                                               {-flag} {-help}]]
+    }
+    set results
+} -cleanup {
+    rename synopsisOne {}
+    rename synopsisTwo {}
+} -result {{synopsisOne ?-flag?} {synopsisTwo ?-flag?} {first arg ?arg?} {second input ...}}
+
+test synopsis-empty-parts {both empty parts suppress the paragraph without an extra blank line} -body {
+    string match {Description.*} [argparse -help Description -helpret -helplevel 1 -synopsis {} -synopsiscmd {} {}\
+                                          {-help}]
+} -result 1
+
+test synopsis-no-caller-variables {inference does not create variables in the caller frame} -setup {
+    proc synopsisLocals {} {
+        set before [lsort [info locals]]
+        set text [argparse -help {} -helpret -helplevel 1 {} {-help}]
+        unset text before
+        info locals
+    }
+} -body {
+    synopsisLocals
+} -cleanup {
+    rename synopsisLocals {}
+} -result {}
+
+# Compare complete returned AND printed messages, including inference, wrapping,
+# constraints and both manual fields, against an independently loaded backend.
+test synopsis-backend-parity {native and reference help agree across tricky definitions} -setup {
+    set source [file join $currentDir .. argparse.tcl]
+    foreach backend {synopsisInstalled synopsisReference} {
+        interp create $backend
+        $backend eval [list set auto_path $auto_path]
+        if {$backend eq {synopsisInstalled}} {
+            $backend eval {package require argparse}
+        } else {
+            $backend eval [list source $source]
+        }
+        $backend eval {
+            rename puts savedPuts
+            proc puts {text} {lappend ::output $text}
+            proc invoke {options definition argv} {
+                set ::output {}
+                set code [catch {argparse -help {} -helplevel 1 {*}$options $definition $argv} value opts]
+                list $code $value [dict get $opts -level] $::output
+            }
+            namespace eval public {
+                proc implementation {args} {argparse -help {} -helpret {-flag} {-help}}
+                namespace ensemble create -command ::public -map {run ::public::implementation}
+            }
+            oo::class create Probe {
+                method run {} {argparse -help {} -helpret {-flag} {-help}}
+                method override {} {
+                    argparse -help {} -helpret -synopsiscmd {public run} {-flag} {-help}
+                }
+            }
+            Probe create object
+        }
+    }
+} -body {
+    set same 1
+    set cases {
+        {{} {{-a -require {b c} -allow {b c}} -b -c} {-help}}
+        {{-pfirst} {{extra -optional} first -flag second rest*} {-help}}
+        {{-mixed -pass rest} {-flag input files*} {-help}}
+        {{-long -equalarg} {-v|verbose -o|output=} {--help}}
+        {{} {{-b= -imply -c} {-c= -required} {-version -standalone}} {-help}}
+        {{} {{-a -key mode -require c -reciprocal} {-b -key mode} -c} {-help}}
+        {{} {{secret -hsuppress} {-value? -required} files*!} {-help}}
+        {{-synopsiscmd {public run} -synopsis {$x [error BAD] ?file?}} {} {-help}}
+        {{-synopsiscmd {} -synopsis {}} {} {-help}}
+    }
+    lappend cases [list [list -synopsiscmd lowerCase -synopsis [string repeat {?-flag value? } 20]] {} {-help}]
+    foreach case $cases {
+        lassign $case options definition argv
+        foreach mode {{} -helpret} {
+            set script [list invoke [concat $options $mode] $definition $argv]
+            set actual [synopsisInstalled eval $script]
+            if {([lindex $actual 0] != 0) || ($actual ne [synopsisReference eval $script])} {
+                set same 0
+            }
+        }
+    }
+    foreach script {{public run} {public r} {object run} {object override}} {
+        if {[synopsisInstalled eval $script] ne [synopsisReference eval $script]} {
+            set same 0
+        }
+    }
+    set same
+} -cleanup {
+    interp delete synopsisInstalled synopsisReference
+} -result 1
+
+rename synopsisText {}
 
 cleanupTests

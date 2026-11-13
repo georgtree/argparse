@@ -108,13 +108,14 @@ namespace eval ::argparse {
         variable and stores the results into local variables having the same [names][Name] as the various
         [elements][Element] of the [definition][Definition].
 
-        Here, the definition is a list of four elements, named `salutation`, `modifier`, `title`, and `subject`. Because
-        their names are prefixed with `-`, `salutation`, `modifier`, and `title` are [switches][Switch], whereas
-        `subject`, lacking a `-` prefix, is a [parameter][Parameter]. Two of the switches are given a `=` suffix, which
-        means they each take an [argument][Argument], whereas `title` does not. In addition to these [flag][Shorthand flag]
-        characters, the `salutation` element is surrounded with braces because it contains more list words used to
-        further customize how it is handled. Namely, it uses the `-default` [element switch][Element Switches] to set
-        its default value to `hello`, in case `-salutation` is not present in the argument list.
+        Here, the definition is a list of four elements, named `salutation`, `modifier`, `title`, and
+        `subject`. Because their names are prefixed with `-`, `salutation`, `modifier`, and `title` are
+        [switches][Switch], whereas `subject`, lacking a `-` prefix, is a [parameter][Parameter]. Two of the switches
+        are given a `=` suffix, which means they each take an [argument][Argument], whereas `title` does not. In
+        addition to these [flag][Shorthand flag] characters, the `salutation` element is surrounded with braces because
+        it contains more list words used to further customize how it is handled. Namely, it uses the `-default`
+        [element switch][Element Switches] to set its default value to `hello`, in case `-salutation` is not present in
+        the argument list.
 
         By default, switches are optional and parameters are required. `salutation`, `modifier`, and `title`, being
         switches, are all optional, but since `salutation` has a default value, its variable's existence is therefore
@@ -451,6 +452,8 @@ namespace eval ::argparse {
         | `-enum enumDef`            | Define named enumeration lists to be used by elements                                    |
         | `-help description`        | Enable help message generating when `-help` argument is provided                         |
         | `-helplevel value`         | Set `-level` option for return command in help evaluation                                |
+        | `-synopsis text`           | Override the argument synopsis; requires `-help`                                         |
+        | `-synopsiscmd command`     | Override the displayed command name; requires `-help`                                    |
         | `-helpret`                 | Set to return help message as a return value of procedure instead of putting into stdout |
         | `--`                       | Force next argument to be interpreted as the definition list                             |
         #ruffopt excludedformats {}
@@ -494,6 +497,10 @@ namespace eval ::argparse {
         ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
         │ -helplevel value         │ Set -level option for return command in help evaluation                                   │
         ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+        │ -synopsis text           │ Override the argument synopsis; requires -help                                            │
+        ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+        │ -synopsiscmd command     │ Override the displayed command name; requires -help                                       │
+        ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
         │ -helpret                 │ Set to return help message as a return value of procedure instead of putting into stdout  │
         ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
         │ --                       │ Force next argument to be interpreted as the definition list                              │
@@ -523,36 +530,36 @@ namespace eval ::argparse {
         ## Element Switches
 
         #ruffopt excludedformats nroff
-        | Switch                     | Description                                                                             |
-        |:---------------------------|:----------------------------------------------------------------------------------------|
-        | `-switch`                  | Element is a switch; conflicts with `-parameter`                                        |
-        | `-parameter`               | Element is a parameter; conflicts with `-switch`                                        |
-        | `-alias aliasName`         | Alias names; requires `-switch`                                                         |
-        | `-ignore`                  | Element is omitted from result; conflicts with `-key` and `-pass`                       |
-        | `-key keyName`             | Override key name; not affected by `-template`                                          |
-        | `-pass keyName`            | Pass through to result key; not affected by `-template`                                 |
-        | `-default value`           | Value if omitted; conflicts with `-required` and `-keep`                                |
-        | `-keep`                    | Do not unset if omitted; requires `-optional`; conflicts `-inline`                      |
-        | `-value value`             | Value if present; requires `-switch`; conflicts with `-argument`                        |
-        | `-boolean`                 | Equivalent to `-default 0 -value 1`                                                     |
-        | `-argument`                | Value is next argument following switch; requires `-switch`                             |
-        | `-optional`                | Switch value is optional, or parameter is optional                                      |
-        | `-required`                | Switch is required, or stop `-catchall` from implying `-optional`                       |
-        | `-catchall`                | Value is list of all otherwise unassigned arguments                                     |
-        | `-upvar`                   | Links caller variable; conflicts with `-inline` and `-catchall`                         |
-        | `-level levelSpec`         | This element's `[upvar]` level; requires `-upvar`                                       |
-        | `-standalone`              | If element is present, ignore `-required`, `-require`, `-forbid` and `-allow`           |
-        | `-require nameList`        | If element is present, other elements that must be present                              |
-        | `-forbid nameList`         | If element is present, other elements that must not be present                          |
-        | `-allow nameList`          | If element is present, other elements that is not in the `nameList` must not be present |
-        | `-imply argList`           | If element is present, extra switch arguments; requires `-switch`                       |
-        | `-reciprocal`              | This element's `-require` is reciprocal; requires `-require`                            |
-        | `-validate validNameOrDef` | Name of validation expression, or inline validation definition                          |
-        | `-errormsg message`        | Custom error message that replaces the default one; requires `-validate`                |
-        | `-enum enumNameOrDef`      | Name of enumeration list, or inline enumeration definition                              |
-        | `-type typeName`           | Validate value according to type defined in [string is][string] command, requires `-argument`   |
-        | `-help description`        | Provide description to element that is displayed when help message is generated         |
-        | `-hsuppress`               | Suppress help generation for certain element                                            |
+        | Switch                     | Description                                                                                   |
+        |:---------------------------|:----------------------------------------------------------------------------------------------|
+        | `-switch`                  | Element is a switch; conflicts with `-parameter`                                              |
+        | `-parameter`               | Element is a parameter; conflicts with `-switch`                                              |
+        | `-alias aliasName`         | Alias names; requires `-switch`                                                               |
+        | `-ignore`                  | Element is omitted from result; conflicts with `-key` and `-pass`                             |
+        | `-key keyName`             | Override key name; not affected by `-template`                                                |
+        | `-pass keyName`            | Pass through to result key; not affected by `-template`                                       |
+        | `-default value`           | Value if omitted; conflicts with `-required` and `-keep`                                      |
+        | `-keep`                    | Do not unset if omitted; requires `-optional`; conflicts `-inline`                            |
+        | `-value value`             | Value if present; requires `-switch`; conflicts with `-argument`                              |
+        | `-boolean`                 | Equivalent to `-default 0 -value 1`                                                           |
+        | `-argument`                | Value is next argument following switch; requires `-switch`                                   |
+        | `-optional`                | Switch value is optional, or parameter is optional                                            |
+        | `-required`                | Switch is required, or stop `-catchall` from implying `-optional`                             |
+        | `-catchall`                | Value is list of all otherwise unassigned arguments                                           |
+        | `-upvar`                   | Links caller variable; conflicts with `-inline` and `-catchall`                               |
+        | `-level levelSpec`         | This element's `[upvar]` level; requires `-upvar`                                             |
+        | `-standalone`              | If element is present, ignore `-required`, `-require`, `-forbid` and `-allow`                 |
+        | `-require nameList`        | If element is present, other elements that must be present                                    |
+        | `-forbid nameList`         | If element is present, other elements that must not be present                                |
+        | `-allow nameList`          | If element is present, other elements that is not in the `nameList` must not be present       |
+        | `-imply argList`           | If element is present, extra switch arguments; requires `-switch`                             |
+        | `-reciprocal`              | This element's `-require` is reciprocal; requires `-require`                                  |
+        | `-validate validNameOrDef` | Name of validation expression, or inline validation definition                                |
+        | `-errormsg message`        | Custom error message that replaces the default one; requires `-validate`                      |
+        | `-enum enumNameOrDef`      | Name of enumeration list, or inline enumeration definition                                    |
+        | `-type typeName`           | Validate value according to type defined in [string is][string] command, requires `-argument` |
+        | `-help description`        | Provide description to element that is displayed when help message is generated               |
+        | `-hsuppress`               | Suppress help generation for certain element                                                  |
         #ruffopt excludedformats {}
 
         #ruffopt includedformats nroff
@@ -1109,6 +1116,8 @@ namespace eval ::argparse {
         ```
 
         ```text
+        genNums ?-from value? ?-to value? ?-step value? ?-prec value?
+
         Procedure generates sequence of numbers.. Can accepts unambiguous prefixes
         instead of switches names. Accepts switches only before parameters.
             Switches:
@@ -1151,6 +1160,8 @@ namespace eval ::argparse {
         ```
 
         ```text
+        sheduleEvent ?-allday? ?-duration value? ?-endtime value? date time
+
         Procedure shedules event at cetain date. At least one of the switches must be
         provided: -allday, -duration or -endtime. Can accepts unambiguous prefixes
         instead of switches names. Accepts switches only before parameters.
@@ -1168,6 +1179,186 @@ namespace eval ::argparse {
                 date - Provides date in format DD-MM-YY.
                 time - Provides time in format HH:MM.
         ```
+
+        ## Help Synopsis
+
+        When help is enabled with the global `-help description` switch, the help message begins with a structural
+        synopsis, followed by a blank line and the existing description, switches, and parameters. This behavior is
+        the same in the C and Tcl implementations. The synopsis is generated only when help is requested; it does not
+        change parsing or validation.
+
+        ### Conventions
+
+        The synopsis uses Tcl manual conventions. Question marks delimit optional material; they are not literal
+        characters to type. A bare item is required in the ordinary structural form. `value` and parameter names
+        are placeholders, not literal arguments. An ellipsis means repetition, not a literal argument.
+
+        - An optional flag is shown as `?-verbose?`.
+        - An optional switch taking a required value is `?-output value?`.
+        - A required switch taking a value is `-output value`.
+        - An optional switch with an optional value is `?-option ?value??`. The outer question marks make the
+          switch optional; the inner pair makes its value optional. This does not change the existing consumption
+          rule: if an argument is available to the switch, it is consumed, even if it resembles another switch.
+        - A required parameter is `input`; an optional parameter is `?input?`.
+        - An optional catchall parameter is `?files ...?`; a required catchall parameter is `files ?files ...?`.
+          The latter requires at least one value.
+        - An optional catchall switch is `?-rest ?value ...??`; a required catchall switch is
+          `-rest ?value ...?`. Requiring the switch does not require a nonempty collection of values.
+        - Global `-pass` adds `?arg ...?` for otherwise unassigned arguments. Consult the pass-through rules for
+          unknown switches and argument assignment; the suffix does not make every argument sequence valid.
+
+        Switches appear in definition order, followed by parameters in definition order. With `-pfirst`, required
+        parameters appear first, then switches, then optional parameters; order within each group is preserved.
+        With `-mixed`, the synopsis still shows a representative switches-first layout, but switches may occur
+        after parameters as explained in the detailed help. Catchall allocation and the reservation of required
+        parameter values follow the normal parsing rules; the synopsis is not an executable grammar.
+
+        Only canonical single-dash switch names are shown. Aliases, abbreviated names, `--name` alternatives enabled
+        by `-long`, and `-name=value` alternatives enabled by `-equalarg` remain supported. Defaults do not make a
+        switch required. `-hsuppress` hides an element from both the synopsis and detailed help, even if it is
+        required. The built-in help switch is described below the synopsis, rather than included in its argument
+        list. Long synopsis text is wrapped at whitespace, with four-space continuation indentation; a single long
+        word is not split. Letter case is preserved.
+
+        For example:
+
+        ```tcl
+        proc convert {args} {
+            argparse -help {Convert an input file} {
+                {-output= -required}
+                -format=
+                -compress
+                input
+                {columns -catchall}
+            }
+        }
+        convert -help
+        ```
+
+        The first paragraph is:
+
+        ```text
+        convert -output value ?-format value? ?-compress? input ?columns ...?
+        ```
+
+        ### Command name and manual argument text
+
+        Two independent global switches control the two parts of the synopsis:
+
+        - `-synopsiscmd command` supplies the displayed command name or command prefix. It always overrides
+          inference, and leaves the argument synopsis automatically generated unless `-synopsis` is also supplied.
+        - `-synopsis text` supplies only the argument portion. It does not contain the command name and does not
+          replace the other help sections.
+
+        Both switches require the global `-help` switch, even on a call that does not request help. Otherwise the
+        parser reports `-synopsiscmd requires -help` or `-synopsis requires -help`. An empty help description is
+        sufficient: `-help {}`. Supplying either switch without its value is an error.
+
+        Both values are plain display text: they are not evaluated, substituted, or checked against the argument
+        definition. Brace text containing dollar signs, brackets, or semicolons when calling argparse, so Tcl itself
+        does not substitute it before the call. Normal whitespace wrapping still applies; this is not a verbatim
+        multiline-layout facility. Leading and trailing whitespace around the combined synopsis is removed.
+
+        An empty `-synopsis {}` displays only the command name. An empty `-synopsiscmd {}` displays only the
+        argument portion. Supplying both as empty strings suppresses the synopsis paragraph entirely.
+
+        To retain generated arguments but override the command prefix:
+
+        ```tcl
+        argparse -help {Convert an input file} -synopsiscmd {tools convert} {
+            -output=
+            input
+            {columns -catchall}
+        }
+        ```
+
+        The synopsis is:
+
+        ```text
+        tools convert ?-output value? input ?columns ...?
+        ```
+
+        To override both parts independently:
+
+        ```tcl
+        argparse -help {Convert an input file} -synopsiscmd {tools convert}\
+                -synopsis {?-output filename? input ?column ...?} {
+            -output=
+            input
+            {columns -catchall}
+        }
+        ```
+
+        ### Automatic inference and ensembles
+
+        Without `-synopsiscmd`, argparse inspects its immediate caller. For a procedure it uses the first word of
+        that invocation, preserving the spelling Tcl exposes there, including namespace qualifiers. Actual argument
+        values are never included. A wrapper procedure is not skipped: if `convert` calls `parseOptions`, and
+        `parseOptions` calls argparse, the inferred command is `parseOptions`.
+
+        In a normal TclOO method, inference uses the fully qualified object name and the current method name.
+        Constructors and destructors use the ordinary first-invocation-word fallback, which may not describe the
+        public creation command; use `-synopsiscmd` there. At top level there is no caller procedure, so the fallback
+        is `command`, not the script filename. Other dispatch mechanisms, aliases, and forwarding commands may
+        expose implementation names rather than the user-facing command. Explicit names are recommended whenever
+        the public invocation matters.
+
+        Ensemble dispatch generally exposes the mapped implementation command. Its public name cannot be recovered
+        reliably: several ensembles or subcommands can map to the same procedure, and the procedure may also be
+        called directly. The original source text may contain variable substitutions rather than command names.
+        argparse does not scan ensemble maps or evaluate source text to guess the public invocation.
+
+        Specify the public prefix in the implementation:
+
+        ```tcl
+        namespace eval tools {
+            proc convertImpl {args} {
+                argparse -help {Convert an input file} -synopsiscmd {tools convert} {
+                    -output=
+                    input
+                }
+            }
+            namespace ensemble create -command ::tools -map {convert ::tools::convertImpl}
+        }
+        tools convert -help
+        ```
+
+        The synopsis is `tools convert ?-output value? input`. Without the override it would use
+        `::tools::convertImpl`, including when the ensemble subcommand is abbreviated to `conv`.
+
+        ### Structural limits and constraints
+
+        The synopsis summarizes individual elements; it does not promise that every displayed combination is legal.
+        Detailed help remains authoritative for `-require`, `-allow`, and `-forbid`. In particular,
+        `-require {b c}` requires both elements, while `-allow {b c}` permits only those other elements when its
+        owning element is present; it does not require either one. Positional parameters participate in these
+        constraints too. Every active allow rule must be satisfied. If an element has both require and allow rules,
+        both are included in its description. Shared-key conflicts and reciprocal requirements also remain in the
+        detailed descriptions rather than being converted into synopsis alternatives.
+
+        For example:
+
+        ```tcl
+        argparse -help {Select features} -synopsiscmd select {
+            {-a -forbid b}
+            {-b -forbid c}
+            -c
+        }
+        ```
+
+        The synopsis is `select ?-a? ?-b? ?-c?`. The pair `-a -c` is legal, whereas `-a -b` and `-b -c` are not.
+        The generator deliberately does not invent an alternative group that would exclude the legal pair.
+        Contradictory definitions are not diagnosed by synopsis generation: a required switch that another switch
+        forbids is still shown as required.
+
+        `-standalone` can waive requirements and conflicts at runtime, and `-imply` can supply required switches
+        indirectly or consume additional values. Their effects are not expanded into the generated synopsis.
+
+        For example, `{-b= -imply -c}` together with `{-c= -required}` is structurally shown as `?-b value? -c value`,
+        even though `-b first second` supplies both values through implication.  Use `-synopsis` to describe such
+        special modes precisely. Custom validation and checks performed by the calling procedure are also outside the
+        generator's scope. A manually supplied synopsis documents those rules; it does not enforce them or change
+        parser behavior.
 
         ## Argument Processing Sequence
 

@@ -116,13 +116,14 @@ accept args\&.  When not explicitly given an argument list to parse, argparse pa
 variable and stores the results into local variables having the same \fInames\fP as the various
 \fIelements\fP of the \fIdefinition\fP\&.
 .PP
-Here, the definition is a list of four elements, named salutation, modifier, title, and subject\&. Because
-their names are prefixed with -, salutation, modifier, and title are \fIswitches\fP, whereas
-subject, lacking a - prefix, is a \fIparameter\fP\&. Two of the switches are given a = suffix, which
-means they each take an \fIargument\fP, whereas title does not\&. In addition to these \fIflag\fP
-characters, the salutation element is surrounded with braces because it contains more list words used to
-further customize how it is handled\&. Namely, it uses the -default \fIelement switch\fP to set
-its default value to hello, in case -salutation is not present in the argument list\&.
+Here, the definition is a list of four elements, named salutation, modifier, title, and
+subject\&. Because their names are prefixed with -, salutation, modifier, and title are
+\fIswitches\fP, whereas subject, lacking a - prefix, is a \fIparameter\fP\&. Two of the switches
+are given a = suffix, which means they each take an \fIargument\fP, whereas title does not\&. In
+addition to these \fIflag\fP characters, the salutation element is surrounded with braces because
+it contains more list words used to further customize how it is handled\&. Namely, it uses the -default
+\fIelement switch\fP to set its default value to hello, in case -salutation is not present in
+the argument list\&.
 .PP
 By default, switches are optional and parameters are required\&. salutation, modifier, and title, being
 switches, are all optional, but since salutation has a default value, its variable's existence is therefore
@@ -487,6 +488,10 @@ Comment is the \fIelement\fP started with # at the start of definition in the de
 │ -help description        │ Enable help message generating when -help argument is provided                            │
 ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
 │ -helplevel value         │ Set -level option for return command in help evaluation                                   │
+├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ -synopsis text           │ Override the argument synopsis; requires -help                                            │
+├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ -synopsiscmd command     │ Override the displayed command name; requires -help                                       │
 ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
 │ -helpret                 │ Set to return help message as a return value of procedure instead of putting into stdout  │
 ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
@@ -1107,6 +1112,8 @@ genNums -help
 .PP
 .RS 4n
 .nf
+genNums ?-from value? ?-to value? ?-step value? ?-prec value?
+
 Procedure generates sequence of numbers\&.\&. Can accepts unambiguous prefixes
 instead of switches names\&. Accepts switches only before parameters\&.
     Switches:
@@ -1150,6 +1157,8 @@ sheduleEvent -help
 .PP
 .RS 4n
 .nf
+sheduleEvent ?-allday? ?-duration value? ?-endtime value? date time
+
 Procedure shedules event at cetain date\&. At least one of the switches must be
 provided: -allday, -duration or -endtime\&. Can accepts unambiguous prefixes
 instead of switches names\&. Accepts switches only before parameters\&.
@@ -1168,6 +1177,205 @@ instead of switches names\&. Accepts switches only before parameters\&.
         time - Provides time in format HH:MM\&.
 .fi
 .RE
+.SH "HELP SYNOPSIS"
+.PP
+When help is enabled with the global -help description switch, the help message begins with a structural
+synopsis, followed by a blank line and the existing description, switches, and parameters\&. This behavior is
+the same in the C and Tcl implementations\&. The synopsis is generated only when help is requested; it does not
+change parsing or validation\&.
+.SS CONVENTIONS
+.PP
+The synopsis uses Tcl manual conventions\&. Question marks delimit optional material; they are not literal
+characters to type\&. A bare item is required in the ordinary structural form\&. value and parameter names
+are placeholders, not literal arguments\&. An ellipsis means repetition, not a literal argument\&.
+.TP
+\(bu
+An optional flag is shown as ?-verbose?\&.
+.TP
+\(bu
+An optional switch taking a required value is ?-output value?\&.
+.TP
+\(bu
+A required switch taking a value is -output value\&.
+.TP
+\(bu
+An optional switch with an optional value is ?-option ?value??\&. The outer question marks make the switch optional; the inner pair makes its value optional\&. This does not change the existing consumption rule: if an argument is available to the switch, it is consumed, even if it resembles another switch\&.
+.TP
+\(bu
+A required parameter is input; an optional parameter is ?input?\&.
+.TP
+\(bu
+An optional catchall parameter is ?files \&.\&.\&.?; a required catchall parameter is files ?files \&.\&.\&.?\&. The latter requires at least one value\&.
+.TP
+\(bu
+An optional catchall switch is ?-rest ?value \&.\&.\&.??; a required catchall switch is -rest ?value \&.\&.\&.?\&. Requiring the switch does not require a nonempty collection of values\&.
+.TP
+\(bu
+Global -pass adds ?arg \&.\&.\&.? for otherwise unassigned arguments\&. Consult the pass-through rules for unknown switches and argument assignment; the suffix does not make every argument sequence valid\&.
+.PP
+Switches appear in definition order, followed by parameters in definition order\&. With -pfirst, required
+parameters appear first, then switches, then optional parameters; order within each group is preserved\&.
+With -mixed, the synopsis still shows a representative switches-first layout, but switches may occur
+after parameters as explained in the detailed help\&. Catchall allocation and the reservation of required
+parameter values follow the normal parsing rules; the synopsis is not an executable grammar\&.
+.PP
+Only canonical single-dash switch names are shown\&. Aliases, abbreviated names, --name alternatives enabled
+by -long, and -name=value alternatives enabled by -equalarg remain supported\&. Defaults do not make a
+switch required\&. -hsuppress hides an element from both the synopsis and detailed help, even if it is
+required\&. The built-in help switch is described below the synopsis, rather than included in its argument
+list\&. Long synopsis text is wrapped at whitespace, with four-space continuation indentation; a single long
+word is not split\&. Letter case is preserved\&.
+.PP
+For example:
+.PP
+.RS 4n
+.nf
+proc convert {args} {
+    argparse -help {Convert an input file} {
+        {-output= -required}
+        -format=
+        -compress
+        input
+        {columns -catchall}
+    }
+}
+convert -help
+.fi
+.RE
+.PP
+The first paragraph is:
+.PP
+.RS 4n
+.nf
+convert -output value ?-format value? ?-compress? input ?columns \&.\&.\&.?
+.fi
+.RE
+.SS "COMMAND NAME AND MANUAL ARGUMENT TEXT"
+.PP
+Two independent global switches control the two parts of the synopsis:
+.TP
+\(bu
+-synopsiscmd command supplies the displayed command name or command prefix\&. It always overrides inference, and leaves the argument synopsis automatically generated unless -synopsis is also supplied\&.
+.TP
+\(bu
+-synopsis text supplies only the argument portion\&. It does not contain the command name and does not replace the other help sections\&.
+.PP
+Both switches require the global -help switch, even on a call that does not request help\&. Otherwise the
+parser reports -synopsiscmd requires -help or -synopsis requires -help\&. An empty help description is
+sufficient: -help {}\&. Supplying either switch without its value is an error\&.
+.PP
+Both values are plain display text: they are not evaluated, substituted, or checked against the argument
+definition\&. Brace text containing dollar signs, brackets, or semicolons when calling argparse, so Tcl itself
+does not substitute it before the call\&. Normal whitespace wrapping still applies; this is not a verbatim
+multiline-layout facility\&. Leading and trailing whitespace around the combined synopsis is removed\&.
+.PP
+An empty -synopsis {} displays only the command name\&. An empty -synopsiscmd {} displays only the
+argument portion\&. Supplying both as empty strings suppresses the synopsis paragraph entirely\&.
+.PP
+To retain generated arguments but override the command prefix:
+.PP
+.RS 4n
+.nf
+argparse -help {Convert an input file} -synopsiscmd {tools convert} {
+    -output=
+    input
+    {columns -catchall}
+}
+.fi
+.RE
+.PP
+The synopsis is:
+.PP
+.RS 4n
+.nf
+tools convert ?-output value? input ?columns \&.\&.\&.?
+.fi
+.RE
+.PP
+To override both parts independently:
+.PP
+.RS 4n
+.nf
+argparse -help {Convert an input file} -synopsiscmd {tools convert} -synopsis {?-output filename? input ?column \&.\&.\&.?} {
+    -output=
+    input
+    {columns -catchall}
+}
+.fi
+.RE
+.SS "AUTOMATIC INFERENCE AND ENSEMBLES"
+.PP
+Without -synopsiscmd, argparse inspects its immediate caller\&. For a procedure it uses the first word of
+that invocation, preserving the spelling Tcl exposes there, including namespace qualifiers\&. Actual argument
+values are never included\&. A wrapper procedure is not skipped: if convert calls parseOptions, and
+parseOptions calls argparse, the inferred command is parseOptions\&.
+.PP
+In a normal TclOO method, inference uses the fully qualified object name and the current method name\&.
+Constructors and destructors use the ordinary first-invocation-word fallback, which may not describe the
+public creation command; use -synopsiscmd there\&. At top level there is no caller procedure, so the fallback
+is command, not the script filename\&. Other dispatch mechanisms, aliases, and forwarding commands may
+expose implementation names rather than the user-facing command\&. Explicit names are recommended whenever
+the public invocation matters\&.
+.PP
+Ensemble dispatch generally exposes the mapped implementation command\&. Its public name cannot be recovered
+reliably: several ensembles or subcommands can map to the same procedure, and the procedure may also be
+called directly\&. The original source text may contain variable substitutions rather than command names\&.
+argparse does not scan ensemble maps or evaluate source text to guess the public invocation\&.
+.PP
+Specify the public prefix in the implementation:
+.PP
+.RS 4n
+.nf
+namespace eval tools {
+    proc convertImpl {args} {
+        argparse -help {Convert an input file} -synopsiscmd {tools convert} {
+            -output=
+            input
+        }
+    }
+    namespace ensemble create -command ::tools -map {convert ::tools::convertImpl}
+}
+tools convert -help
+.fi
+.RE
+.PP
+The synopsis is tools convert ?-output value? input\&. Without the override it would use
+::tools::convertImpl, including when the ensemble subcommand is abbreviated to conv\&.
+.SS "STRUCTURAL LIMITS AND CONSTRAINTS"
+.PP
+The synopsis summarizes individual elements; it does not promise that every displayed combination is legal\&.
+Detailed help remains authoritative for -require, -allow, and -forbid\&. In particular,
+-require {b c} requires both elements, while -allow {b c} permits only those other elements when its
+owning element is present; it does not require either one\&. Positional parameters participate in these
+constraints too\&. Every active allow rule must be satisfied\&. If an element has both require and allow rules,
+both are included in its description\&. Shared-key conflicts and reciprocal requirements also remain in the
+detailed descriptions rather than being converted into synopsis alternatives\&.
+.PP
+For example:
+.PP
+.RS 4n
+.nf
+argparse -help {Select features} -synopsiscmd select {
+    {-a -forbid b}
+    {-b -forbid c}
+    -c
+}
+.fi
+.RE
+.PP
+The synopsis is select ?-a? ?-b? ?-c?\&. The pair -a -c is legal, whereas -a -b and -b -c are not\&.
+The generator deliberately does not invent an alternative group that would exclude the legal pair\&.
+Contradictory definitions are not diagnosed by synopsis generation: a required switch that another switch
+forbids is still shown as required\&.
+.PP
+-standalone can waive requirements and conflicts at runtime, and -imply can supply required switches
+indirectly or consume additional values\&. Their effects are not expanded into the generated synopsis\&.
+.PP
+For example, {-b= -imply -c} together with {-c= -required} is structurally shown as ?-b value? -c value,
+even though -b first second supplies both values through implication\&.  Use -synopsis to describe such
+special modes precisely\&. Custom validation and checks performed by the calling procedure are also outside the
+generator's scope\&. A manually supplied synopsis documents those rules; it does not enforce them or change
+parser behavior\&.
 .SH "ARGUMENT PROCESSING SEQUENCE"
 .PP
 \fIArgument\fP processing is performed in three stages: \fIswitch\fP processing,

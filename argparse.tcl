@@ -57,7 +57,7 @@ proc ::argparse {args} {
     set enum {}
     set validate {}
     set globalSwitches {-boolean -enum -equalarg -exact -inline -keep -level -long -mixed -normalize -pass -reciprocal\
-                                -template -validate -help -helplevel -pfirst -helpret}
+                                -template -validate -help -helplevel -pfirst -helpret -synopsis -synopsiscmd}
     for {set i 0} {$i<[llength $args]} {incr i} {
         if {[catch {regsub {^-} [tcl::prefix match -message switch $globalSwitches [lindex $args $i]] {} switch}\
                      errorMsg]} {
@@ -97,7 +97,7 @@ proc ::argparse {args} {
                     lappend definition $elem
                 }
             }
-        } elseif {$switch ni {enum level pass template validate help helplevel}} {
+        } elseif {$switch ni {enum level pass template validate help helplevel synopsis synopsiscmd}} {
             # Process switches with no arguments.
             set $switch {}
         } elseif {$i == [llength $args]-1} {
@@ -118,6 +118,11 @@ proc ::argparse {args} {
     # Forbid using -mixed and -pfirst at the same time.
     if {[info exists mixed] && [info exists pfirst]} {
         return -code error {-mixed and -pfirst conflict}
+    }
+    foreach option {synopsis synopsiscmd} {
+        if {[info exists $option] && ![info exists help]} {
+            return -code error "-$option requires -help"
+        }
     }
     ### Parse element definition list.
     set def {}
@@ -382,10 +387,12 @@ proc ::argparse {args} {
         namespace import textutil::adjust::*
         if {({-help} in $argv) || ([info exists long] && ({--help} in $argv))} {
             set enumStrBuild {apply {{name opt} {
+                set conjunction [expr {$name eq {require} ? {and} : {or}}]
                 if {[llength [dict get $opt $name]]>2} {
-                    set str "[join [lrange [dict get $opt $name] 0 end-1] {, }] or [lindex [dict get $opt $name] end]"
+                    set str "[join [lrange [dict get $opt $name] 0 end-1] {, }] $conjunction\
+                                     [lindex [dict get $opt $name] end]"
                 } elseif {[llength [dict get $opt $name]]==2} {
-                    set str "[lindex [dict get $opt $name] 0] or [lindex [dict get $opt $name] end]"
+                    set str "[lindex [dict get $opt $name] 0] $conjunction [lindex [dict get $opt $name] end]"
                 } else {
                     set str [lindex [dict get $opt $name] 0]
                 }
@@ -448,7 +455,8 @@ proc ::argparse {args} {
                 # element constraints string building
                 if {[dict exists $opt require]} {
                     lappend constraints [join [list Requires [{*}$enumStrBuild require $opt]]].
-                } elseif {[dict exists $opt allow]} {
+                }
+                if {[dict exists $opt allow]} {
                     lappend constraints [join [list Allows [{*}$enumStrBuild allow $opt]]].
                 }
                 if {[dict exists $opt forbid]} {
@@ -535,6 +543,70 @@ proc ::argparse {args} {
                                                                          {*}$descriptionParameters] \n]] 0 1]
             } else {
                 set finalHelpStr [string totitle [string map {{,;} {;} {,.} {.}} $providedHelp] 0 1]
+            }
+            ####  Infer only the immediate caller; ensemble mappings are not reversible.
+            if {![info exists synopsiscmd]} {
+                set synopsiscmd [uplevel 1 {
+                    if {([namespace which -command self] eq {::oo::Helpers::self}) && ![catch {self method}]\
+                                && ([self method] ni {constructor destructor})} {
+                        list [self object] [self method]
+                    } elseif {[info level] > 0} {
+                        lrange [info level 0] 0 0
+                    } else {
+                        list command
+                    }
+                }]
+            }
+            ####  Describe structure, without solving cross-element constraints.
+            if {![info exists synopsis]} {
+                set synopsisSwitches [list]
+                set synopsisParameters [list]
+                set synopsisRequired [list]
+                set synopsisOptional [list]
+                dict for {name opt} $def {
+                    if {[dict exists $opt hsuppress]} {
+                        continue
+                    }
+                    set required [dict exists $opt required]
+                    if {[dict exists $opt switch]} {
+                        set token -$name
+                        if {[dict exists $opt catchall]} {
+                            append token { ?value ...?}
+                        } elseif {[dict exists $opt argument]} {
+                            append token [expr {[dict exists $opt optional] ? { ?value?} : { value}}]
+                        }
+                        if {!$required} {
+                            set token ?$token?
+                        }
+                        lappend synopsisSwitches $token
+                    } else {
+                        set token $name
+                        if {[dict exists $opt catchall]} {
+                            set token [expr {$required ? "$name ?$name ...?" : "?$name ...?"}]
+                        } elseif {!$required} {
+                            set token ?$name?
+                        }
+                        lappend synopsisParameters $token
+                        if {$required} {
+                            lappend synopsisRequired $token
+                        } else {
+                            lappend synopsisOptional $token
+                        }
+                    }
+                }
+                if {[info exists pfirst]} {
+                    set tokens [concat $synopsisRequired $synopsisSwitches $synopsisOptional]
+                } else {
+                    set tokens [concat $synopsisSwitches $synopsisParameters]
+                }
+                if {[info exists pass]} {
+                    lappend tokens {?arg ...?}
+                }
+                set synopsis [join $tokens { }]
+            }
+            set synopsisText [string trim "$synopsiscmd $synopsis"]
+            if {$synopsisText ne {}} {
+                set finalHelpStr "[indent [adjust $synopsisText -length 76] $4spaces 1]\n\n$finalHelpStr"
             }
             if {[info exists helpret]} {
                 return -options $levelOptions $finalHelpStr

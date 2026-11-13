@@ -1309,6 +1309,7 @@ Tcl_Obj *EnumStrBuildObj(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDict)
     TCL_RETURN_NULL_IF_ERROR(Tcl_DictObjGet(interp, optDict, nameObj, &valList));
     Tcl_Size len;
     TCL_RETURN_NULL_IF_ERROR(Tcl_ListObjLength(interp, valList, &len));
+    const char *conjunction = !strcmp(Tcl_GetString(nameObj), "require") ? " and " : " or ";
     Tcl_Obj *resultStr = NULL;
     if (len >= 3) {
         resultStr = Tcl_NewStringObj("", 0);
@@ -1322,7 +1323,7 @@ Tcl_Obj *EnumStrBuildObj(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDict)
         }
         Tcl_Obj *lastElem;
         TCL_RETURN_NULL_IF_ERROR(Tcl_ListObjIndex(interp, valList, len - 1, &lastElem));
-        Tcl_AppendToObj(resultStr, " or ", -1);
+        Tcl_AppendToObj(resultStr, conjunction, -1);
         Tcl_AppendObjToObj(resultStr, lastElem);
     } else if (len == 2) {
         Tcl_Obj *first;
@@ -1331,7 +1332,7 @@ Tcl_Obj *EnumStrBuildObj(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDict)
         TCL_RETURN_NULL_IF_ERROR(Tcl_ListObjIndex(interp, valList, 1, &second));
         resultStr = Tcl_NewStringObj("", 0);
         Tcl_AppendObjToObj(resultStr, first);
-        Tcl_AppendToObj(resultStr, " or ", -1);
+        Tcl_AppendToObj(resultStr, conjunction, -1);
         Tcl_AppendObjToObj(resultStr, second);
 
     } else if (len == 1) {
@@ -1568,6 +1569,209 @@ Tcl_Obj *JoinWithEmptySeparator(Tcl_Interp *interp, Tcl_Obj *listObj) {
     return result;
 }
 
+//***  AppendSynopsisPart function
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * AppendSynopsisPart --
+ *
+ *      Appends a nonempty synopsis fragment to a dynamic string, inserting a separating space when the destination
+ *      already contains text. Fragments are appended without Tcl-list quoting because the synopsis uses display
+ *      notation, including question marks and spaces, rather than executable Tcl syntax.
+ *
+ * Parameters:
+ *      Tcl_DString *parts          - input/output: dynamic string receiving the synopsis fragment
+ *      const char *text            - input: pointer to the fragment text
+ *      Tcl_Size length             - input: fragment length in bytes, or -1 for a null-terminated string
+ *
+ * Results:
+ *      None. A length of zero leaves the destination unchanged.
+ *
+ * Side Effects:
+ *      Modifies the destination dynamic string and may allocate additional storage.
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
+static void AppendSynopsisPart(Tcl_DString *parts, const char *text, Tcl_Size length) {
+    if (length == 0) {
+        return;
+    }
+    if (Tcl_DStringLength(parts) > 0) {
+        Tcl_DStringAppend(parts, " ", 1);
+    }
+    Tcl_DStringAppend(parts, text, length);
+}
+
+//***  BuildSynopsis function
+/*
+ *----------------------------------------------------------------------------------------------------------------------
+ *
+ * BuildSynopsis --
+ *
+ *      Builds the synopsis paragraph from the processed argument definitions and global switches. The command
+ *      prefix is taken from -synopsiscmd when supplied; otherwise it is inferred from the immediate caller.
+ *      The native command executes in the caller's frame, corresponding to one level above the Tcl implementation.
+ *
+ *      The argument portion is taken from -synopsis when supplied; otherwise it is generated using Tcl-style
+ *      optional-item and repetition notation. Generated output respects -pfirst ordering, catchall elements,
+ *      -hsuppress, and global pass-through arguments. Cross-element constraints and runtime effects such as
+ *      -imply and -standalone are not expanded into alternatives.
+ *
+ *      The combined text is trimmed, wrapped, and indented using the same operations as the Tcl implementation.
+ *      Manual text is passed as data and is not evaluated as Tcl code.
+ *
+ * Parameters:
+ *      Tcl_Interp *interp                  - input: interpreter providing caller context and formatting commands
+ *      GlobalSwitchesContext *ctx          - input: parsed global switches and their associated values
+ *      ArgumentDefinition *argDefCtx       - input: processed argument definitions
+ *      ArgparseInterpCtx *interpCtx        - input: per-interpreter context containing cached element-switch keys
+ *
+ * Results:
+ *      Returns a new Tcl_Obj with reference count zero containing the formatted synopsis, without a trailing
+ *      separator or the remaining help text. Returns an empty object when both synopsis parts are empty.
+ *      Returns NULL on failure, leaving the error message in the interpreter result.
+ *
+ * Side Effects:
+ *      Evaluates Tcl introspection and text-formatting commands, modifying the interpreter result.
+ *      Allocates the returned object and temporary storage; temporary storage is released before returning.
+ *      Does not modify argument definitions or global switch values.
+ *
+ *----------------------------------------------------------------------------------------------------------------------
+ */
+static Tcl_Obj *BuildSynopsis(Tcl_Interp *interp, GlobalSwitchesContext *ctx, ArgumentDefinition *argDefCtx,
+                              ArgparseInterpCtx *interpCtx) {
+    Tcl_DString synopsis, switches, parameters, required, optional, token;
+    Tcl_DStringInit(&synopsis);
+    Tcl_DStringInit(&switches);
+    Tcl_DStringInit(&parameters);
+    Tcl_DStringInit(&required);
+    Tcl_DStringInit(&optional);
+    Tcl_DStringInit(&token);
+    Tcl_Obj *result = NULL;
+    Tcl_Obj *commandName;
+    Tcl_Size length;
+    const char *text;
+    if (HAS_GLOBAL_SWITCH(ctx, GLOBAL_SWITCH_SYNOPSISCMD)) {
+        commandName = GLOBAL_SWITCH_ARG(ctx, GLOBAL_SWITCH_SYNOPSISCMD);
+    } else {
+        const char *inferCaller = "if {[namespace which -command self] eq {::oo::Helpers::self} "
+                                  "&& ![catch {self method}] && [self method] ni {constructor destructor}} {"
+                                  "list [self object] [self method]"
+                                  "} elseif {[info level] > 0} {lrange [info level 0] 0 0} else {list command}";
+        if (Tcl_EvalEx(interp, inferCaller, -1, 0) != TCL_OK) {
+            goto cleanup;
+        }
+        commandName = Tcl_GetObjResult(interp);
+    }
+    text = Tcl_GetStringFromObj(commandName, &length);
+    AppendSynopsisPart(&synopsis, text, length);
+    if (HAS_GLOBAL_SWITCH(ctx, GLOBAL_SWITCH_SYNOPSIS)) {
+        text = Tcl_GetStringFromObj(GLOBAL_SWITCH_ARG(ctx, GLOBAL_SWITCH_SYNOPSIS), &length);
+        AppendSynopsisPart(&synopsis, text, length);
+    } else {
+        Tcl_DictSearch search;
+        Tcl_Obj *name, *opt;
+        int done;
+        if (Tcl_DictObjFirst(interp, argDefCtx->defDict, &search, &name, &opt, &done) != TCL_OK) {
+            goto cleanup;
+        }
+        while (!done) {
+            if (DictKeyExists(interp, opt, interpCtx->elswitch_hsuppress) != 1) {
+                int isRequired = DictKeyExists(interp, opt, interpCtx->elswitch_required) == 1;
+                int isSwitch = DictKeyExists(interp, opt, interpCtx->elswitch_switch) == 1;
+                int isCatchall = DictKeyExists(interp, opt, interpCtx->elswitch_catchall) == 1;
+                Tcl_DStringSetLength(&token, 0);
+                if (!isRequired) {
+                    Tcl_DStringAppend(&token, "?", 1);
+                }
+                if (isSwitch) {
+                    Tcl_DStringAppend(&token, "-", 1);
+                }
+                Tcl_DStringAppend(&token, Tcl_GetString(name), -1);
+                if (isSwitch) {
+                    if (isCatchall) {
+                        Tcl_DStringAppend(&token, " ?value ...?", -1);
+                    } else if (DictKeyExists(interp, opt, interpCtx->elswitch_argument) == 1) {
+                        Tcl_DStringAppend(
+                            &token,
+                            DictKeyExists(interp, opt, interpCtx->elswitch_optional) == 1 ? " ?value?" : " value", -1);
+                    }
+                } else if (isCatchall) {
+                    if (isRequired) {
+                        Tcl_DStringAppend(&token, " ?", 2);
+                        Tcl_DStringAppend(&token, Tcl_GetString(name), -1);
+                        Tcl_DStringAppend(&token, " ...?", -1);
+                    } else {
+                        Tcl_DStringAppend(&token, " ...", -1);
+                    }
+                }
+                if (!isRequired) {
+                    Tcl_DStringAppend(&token, "?", 1);
+                }
+                text = Tcl_DStringValue(&token);
+                length = Tcl_DStringLength(&token);
+                if (isSwitch) {
+                    AppendSynopsisPart(&switches, text, length);
+                } else {
+                    AppendSynopsisPart(&parameters, text, length);
+                    AppendSynopsisPart(isRequired ? &required : &optional, text, length);
+                }
+            }
+            Tcl_DictObjNext(&search, &name, &opt, &done);
+        }
+        Tcl_DictObjDone(&search);
+        if (HAS_GLOBAL_SWITCH(ctx, GLOBAL_SWITCH_PFIRST)) {
+            AppendSynopsisPart(&synopsis, Tcl_DStringValue(&required), Tcl_DStringLength(&required));
+        }
+        AppendSynopsisPart(&synopsis, Tcl_DStringValue(&switches), Tcl_DStringLength(&switches));
+        Tcl_DString *tail = HAS_GLOBAL_SWITCH(ctx, GLOBAL_SWITCH_PFIRST) ? &optional : &parameters;
+        AppendSynopsisPart(&synopsis, Tcl_DStringValue(tail), Tcl_DStringLength(tail));
+        if (HAS_GLOBAL_SWITCH(ctx, GLOBAL_SWITCH_PASS)) {
+            AppendSynopsisPart(&synopsis, "?arg ...?", -1);
+        }
+    }
+    /* Use the same trim/wrap/indent operations as Tcl, passing text as data. */
+    Tcl_Obj *trimWords[] = {Tcl_NewStringObj("::string", -1), Tcl_NewStringObj("trim", -1),
+                            Tcl_NewStringObj(Tcl_DStringValue(&synopsis), Tcl_DStringLength(&synopsis))};
+    Tcl_Obj *command = Tcl_NewListObj(3, trimWords);
+    Tcl_IncrRefCount(command);
+    int code = Tcl_EvalObjEx(interp, command, 0);
+    Tcl_DecrRefCount(command);
+    if (code != TCL_OK) {
+        goto cleanup;
+    }
+    if (Tcl_GetCharLength(Tcl_GetObjResult(interp)) == 0) {
+        result = Tcl_NewObj();
+        goto cleanup;
+    }
+    Tcl_Obj *adjustWords[] = {Tcl_NewStringObj("::textutil::adjust::adjust", -1), Tcl_GetObjResult(interp),
+                              Tcl_NewStringObj("-length", -1), Tcl_NewIntObj(76)};
+    command = Tcl_NewListObj(4, adjustWords);
+    Tcl_IncrRefCount(command);
+    code = Tcl_EvalObjEx(interp, command, 0);
+    Tcl_DecrRefCount(command);
+    if (code != TCL_OK) {
+        goto cleanup;
+    }
+    Tcl_Obj *indentWords[] = {Tcl_NewStringObj("::textutil::adjust::indent", -1), Tcl_GetObjResult(interp),
+                              Tcl_NewStringObj("    ", -1), Tcl_NewIntObj(1)};
+    command = Tcl_NewListObj(4, indentWords);
+    Tcl_IncrRefCount(command);
+    code = Tcl_EvalObjEx(interp, command, 0);
+    Tcl_DecrRefCount(command);
+    if (code == TCL_OK) {
+        result = Tcl_DuplicateObj(Tcl_GetObjResult(interp));
+    }
+cleanup:
+    Tcl_DStringFree(&synopsis);
+    Tcl_DStringFree(&switches);
+    Tcl_DStringFree(&parameters);
+    Tcl_DStringFree(&required);
+    Tcl_DStringFree(&optional);
+    Tcl_DStringFree(&token);
+    return result;
+}
+
 //***  BuildHelpMessage function
 /*
  *----------------------------------------------------------------------------------------------------------------------
@@ -1686,7 +1890,8 @@ Tcl_Obj *BuildHelpMessage(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Argume
             TCL_RETURN_NULL_IF_ERROR(Tcl_ListObjAppendElement(interp, enumStr, Tcl_NewStringObj(".", -1)));
             TCL_RETURN_NULL_IF_ERROR(
                 Tcl_ListObjAppendElement(interp, constraints, JoinWithEmptySeparator(interp, enumStr)));
-        } else if (DictKeyExists(interp, opt, interpCtx->elswitch_allow) == 1) {
+        }
+        if (DictKeyExists(interp, opt, interpCtx->elswitch_allow) == 1) {
             Tcl_Obj *enumStr = Tcl_NewListObj(0, NULL);
             TCL_RETURN_NULL_IF_ERROR(Tcl_ListObjAppendElement(interp, enumStr, Tcl_NewStringObj("Allows ", -1)));
             TCL_RETURN_NULL_IF_ERROR(
@@ -3120,7 +3325,11 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
         if (((GLOBAL_SWITCH_TAKES_ARG_MASK & bit) != (bitmask_t)0u)) {
             /* switch takes an argument: ensure one is present */
             if ((i + 1) >= objc) {
-                Tcl_SetObjResult(interp, Tcl_ObjPrintf("Missing argument for %s", globalSwitches[idx]));
+                if (idx == GLOBAL_SWITCH_SYNOPSIS || idx == GLOBAL_SWITCH_SYNOPSISCMD) {
+                    Tcl_SetObjResult(interp, Tcl_ObjPrintf("%s requires an argument", globalSwitches[idx]));
+                } else {
+                    Tcl_SetObjResult(interp, Tcl_ObjPrintf("Missing argument for %s", globalSwitches[idx]));
+                }
                 goto cleanupOnError;
             }
             SetGlobalSwitch(&ctx, (unsigned)idx, objv[i + 1]);
@@ -3195,6 +3404,13 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
     if (HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_MIXED) && HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_PFIRST)) {
         Tcl_SetObjResult(interp, Tcl_NewStringObj("-mixed and -pfirst conflict", -1));
         goto cleanupOnError;
+    }
+
+    for (int option = GLOBAL_SWITCH_SYNOPSIS; option <= GLOBAL_SWITCH_SYNOPSISCMD; ++option) {
+        if (HAS_GLOBAL_SWITCH(&ctx, option) && !HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_HELP)) {
+            Tcl_SetObjResult(interp, Tcl_ObjPrintf("%s requires -help", globalSwitches[option]));
+            goto cleanupOnError;
+        }
     }
 
     //***   Parse element definition list and cash it, or used cashed version
@@ -3397,6 +3613,17 @@ static int ArgparseCmdProc2(void *clientData, Tcl_Interp *interp, Tcl_Size objc,
             if (helpText == NULL) {
                 goto cleanupOnError;
             }
+            Tcl_Obj *synopsis = BuildSynopsis(interp, &ctx, argDefCtx, interpCtx);
+            if (synopsis == NULL) {
+                goto cleanupOnError;
+            }
+            Tcl_IncrRefCount(synopsis);
+            if (Tcl_GetCharLength(synopsis) > 0) {
+                Tcl_AppendToObj(synopsis, "\n\n", 2);
+                Tcl_AppendObjToObj(synopsis, helpText);
+                ReplaceOwnedObj(&helpText, synopsis);
+            }
+            Tcl_DecrRefCount(synopsis);
             if (HAS_GLOBAL_SWITCH(&ctx, GLOBAL_SWITCH_HELPRET)) {
                 Tcl_SetObjResult(interp, helpText);
             } else {

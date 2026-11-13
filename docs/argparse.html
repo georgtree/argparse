@@ -83,6 +83,13 @@
 <li class="toctree-l2"><a class="reference internal" href="#upvar-elements">Upvar Elements</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#template">Template</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#help">Help</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#help-synopsis">Help Synopsis</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#conventions">Conventions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#command-name-and-manual-argument-text">Command name and manual argument text</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#automatic-inference-and-ensembles">Automatic inference and ensembles</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#structural-limits-and-constraints">Structural limits and constraints</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#argument-processing-sequence">Argument Processing Sequence</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#normal-processing">Normal processing</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#processing-with-parameters-first">Processing with parameters first</a></li>
@@ -211,13 +218,14 @@ action before reading the precise details on how it works.</p>
 accept args.  When not explicitly given an argument list to parse, argparse parses the value of the args
 variable and stores the results into local variables having the same <a class="reference internal" href="#r-3a3aargparseqzname"><span class="std std-ref">names</span></a> as the various
 <a class="reference internal" href="#r-3a3aargparseqzelement"><span class="std std-ref">elements</span></a> of the <a class="reference internal" href="#r-3a3aargparseqzdefinition"><span class="std std-ref">definition</span></a>.</p>
-<p>Here, the definition is a list of four elements, named <code class="docutils literal notranslate"><span class="pre">salutation</span></code>, <code class="docutils literal notranslate"><span class="pre">modifier</span></code>, <code class="docutils literal notranslate"><span class="pre">title</span></code>, and <code class="docutils literal notranslate"><span class="pre">subject</span></code>. Because
-their names are prefixed with <code class="docutils literal notranslate"><span class="pre">-</span></code>, <code class="docutils literal notranslate"><span class="pre">salutation</span></code>, <code class="docutils literal notranslate"><span class="pre">modifier</span></code>, and <code class="docutils literal notranslate"><span class="pre">title</span></code> are <a class="reference internal" href="#r-3a3aargparseqzswitch"><span class="std std-ref">switches</span></a>, whereas
-<code class="docutils literal notranslate"><span class="pre">subject</span></code>, lacking a <code class="docutils literal notranslate"><span class="pre">-</span></code> prefix, is a <a class="reference internal" href="#r-3a3aargparseqzparameter"><span class="std std-ref">parameter</span></a>. Two of the switches are given a <code class="docutils literal notranslate"><span class="pre">=</span></code> suffix, which
-means they each take an <a class="reference internal" href="#r-3a3aargparseqzargument"><span class="std std-ref">argument</span></a>, whereas <code class="docutils literal notranslate"><span class="pre">title</span></code> does not. In addition to these <a class="reference internal" href="#r-3a3aargparseqzshorthand20flag"><span class="std std-ref">flag</span></a>
-characters, the <code class="docutils literal notranslate"><span class="pre">salutation</span></code> element is surrounded with braces because it contains more list words used to
-further customize how it is handled. Namely, it uses the <code class="docutils literal notranslate"><span class="pre">-default</span></code> <a class="reference internal" href="#r-3a3aargparseqzelement20switches"><span class="std std-ref">element switch</span></a> to set
-its default value to <code class="docutils literal notranslate"><span class="pre">hello</span></code>, in case <code class="docutils literal notranslate"><span class="pre">-salutation</span></code> is not present in the argument list.</p>
+<p>Here, the definition is a list of four elements, named <code class="docutils literal notranslate"><span class="pre">salutation</span></code>, <code class="docutils literal notranslate"><span class="pre">modifier</span></code>, <code class="docutils literal notranslate"><span class="pre">title</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">subject</span></code>. Because their names are prefixed with <code class="docutils literal notranslate"><span class="pre">-</span></code>, <code class="docutils literal notranslate"><span class="pre">salutation</span></code>, <code class="docutils literal notranslate"><span class="pre">modifier</span></code>, and <code class="docutils literal notranslate"><span class="pre">title</span></code> are
+<a class="reference internal" href="#r-3a3aargparseqzswitch"><span class="std std-ref">switches</span></a>, whereas <code class="docutils literal notranslate"><span class="pre">subject</span></code>, lacking a <code class="docutils literal notranslate"><span class="pre">-</span></code> prefix, is a <a class="reference internal" href="#r-3a3aargparseqzparameter"><span class="std std-ref">parameter</span></a>. Two of the switches
+are given a <code class="docutils literal notranslate"><span class="pre">=</span></code> suffix, which means they each take an <a class="reference internal" href="#r-3a3aargparseqzargument"><span class="std std-ref">argument</span></a>, whereas <code class="docutils literal notranslate"><span class="pre">title</span></code> does not. In
+addition to these <a class="reference internal" href="#r-3a3aargparseqzshorthand20flag"><span class="std std-ref">flag</span></a> characters, the <code class="docutils literal notranslate"><span class="pre">salutation</span></code> element is surrounded with braces because
+it contains more list words used to further customize how it is handled. Namely, it uses the <code class="docutils literal notranslate"><span class="pre">-default</span></code>
+<a class="reference internal" href="#r-3a3aargparseqzelement20switches"><span class="std std-ref">element switch</span></a> to set its default value to <code class="docutils literal notranslate"><span class="pre">hello</span></code>, in case <code class="docutils literal notranslate"><span class="pre">-salutation</span></code> is not present in
+the argument list.</p>
 <p>By default, switches are optional and parameters are required. <code class="docutils literal notranslate"><span class="pre">salutation</span></code>, <code class="docutils literal notranslate"><span class="pre">modifier</span></code>, and <code class="docutils literal notranslate"><span class="pre">title</span></code>, being
 switches, are all optional, but since <code class="docutils literal notranslate"><span class="pre">salutation</span></code> has a default value, its variable’s existence is therefore
 guaranteed. Likewise, <code class="docutils literal notranslate"><span class="pre">subject</span></code>, being a parameter, is required, and its variable’s existence is also
@@ -549,6 +557,12 @@ after <code class="docutils literal notranslate"><span class="pre">-</span></cod
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-helplevel</span> <span class="pre">value</span></code></p></td>
 <td><p>Set <code class="docutils literal notranslate"><span class="pre">-level</span></code> option for return command in help evaluation</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-synopsis</span> <span class="pre">text</span></code></p></td>
+<td><p>Override the argument synopsis; requires <code class="docutils literal notranslate"><span class="pre">-help</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-synopsiscmd</span> <span class="pre">command</span></code></p></td>
+<td><p>Override the displayed command name; requires <code class="docutils literal notranslate"><span class="pre">-help</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-helpret</span></code></p></td>
 <td><p>Set to return help message as a return value of procedure instead of putting into stdout</p></td>
@@ -1091,7 +1105,9 @@ switch</span></a> <code class="docutils literal notranslate"><span class="pre">-
 <span class="nv">genNums</span><span class="w"> </span><span class="o">-</span>help
 </pre></div>
 </div>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Procedure generates sequence of numbers.. Can accepts unambiguous prefixes
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>genNums ?-from value? ?-to value? ?-step value? ?-prec value?
+
+Procedure generates sequence of numbers.. Can accepts unambiguous prefixes
 instead of switches names. Accepts switches only before parameters.
     Switches:
         -from value - Provides start of sequence. Default value is 1. Type
@@ -1126,7 +1142,9 @@ switch</span></a> <code class="docutils literal notranslate"><span class="pre">-
 <span class="nv">sheduleEvent</span><span class="w"> </span><span class="o">-</span>help
 </pre></div>
 </div>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Procedure shedules event at cetain date. At least one of the switches must be
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>sheduleEvent ?-allday? ?-duration value? ?-endtime value? date time
+
+Procedure shedules event at cetain date. At least one of the switches must be
 provided: -allday, -duration or -endtime. Can accepts unambiguous prefixes
 instead of switches names. Accepts switches only before parameters.
     Switches:
@@ -1144,6 +1162,155 @@ instead of switches names. Accepts switches only before parameters.
         time - Provides time in format HH:MM.
 </pre></div>
 </div>
+</section>
+<section id="help-synopsis">
+<span id="r-argparse-help-synopsis"></span><span id="r-3a3aargparseqzhelp20synopsis"></span><h2>Help Synopsis<a class="headerlink" href="#help-synopsis" title="Link to this heading"></a></h2>
+<p>When help is enabled with the global <code class="docutils literal notranslate"><span class="pre">-help</span> <span class="pre">description</span></code> switch, the help message begins with a structural
+synopsis, followed by a blank line and the existing description, switches, and parameters. This behavior is
+the same in the C and Tcl implementations. The synopsis is generated only when help is requested; it does not
+change parsing or validation.</p>
+<section id="conventions">
+<span id="r-argparse-conventions"></span><span id="r-3a3aargparseqzconventions"></span><h3>Conventions<a class="headerlink" href="#conventions" title="Link to this heading"></a></h3>
+<p>The synopsis uses Tcl manual conventions. Question marks delimit optional material; they are not literal
+characters to type. A bare item is required in the ordinary structural form. <code class="docutils literal notranslate"><span class="pre">value</span></code> and parameter names
+are placeholders, not literal arguments. An ellipsis means repetition, not a literal argument.</p>
+<ul class="simple">
+<li><p>An optional flag is shown as <code class="docutils literal notranslate"><span class="pre">?-verbose?</span></code>.</p></li>
+<li><p>An optional switch taking a required value is <code class="docutils literal notranslate"><span class="pre">?-output</span> <span class="pre">value?</span></code>.</p></li>
+<li><p>A required switch taking a value is <code class="docutils literal notranslate"><span class="pre">-output</span> <span class="pre">value</span></code>.</p></li>
+<li><p>An optional switch with an optional value is <code class="docutils literal notranslate"><span class="pre">?-option</span> <span class="pre">?value??</span></code>. The outer question marks make the switch optional; the inner pair makes its value optional. This does not change the existing consumption rule: if an argument is available to the switch, it is consumed, even if it resembles another switch.</p></li>
+<li><p>A required parameter is <code class="docutils literal notranslate"><span class="pre">input</span></code>; an optional parameter is <code class="docutils literal notranslate"><span class="pre">?input?</span></code>.</p></li>
+<li><p>An optional catchall parameter is <code class="docutils literal notranslate"><span class="pre">?files</span> <span class="pre">...?</span></code>; a required catchall parameter is <code class="docutils literal notranslate"><span class="pre">files</span> <span class="pre">?files</span> <span class="pre">...?</span></code>. The latter requires at least one value.</p></li>
+<li><p>An optional catchall switch is <code class="docutils literal notranslate"><span class="pre">?-rest</span> <span class="pre">?value</span> <span class="pre">...??</span></code>; a required catchall switch is <code class="docutils literal notranslate"><span class="pre">-rest</span> <span class="pre">?value</span> <span class="pre">...?</span></code>. Requiring the switch does not require a nonempty collection of values.</p></li>
+<li><p>Global <code class="docutils literal notranslate"><span class="pre">-pass</span></code> adds <code class="docutils literal notranslate"><span class="pre">?arg</span> <span class="pre">...?</span></code> for otherwise unassigned arguments. Consult the pass-through rules for unknown switches and argument assignment; the suffix does not make every argument sequence valid.</p></li>
+</ul>
+<p>Switches appear in definition order, followed by parameters in definition order. With <code class="docutils literal notranslate"><span class="pre">-pfirst</span></code>, required
+parameters appear first, then switches, then optional parameters; order within each group is preserved.
+With <code class="docutils literal notranslate"><span class="pre">-mixed</span></code>, the synopsis still shows a representative switches-first layout, but switches may occur
+after parameters as explained in the detailed help. Catchall allocation and the reservation of required
+parameter values follow the normal parsing rules; the synopsis is not an executable grammar.</p>
+<p>Only canonical single-dash switch names are shown. Aliases, abbreviated names, <code class="docutils literal notranslate"><span class="pre">--name</span></code> alternatives enabled
+by <code class="docutils literal notranslate"><span class="pre">-long</span></code>, and <code class="docutils literal notranslate"><span class="pre">-name=value</span></code> alternatives enabled by <code class="docutils literal notranslate"><span class="pre">-equalarg</span></code> remain supported. Defaults do not make a
+switch required. <code class="docutils literal notranslate"><span class="pre">-hsuppress</span></code> hides an element from both the synopsis and detailed help, even if it is
+required. The built-in help switch is described below the synopsis, rather than included in its argument
+list. Long synopsis text is wrapped at whitespace, with four-space continuation indentation; a single long
+word is not split. Letter case is preserved.</p>
+<p>For example:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">proc</span><span class="w"> </span>convert<span class="w"> </span><span class="k">{</span><span class="nv">args</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="nv">argparse</span><span class="w"> </span><span class="o">-</span>help<span class="w"> </span><span class="k">{</span><span class="nv">Convert</span><span class="w"> </span>an<span class="w"> </span>input<span class="w"> </span>file<span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">-output</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>required<span class="k">}</span>
+<span class="w">        </span><span class="nv">-format</span><span class="o">=</span>
+<span class="w">        </span><span class="nv">-compress</span>
+<span class="w">        </span><span class="nv">input</span>
+<span class="w">        </span><span class="k">{</span><span class="nv">columns</span><span class="w"> </span><span class="o">-</span>catchall<span class="k">}</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="k">}</span>
+<span class="nv">convert</span><span class="w"> </span><span class="o">-</span>help
+</pre></div>
+</div>
+<p>The first paragraph is:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>convert -output value ?-format value? ?-compress? input ?columns ...?
+</pre></div>
+</div>
+</section>
+<section id="command-name-and-manual-argument-text">
+<span id="r-argparse-command-name-and-manual-argument-text"></span><span id="r-3a3aargparseqzcommand20name20and20manual20argument20text"></span><h3>Command name and manual argument text<a class="headerlink" href="#command-name-and-manual-argument-text" title="Link to this heading"></a></h3>
+<p>Two independent global switches control the two parts of the synopsis:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-synopsiscmd</span> <span class="pre">command</span></code> supplies the displayed command name or command prefix. It always overrides inference, and leaves the argument synopsis automatically generated unless <code class="docutils literal notranslate"><span class="pre">-synopsis</span></code> is also supplied.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-synopsis</span> <span class="pre">text</span></code> supplies only the argument portion. It does not contain the command name and does not replace the other help sections.</p></li>
+</ul>
+<p>Both switches require the global <code class="docutils literal notranslate"><span class="pre">-help</span></code> switch, even on a call that does not request help. Otherwise the
+parser reports <code class="docutils literal notranslate"><span class="pre">-synopsiscmd</span> <span class="pre">requires</span> <span class="pre">-help</span></code> or <code class="docutils literal notranslate"><span class="pre">-synopsis</span> <span class="pre">requires</span> <span class="pre">-help</span></code>. An empty help description is
+sufficient: <code class="docutils literal notranslate"><span class="pre">-help</span> <span class="pre">{}</span></code>. Supplying either switch without its value is an error.</p>
+<p>Both values are plain display text: they are not evaluated, substituted, or checked against the argument
+definition. Brace text containing dollar signs, brackets, or semicolons when calling argparse, so Tcl itself
+does not substitute it before the call. Normal whitespace wrapping still applies; this is not a verbatim
+multiline-layout facility. Leading and trailing whitespace around the combined synopsis is removed.</p>
+<p>An empty <code class="docutils literal notranslate"><span class="pre">-synopsis</span> <span class="pre">{}</span></code> displays only the command name. An empty <code class="docutils literal notranslate"><span class="pre">-synopsiscmd</span> <span class="pre">{}</span></code> displays only the
+argument portion. Supplying both as empty strings suppresses the synopsis paragraph entirely.</p>
+<p>To retain generated arguments but override the command prefix:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">argparse</span><span class="w"> </span><span class="o">-</span>help<span class="w"> </span><span class="k">{</span><span class="nv">Convert</span><span class="w"> </span>an<span class="w"> </span>input<span class="w"> </span>file<span class="k">}</span><span class="w"> </span><span class="o">-</span>synopsiscmd<span class="w"> </span><span class="k">{</span><span class="nv">tools</span><span class="w"> </span>convert<span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="nv">-output</span><span class="o">=</span>
+<span class="w">    </span><span class="nv">input</span>
+<span class="w">    </span><span class="k">{</span><span class="nv">columns</span><span class="w"> </span><span class="o">-</span>catchall<span class="k">}</span>
+<span class="k">}</span>
+</pre></div>
+</div>
+<p>The synopsis is:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>tools convert ?-output value? input ?columns ...?
+</pre></div>
+</div>
+<p>To override both parts independently:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">argparse</span><span class="w"> </span><span class="o">-</span>help<span class="w"> </span><span class="k">{</span><span class="nv">Convert</span><span class="w"> </span>an<span class="w"> </span>input<span class="w"> </span>file<span class="k">}</span><span class="w"> </span><span class="o">-</span>synopsiscmd<span class="w"> </span><span class="k">{</span><span class="nv">tools</span><span class="w"> </span>convert<span class="k">}</span><span class="w"> </span><span class="o">-</span>synopsis<span class="w"> </span><span class="k">{</span><span class="o">?</span><span class="nv">-output</span><span class="w"> </span>filename<span class="o">?</span><span class="w"> </span>input<span class="w"> </span><span class="o">?</span>column<span class="w"> </span>...<span class="o">?</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="nv">-output</span><span class="o">=</span>
+<span class="w">    </span><span class="nv">input</span>
+<span class="w">    </span><span class="k">{</span><span class="nv">columns</span><span class="w"> </span><span class="o">-</span>catchall<span class="k">}</span>
+<span class="k">}</span>
+</pre></div>
+</div>
+</section>
+<section id="automatic-inference-and-ensembles">
+<span id="r-argparse-automatic-inference-and-ensembles"></span><span id="r-3a3aargparseqzautomatic20inference20and20ensembles"></span><h3>Automatic inference and ensembles<a class="headerlink" href="#automatic-inference-and-ensembles" title="Link to this heading"></a></h3>
+<p>Without <code class="docutils literal notranslate"><span class="pre">-synopsiscmd</span></code>, argparse inspects its immediate caller. For a procedure it uses the first word of
+that invocation, preserving the spelling Tcl exposes there, including namespace qualifiers. Actual argument
+values are never included. A wrapper procedure is not skipped: if <code class="docutils literal notranslate"><span class="pre">convert</span></code> calls <code class="docutils literal notranslate"><span class="pre">parseOptions</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">parseOptions</span></code> calls argparse, the inferred command is <code class="docutils literal notranslate"><span class="pre">parseOptions</span></code>.</p>
+<p>In a normal TclOO method, inference uses the fully qualified object name and the current method name.
+Constructors and destructors use the ordinary first-invocation-word fallback, which may not describe the
+public creation command; use <code class="docutils literal notranslate"><span class="pre">-synopsiscmd</span></code> there. At top level there is no caller procedure, so the fallback
+is <code class="docutils literal notranslate"><span class="pre">command</span></code>, not the script filename. Other dispatch mechanisms, aliases, and forwarding commands may
+expose implementation names rather than the user-facing command. Explicit names are recommended whenever
+the public invocation matters.</p>
+<p>Ensemble dispatch generally exposes the mapped implementation command. Its public name cannot be recovered
+reliably: several ensembles or subcommands can map to the same procedure, and the procedure may also be
+called directly. The original source text may contain variable substitutions rather than command names.
+argparse does not scan ensemble maps or evaluate source text to guess the public invocation.</p>
+<p>Specify the public prefix in the implementation:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="k">namespace</span><span class="w"> </span>eval<span class="w"> </span>tools<span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="k">proc</span><span class="w"> </span>convertImpl<span class="w"> </span><span class="k">{</span><span class="nv">args</span><span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">        </span><span class="nv">argparse</span><span class="w"> </span><span class="o">-</span>help<span class="w"> </span><span class="k">{</span><span class="nv">Convert</span><span class="w"> </span>an<span class="w"> </span>input<span class="w"> </span>file<span class="k">}</span><span class="w"> </span><span class="o">-</span>synopsiscmd<span class="w"> </span><span class="k">{</span><span class="nv">tools</span><span class="w"> </span>convert<span class="k">}</span><span class="w"> </span><span class="k">{</span>
+<span class="w">            </span><span class="nv">-output</span><span class="o">=</span>
+<span class="w">            </span><span class="nv">input</span>
+<span class="w">        </span><span class="k">}</span>
+<span class="w">    </span><span class="k">}</span>
+<span class="w">    </span><span class="k">namespace</span><span class="w"> </span>ensemble<span class="w"> </span>create<span class="w"> </span><span class="o">-</span>command<span class="w"> </span><span class="o">::</span>tools<span class="w"> </span><span class="o">-</span>map<span class="w"> </span><span class="k">{</span><span class="nv">convert</span><span class="w"> </span><span class="o">::</span>tools::convertImpl<span class="k">}</span>
+<span class="k">}</span>
+<span class="nv">tools</span><span class="w"> </span>convert<span class="w"> </span><span class="o">-</span>help
+</pre></div>
+</div>
+<p>The synopsis is <code class="docutils literal notranslate"><span class="pre">tools</span> <span class="pre">convert</span> <span class="pre">?-output</span> <span class="pre">value?</span> <span class="pre">input</span></code>. Without the override it would use
+<code class="docutils literal notranslate"><span class="pre">::tools::convertImpl</span></code>, including when the ensemble subcommand is abbreviated to <code class="docutils literal notranslate"><span class="pre">conv</span></code>.</p>
+</section>
+<section id="structural-limits-and-constraints">
+<span id="r-argparse-structural-limits-and-constraints"></span><span id="r-3a3aargparseqzstructural20limits20and20constraints"></span><h3>Structural limits and constraints<a class="headerlink" href="#structural-limits-and-constraints" title="Link to this heading"></a></h3>
+<p>The synopsis summarizes individual elements; it does not promise that every displayed combination is legal.
+Detailed help remains authoritative for <code class="docutils literal notranslate"><span class="pre">-require</span></code>, <code class="docutils literal notranslate"><span class="pre">-allow</span></code>, and <code class="docutils literal notranslate"><span class="pre">-forbid</span></code>. In particular,
+<code class="docutils literal notranslate"><span class="pre">-require</span> <span class="pre">{b</span> <span class="pre">c}</span></code> requires both elements, while <code class="docutils literal notranslate"><span class="pre">-allow</span> <span class="pre">{b</span> <span class="pre">c}</span></code> permits only those other elements when its
+owning element is present; it does not require either one. Positional parameters participate in these
+constraints too. Every active allow rule must be satisfied. If an element has both require and allow rules,
+both are included in its description. Shared-key conflicts and reciprocal requirements also remain in the
+detailed descriptions rather than being converted into synopsis alternatives.</p>
+<p>For example:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">argparse</span><span class="w"> </span><span class="o">-</span>help<span class="w"> </span><span class="k">{</span><span class="nv">Select</span><span class="w"> </span>features<span class="k">}</span><span class="w"> </span><span class="o">-</span>synopsiscmd<span class="w"> </span>select<span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="k">{</span><span class="nv">-a</span><span class="w"> </span><span class="o">-</span>forbid<span class="w"> </span>b<span class="k">}</span>
+<span class="w">    </span><span class="k">{</span><span class="nv">-b</span><span class="w"> </span><span class="o">-</span>forbid<span class="w"> </span>c<span class="k">}</span>
+<span class="w">    </span><span class="nv">-c</span>
+<span class="k">}</span>
+</pre></div>
+</div>
+<p>The synopsis is <code class="docutils literal notranslate"><span class="pre">select</span> <span class="pre">?-a?</span> <span class="pre">?-b?</span> <span class="pre">?-c?</span></code>. The pair <code class="docutils literal notranslate"><span class="pre">-a</span> <span class="pre">-c</span></code> is legal, whereas <code class="docutils literal notranslate"><span class="pre">-a</span> <span class="pre">-b</span></code> and <code class="docutils literal notranslate"><span class="pre">-b</span> <span class="pre">-c</span></code> are not.
+The generator deliberately does not invent an alternative group that would exclude the legal pair.
+Contradictory definitions are not diagnosed by synopsis generation: a required switch that another switch
+forbids is still shown as required.</p>
+<p><code class="docutils literal notranslate"><span class="pre">-standalone</span></code> can waive requirements and conflicts at runtime, and <code class="docutils literal notranslate"><span class="pre">-imply</span></code> can supply required switches
+indirectly or consume additional values. Their effects are not expanded into the generated synopsis.</p>
+<p>For example, <code class="docutils literal notranslate"><span class="pre">{-b=</span> <span class="pre">-imply</span> <span class="pre">-c}</span></code> together with <code class="docutils literal notranslate"><span class="pre">{-c=</span> <span class="pre">-required}</span></code> is structurally shown as <code class="docutils literal notranslate"><span class="pre">?-b</span> <span class="pre">value?</span> <span class="pre">-c</span> <span class="pre">value</span></code>,
+even though <code class="docutils literal notranslate"><span class="pre">-b</span> <span class="pre">first</span> <span class="pre">second</span></code> supplies both values through implication.  Use <code class="docutils literal notranslate"><span class="pre">-synopsis</span></code> to describe such
+special modes precisely. Custom validation and checks performed by the calling procedure are also outside the
+generator’s scope. A manually supplied synopsis documents those rules; it does not enforce them or change
+parser behavior.</p>
+</section>
 </section>
 <section id="argument-processing-sequence">
 <span id="r-argparse-argument-processing-sequence"></span><span id="r-3a3aargparseqzargument20processing20sequence"></span><h2>Argument Processing Sequence<a class="headerlink" href="#argument-processing-sequence" title="Link to this heading"></a></h2>

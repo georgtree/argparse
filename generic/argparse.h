@@ -48,10 +48,10 @@ typedef uint32_t bitmask_t;
             return TCL_ERROR;                                                                                          \
     } while (0)
 
-#define TCL_RETURN_NULL_IF_ERROR(expr)                                                                             \
+#define TCL_RETURN_NULL_IF_ERROR(expr)                                                                                 \
     do {                                                                                                               \
         if ((expr) != TCL_OK)                                                                                          \
-            return NULL;                                                                                              \
+            return NULL;                                                                                               \
     } while (0)
 //** arguments definition structure
 typedef struct {
@@ -125,12 +125,14 @@ enum GlobalSwitchId {
     GLOBAL_SWITCH_HELPLEVEL,
     GLOBAL_SWITCH_PFIRST,
     GLOBAL_SWITCH_HELPRET,
+    GLOBAL_SWITCH_SYNOPSIS,
+    GLOBAL_SWITCH_SYNOPSISCMD,
     GLOBAL_SWITCH_COUNT // total number of global switches
 };
-static const char *globalSwitches[] = {"-boolean",   "-enum",       "-equalarg", "-exact",    "-inline",
-                                       "-keep",      "-level",      "-long",     "-mixed",    "-normalize",
-                                       "-pass",      "-reciprocal", "-template", "-validate", "-help",
-                                       "-helplevel", "-pfirst",     "-helpret",  NULL};
+static const char *globalSwitches[] = {"-boolean",  "-enum",        "-equalarg", "-exact",     "-inline", "-keep",
+                                       "-level",    "-long",        "-mixed",    "-normalize", "-pass",   "-reciprocal",
+                                       "-template", "-validate",    "-help",     "-helplevel", "-pfirst", "-helpret",
+                                       "-synopsis", "-synopsiscmd", NULL};
 typedef struct {
     bitmask_t globalSwitches;             // bitmask of which global switch are present
     Tcl_Obj *values[GLOBAL_SWITCH_COUNT]; // arguments for value-carrying global switches
@@ -138,7 +140,8 @@ typedef struct {
 // global switches that require arguments
 #define GLOBAL_SWITCH_TAKES_ARG_MASK                                                                                   \
     (BIT(GLOBAL_SWITCH_ENUM) | BIT(GLOBAL_SWITCH_LEVEL) | BIT(GLOBAL_SWITCH_PASS) | BIT(GLOBAL_SWITCH_TEMPLATE) |      \
-     BIT(GLOBAL_SWITCH_VALIDATE) | BIT(GLOBAL_SWITCH_HELP) | BIT(GLOBAL_SWITCH_HELPLEVEL))
+     BIT(GLOBAL_SWITCH_VALIDATE) | BIT(GLOBAL_SWITCH_HELP) | BIT(GLOBAL_SWITCH_HELPLEVEL) |                            \
+     BIT(GLOBAL_SWITCH_SYNOPSIS) | BIT(GLOBAL_SWITCH_SYNOPSISCMD))
 #define HAS_GLOBAL_SWITCH(pctx, id) ((((bitmask_t)((pctx)->globalSwitches)) & BITMASK_OF(id)) != (bitmask_t)0u)
 #define GLOBAL_SWITCH_ARG(ctx, globalSwitchId) ((ctx)->values[globalSwitchId])
 
