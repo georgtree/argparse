@@ -292,7 +292,7 @@ proc ::argparse {args} {
             lappend switches -[join [list {*}[dict get $opt alias] $name] |]
         }
         ####  Check for collision between alias and other switch name
-        if {$name in [dict keys $aliases]} {
+        if {[dict exists $opt switch] && [dict exists $aliases $name]} {
             return -code error "collision of switch -[dict get $aliases $name] alias with the -$name switch"
         }
         ####  Map from upvar keys back to element names, and forbid collisions.

@@ -2302,4 +2302,21 @@ test help-parity-constructor {default returns normally from a TclOO constructor 
 
 interp delete installed reference
 
+### Issue #13: switch aliases may share names with positional parameters.
+testTemplate aliasParameterTest-1 {shorthand alias before matching parameter} {} {
+-p|path=
+p} {-p switch-value positional-value} {p positional-value path switch-value}
+
+testTemplate aliasParameterTest-2 {shorthand alias after matching parameter} {} {
+p
+-p|path=} {-p switch-value positional-value} {p positional-value path switch-value}
+
+testTemplate aliasParameterTest-3 {explicit aliases before matching parameter} {} {
+{path -switch -argument -alias {p f}}
+{p -parameter}} {-f switch-value positional-value} {p positional-value path switch-value}
+
+testTemplate aliasParameterTest-4 {explicit aliases after matching parameter} {} {
+{p -parameter}
+{path -switch -argument -alias {p f}}} {-p switch-value positional-value} {p positional-value path switch-value}
+
 cleanupTests

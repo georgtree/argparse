@@ -2609,7 +2609,8 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
         }
         //*****    Check for collision between alias and other switch name
         Tcl_Obj *switchValCollision = NULL;
-        if (DICT_GET_IF_EXISTS(interp, argCtx->aliasesDict, name, &switchValCollision)) {
+        if (DictKeyExists(interp, optDict, interpCtx->elswitch_switch) == 1 &&
+            DICT_GET_IF_EXISTS(interp, argCtx->aliasesDict, name, &switchValCollision)) {
             Tcl_Obj *msg = Tcl_NewStringObj("collision of switch -", -1);
             Tcl_AppendStringsToObj(msg, Tcl_GetString(switchValCollision), " alias with the -", Tcl_GetString(name),
                                    " switch", NULL);
