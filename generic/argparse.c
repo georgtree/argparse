@@ -1915,15 +1915,22 @@ Tcl_Obj *BuildHelpMessage(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Argume
                 Tcl_ListObjAppendElement(interp, constraints, JoinWithEmptySeparator(interp, enumStr)));
         }
         if (DictKeyExists(interp, opt, interpCtx->elswitch_allow) == 1) {
-            Tcl_Obj *enumStr = Tcl_NewListObj(0, NULL);
-            TCL_RETURN_NULL_IF_ERROR(Tcl_ListObjAppendElement(interp, enumStr, Tcl_NewStringObj("Allows ", -1)));
-            TCL_RETURN_NULL_IF_ERROR(
-                Tcl_ListObjAppendElement(interp, enumStr, EnumStrBuildObj(interp, interpCtx->elswitch_allow, opt)));
-            TCL_RETURN_NULL_IF_ERROR(Tcl_ListObjAppendElement(interp, enumStr, Tcl_NewStringObj(".", -1)));
-            TCL_RETURN_NULL_IF_ERROR(
-                Tcl_ListObjAppendElement(interp, constraints, JoinWithEmptySeparator(interp, enumStr)));
-        } else {
-            /* No action required: all valid cases handled above (MISRA 15.7) */
+            Tcl_Obj *allowedNames;
+            Tcl_Size allowedCount;
+            TCL_RETURN_NULL_IF_ERROR(Tcl_DictObjGet(interp, opt, interpCtx->elswitch_allow, &allowedNames));
+            TCL_RETURN_NULL_IF_ERROR(Tcl_ListObjLength(interp, allowedNames, &allowedCount));
+            if (allowedCount == 0) {
+                TCL_RETURN_NULL_IF_ERROR(Tcl_ListObjAppendElement(
+                    interp, constraints, Tcl_NewStringObj("Allows no other elements.", -1)));
+            } else {
+                Tcl_Obj *enumStr = Tcl_NewListObj(0, NULL);
+                TCL_RETURN_NULL_IF_ERROR(Tcl_ListObjAppendElement(interp, enumStr, Tcl_NewStringObj("Allows ", -1)));
+                TCL_RETURN_NULL_IF_ERROR(
+                    Tcl_ListObjAppendElement(interp, enumStr, EnumStrBuildObj(interp, interpCtx->elswitch_allow, opt)));
+                TCL_RETURN_NULL_IF_ERROR(Tcl_ListObjAppendElement(interp, enumStr, Tcl_NewStringObj(".", -1)));
+                TCL_RETURN_NULL_IF_ERROR(
+                    Tcl_ListObjAppendElement(interp, constraints, JoinWithEmptySeparator(interp, enumStr)));
+            }
         }
         if (DictKeyExists(interp, opt, interpCtx->elswitch_forbid) == 1) {
             Tcl_Obj *enumStr = Tcl_NewListObj(0, NULL);
@@ -2514,10 +2521,10 @@ int TypeChecker(Tcl_Interp *interp, Tcl_Obj *nameObj, Tcl_Obj *optDictObj, Tcl_O
 int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_Obj *definition,
                             ArgumentDefinition *argCtx, ArgparseInterpCtx *interpCtx) {
     static const char *elementSwitches[] = {
-        "-alias",   "-argument", "-boolean",    "-catchall",  "-default",  "-enum",      "-forbid", "-ignore",
-        "-imply",   "-keep",     "-key",        "-level",     "-optional", "-parameter", "-pass",   "-reciprocal",
-        "-require", "-required", "-standalone", "-switch",    "-upvar",    "-validate",  "-value",  "-type",
-        "-allow",   "-help",     "-errormsg",   "-hsuppress", NULL};
+        "-alias",   "-argument", "-boolean",    "-catchall",  "-default",   "-enum",      "-forbid", "-ignore",
+        "-imply",   "-keep",     "-key",        "-level",     "-optional",  "-parameter", "-pass",   "-reciprocal",
+        "-require", "-required", "-standalone", "-switch",    "-upvar",     "-validate",  "-value",  "-type",
+        "-allow",   "-help",     "-errormsg",   "-hsuppress", "-exclusive", NULL};
     static const char *elementSwitchesWithArgsNames[] = {"alias", "default", "enum",    "forbid",   "imply",
                                                          "key",   "pass",    "require", "validate", "value",
                                                          "type",  "allow",   "help",    "errormsg", NULL};
@@ -2597,6 +2604,16 @@ int ParseElementDefinitions(Tcl_Interp *interp, GlobalSwitchesContext *ctx, Tcl_
                 TCL_RETURN_IF_ERROR(Tcl_DictObjPut(interp, optDict, switchName, elemListElems[j + 1]));
                 j += 2; // consume the argument too
             }
+        }
+        //****   Normalize the no-argument abbreviation before ordinary constraint validation
+        if (DictKeyExists(interp, optDict, interpCtx->elswitch_exclusive) == 1) {
+            if (DictKeyExists(interp, optDict, interpCtx->elswitch_allow) == 1) {
+                Tcl_SetObjResult(interp, Tcl_NewStringObj("-exclusive and -allow conflict", -1));
+                return TCL_ERROR;
+            }
+            TCL_RETURN_IF_ERROR(
+                Tcl_DictObjPut(interp, optDict, interpCtx->elswitch_allow, interpCtx->misc_emptyStrObj));
+            TCL_RETURN_IF_ERROR(Tcl_DictObjRemove(interp, optDict, interpCtx->elswitch_exclusive));
         }
         //****   Process the first element of the element definition
         Tcl_Obj *name = NULL;
@@ -3152,6 +3169,7 @@ static void FreeArgparseInterpCtx(void *clientData) {
     Tcl_DecrRefCount(interpCtx->elswitch_value);
     Tcl_DecrRefCount(interpCtx->elswitch_type);
     Tcl_DecrRefCount(interpCtx->elswitch_allow);
+    Tcl_DecrRefCount(interpCtx->elswitch_exclusive);
     Tcl_DecrRefCount(interpCtx->elswitch_help);
     Tcl_DecrRefCount(interpCtx->elswitch_errormsg);
     Tcl_DecrRefCount(interpCtx->elswitch_hsuppress);
@@ -3224,6 +3242,7 @@ static ArgparseInterpCtx *InitArgparseInterpCtx(Tcl_Interp *interp) {
     ELSWITCH(interpCtx->elswitch_value, "value");
     ELSWITCH(interpCtx->elswitch_type, "type");
     ELSWITCH(interpCtx->elswitch_allow, "allow");
+    ELSWITCH(interpCtx->elswitch_exclusive, "exclusive");
     ELSWITCH(interpCtx->elswitch_help, "help");
     ELSWITCH(interpCtx->elswitch_errormsg, "errormsg");
     ELSWITCH(interpCtx->elswitch_hsuppress, "hsuppress");

@@ -552,6 +552,7 @@ namespace eval ::argparse {
         | `-require nameList`        | If element is present, other elements that must be present                                    |
         | `-forbid nameList`         | If element is present, other elements that must not be present                                |
         | `-allow nameList`          | If element is present, other elements that is not in the `nameList` must not be present       |
+        | `-exclusive`               | No-argument abbreviation for `-allow {}`; no other elements may be present                  |
         | `-imply argList`           | If element is present, extra switch arguments; requires `-switch`                             |
         | `-reciprocal`              | This element's `-require` is reciprocal; requires `-require`                                  |
         | `-validate validNameOrDef` | Name of validation expression, or inline validation definition                                |
@@ -606,6 +607,8 @@ namespace eval ::argparse {
         │ -forbid nameList         │ If element is present, other elements that must not be present                            │
         ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
         │ -allow nameList          │ If element is present, other elements that is not in the nameList must not be present     │
+        ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+        │ -exclusive               │ No-argument abbreviation for -allow {}; no other elements may be present                  │
         ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
         │ -imply argList           │ If element is present, extra switch arguments; requires -switch                           │
         ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
@@ -924,6 +927,51 @@ namespace eval ::argparse {
         (procedure "sheduleEvent" line 2)
         ```
 
+
+        ### Exclusive elements
+
+        The no-argument element switch `-exclusive` abbreviates `-allow {}`. It can be used on a switch or a
+        positional parameter and is normalized to an empty allow list before ordinary constraint processing.
+
+        For example, these definitions have the same behavior:
+
+        ```tcl
+        {-version -exclusive}
+        {-version -allow {}}
+        ```
+
+        An exclusive element permits no other present elements. Its own argument values are permitted, and
+        repeated occurrences or aliases of the same switch still count as the same element. Defaults belonging
+        to omitted elements do not count as present elements. The existing argument consumption, validation, and
+        required-element rules are unchanged.
+
+        ```tcl
+        proc inspectConfig {args} {
+            argparse -inline {
+                {-version -exclusive}
+                -verbose
+                {file -optional}
+            }
+        }
+        inspectConfig -version
+        # Returns: version {}
+        inspectConfig -version -verbose
+        # Error: version doesn't allow verbose
+        inspectConfig -version settings.conf
+        # Error: version doesn't allow file
+        ```
+
+        `-exclusive` does not waive required switches or parameters. It is therefore different from `-standalone`,
+        which disables required-element checks and require/forbid/allow constraints when it is processed.
+        A present standalone switch also disables the empty allow constraint produced by `-exclusive`.
+        If an exclusive element requires another element, the resulting constraints can be unsatisfiable; this
+        abbreviation does not introduce automatic contradiction checking.
+
+        Combining `-exclusive` with an explicit `-allow` is rejected in either order, including `-allow {}`:
+        `-exclusive and -allow conflict`. Combining it with `-forbid` produces the ordinary normalized diagnostic
+        `-allow and -forbid conflict`. Repeating `-exclusive` itself is harmless.
+
+        Detailed help describes both `-exclusive` and `-allow {}` as `Allows no other elements.`
 
         ## Reciprocal
 

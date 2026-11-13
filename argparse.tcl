@@ -136,7 +136,7 @@ proc ::argparse {args} {
         set opt {}
         set defsSwitches {-alias -argument -boolean -catchall -default -enum -forbid -ignore -imply -keep -key -level\
                                   -optional -parameter -pass -reciprocal -require -required -standalone -switch -upvar\
-                                  -validate -value -type -allow -help -errormsg -hsuppress}
+                                  -validate -value -type -allow -help -errormsg -hsuppress -exclusive}
         set defsSwitchesWArgs {alias default enum forbid imply key pass require validate value type allow help errormsg}
         for {set i 1} {$i<[llength $elem]} {incr i} {
             if {[set switch [regsub {^-} [tcl::prefix match $defsSwitches [lindex $elem $i]] {}]]\
@@ -150,6 +150,14 @@ proc ::argparse {args} {
                 incr i
                 dict set opt $switch [lindex $elem $i]
             }
+        }
+        ####  Normalize the no-argument abbreviation before ordinary constraint validation.
+        if {[dict exists $opt exclusive]} {
+            if {[dict exists $opt allow]} {
+                return -code error {-exclusive and -allow conflict}
+            }
+            dict set opt allow {}
+            dict unset opt exclusive
         }
         ####  Process the first element of the element definition.
         if {$elem eq {}} {
@@ -457,7 +465,11 @@ proc ::argparse {args} {
                     lappend constraints [join [list Requires [{*}$enumStrBuild require $opt]]].
                 }
                 if {[dict exists $opt allow]} {
-                    lappend constraints [join [list Allows [{*}$enumStrBuild allow $opt]]].
+                    if {[llength [dict get $opt allow]] == 0} {
+                        lappend constraints {Allows no other elements.}
+                    } else {
+                        lappend constraints [join [list Allows [{*}$enumStrBuild allow $opt]]].
+                    }
                 }
                 if {[dict exists $opt forbid]} {
                     lappend constraints [join [list Forbids [{*}$enumStrBuild forbid $opt]]].

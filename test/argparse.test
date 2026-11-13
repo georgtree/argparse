@@ -2056,7 +2056,7 @@ testTemplate onlySwitchNoArgsTest-1 {} {} {
 -b
 -c} {-a -c} {bad option "-defauldt": must be -alias, -argument, -boolean, -catchall, -default, -enum, -forbid, -ignore,\
 -imply, -keep, -key, -level, -optional, -parameter, -pass, -reciprocal, -require, -required, -standalone, -switch,\
--upvar, -validate, -value, -type, -allow, -help, -errormsg, or -hsuppress}
+-upvar, -validate, -value, -type, -allow, -help, -errormsg, -hsuppress, or -exclusive}
 
 ### Check the constraints of elements with shared keys
 testTemplate helpTest-2 {} {} {
@@ -2790,5 +2790,118 @@ foreach {name script expected} {
     } -result [list $expected 0 $expected 0]
 }
 interp delete frameInstalled frameReference
+
+### Issue #23: -exclusive is the no-argument form of -allow {}.
+testTemplate exclusiveTest-1 {exclusive switch alone} {} {
+{-version -exclusive}
+-other} {-version} {version {}}
+
+testTemplate exclusiveTest-2 {exclusive switch rejects another switch} {} {
+{-version -exclusive}
+-other} {-version -other} {version doesn't allow other}
+
+testTemplate exclusiveTest-3 {exclusive switch rejects preceding switch} {} {
+{-version -exclusive}
+-other} {-other -version} {version doesn't allow other}
+
+testTemplate exclusiveTest-4 {aliases and repeated occurrences refer to the same element} {} {
+{-v|version -exclusive}} {-v -version} {version {}}
+
+testTemplate exclusiveTest-5 {switch value does not count as another element} {} {
+{-only= -exclusive}} {-only value} {only value}
+
+testTemplate exclusiveTest-6 {optional positional parameter cannot accompany exclusive switch} {} {
+{-only -exclusive}
+{file -optional}} {-only file.txt} {only doesn't allow file}
+
+testTemplate exclusiveTest-7 {exclusive does not waive required parameters} {-mixed} {
+{-only -exclusive}
+file} {-only} {missing required parameter: file}
+
+testTemplate exclusiveTest-8 {exclusive does not waive required switches} {} {
+{-only -exclusive}
+{-out= -required}} {-only} {missing required switch: -out}
+
+testTemplate exclusiveTest-9 {exclusive positional parameter alone} {} {
+{first -exclusive}
+{second -optional}} {one} {first one}
+
+testTemplate exclusiveTest-10 {exclusive positional parameter rejects another parameter} {} {
+{first -exclusive}
+{second -optional}} {one two} {first doesn't allow second}
+
+testTemplate exclusiveTest-11 {omitted defaults are not present elements} {} {
+{-only -exclusive}
+{-other= -default fallback}} {-only} {other fallback only {}}
+
+testTemplate exclusiveTest-12 {standalone keeps its existing constraint-waiving behavior} {} {
+{-only -exclusive}
+{-other -standalone}} {-only -other} {other {} only {}}
+
+testTemplate exclusiveTest-13 {explicit allow conflicts regardless of option order} {} {
+{-only -exclusive -allow {}}} {} {-exclusive and -allow conflict}
+
+testTemplate exclusiveTest-14 {explicit nonempty allow cannot override exclusive} {} {
+{-only -allow other -exclusive}
+-other} {} {-exclusive and -allow conflict}
+
+testTemplate exclusiveTest-15 {ordinary allow-forbid conflict survives normalization} {} {
+{-only -exclusive -forbid other}
+-other} {} {-allow and -forbid conflict}
+
+testTemplate exclusiveTest-16 {repeated flag is idempotent} {} {
+{-only -exclusive -exclusive}} {-only} {only {}}
+
+testTemplate exclusiveTest-17 {required-by relationship is still enforced} {} {
+{-only -exclusive -require other}
+-other} {-only} {-only requires -other}
+
+testTemplate exclusiveTest-18 {satisfying require does not bypass exclusivity} {} {
+{-only -exclusive -require other}
+-other} {-only -other} {only doesn't allow other}
+
+# Compare complete help and parse outcomes, including cached native definitions.
+test exclusive-parity {abbreviation matches empty allow in both implementations} -setup {
+    foreach backend {exclusiveInstalled exclusiveReference} {
+        interp create $backend
+        $backend eval [list set auto_path $auto_path]
+        if {$backend eq {exclusiveInstalled}} {
+            $backend eval {package require argparse}
+        } else {
+            $backend eval [list source [file join $currentDir .. argparse.tcl]]
+        }
+    }
+} -body {
+    set same 1
+    foreach argv {{-help} {-only} {-only -other} {-other -only} {-other} {}} {
+        set outcomes {}
+        foreach backend {exclusiveInstalled exclusiveReference} {
+            foreach flag {{-exclusive} {-allow {}}} {
+                set definition [list [list -only {*}$flag] -other]
+                set script [list argparse -inline -help {} -helpret -helplevel 1 -synopsiscmd cmd $definition $argv]
+                set code [catch {$backend eval $script} result]
+                lappend outcomes [list $code $result]
+            }
+        }
+        foreach outcome [lrange $outcomes 1 end] {
+            if {$outcome ne [lindex $outcomes 0]} {
+                set same 0
+            }
+        }
+    }
+    set same
+} -cleanup {
+    interp delete exclusiveInstalled exclusiveReference
+} -result 1
+
+test exclusive-help {empty allow is described clearly, including a whitespace-only list} -body {
+    set result {}
+    foreach flag {{-exclusive} {-allow {}} {-allow {   }}} {
+        set text [argparse -help {} -helpret -helplevel 1 -synopsiscmd cmd \
+                [list [list -only {*}$flag]] {-help}]
+        lappend result [string match {*Allows no other elements.*} $text]
+    }
+    set result
+} -result {1 1 1}
 
 cleanupTests

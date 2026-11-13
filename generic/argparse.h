@@ -100,6 +100,7 @@ typedef struct {
     Tcl_Obj *elswitch_value;
     Tcl_Obj *elswitch_type;
     Tcl_Obj *elswitch_allow;
+    Tcl_Obj *elswitch_exclusive;
     Tcl_Obj *elswitch_help;
     Tcl_Obj *elswitch_errormsg;
     Tcl_Obj *elswitch_hsuppress; // cashed element switches objects

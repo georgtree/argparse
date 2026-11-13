@@ -569,6 +569,8 @@ increase an explicit positive level by one when preserving that earlier native b
 ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
 │ -allow nameList          │ If element is present, other elements that is not in the nameList must not be present     │
 ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ -exclusive               │ No-argument abbreviation for -allow {}; no other elements may be present                  │
+├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
 │ -imply argList           │ If element is present, extra switch arguments; requires -switch                           │
 ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
 │ -reciprocal              │ This element's -require is reciprocal; requires -require                                  │
@@ -903,6 +905,54 @@ while executing
 (procedure "sheduleEvent" line 2)
 .fi
 .RE
+.SS "EXCLUSIVE ELEMENTS"
+.PP
+The no-argument element switch -exclusive abbreviates -allow {}\&. It can be used on a switch or a
+positional parameter and is normalized to an empty allow list before ordinary constraint processing\&.
+.PP
+For example, these definitions have the same behavior:
+.PP
+.RS 4n
+.nf
+{-version -exclusive}
+{-version -allow {}}
+.fi
+.RE
+.PP
+An exclusive element permits no other present elements\&. Its own argument values are permitted, and
+repeated occurrences or aliases of the same switch still count as the same element\&. Defaults belonging
+to omitted elements do not count as present elements\&. The existing argument consumption, validation, and
+required-element rules are unchanged\&.
+.PP
+.RS 4n
+.nf
+proc inspectConfig {args} {
+    argparse -inline {
+        {-version -exclusive}
+        -verbose
+        {file -optional}
+    }
+}
+inspectConfig -version
+# Returns: version {}
+inspectConfig -version -verbose
+# Error: version doesn't allow verbose
+inspectConfig -version settings\&.conf
+# Error: version doesn't allow file
+.fi
+.RE
+.PP
+-exclusive does not waive required switches or parameters\&. It is therefore different from -standalone,
+which disables required-element checks and require/forbid/allow constraints when it is processed\&.
+A present standalone switch also disables the empty allow constraint produced by -exclusive\&.
+If an exclusive element requires another element, the resulting constraints can be unsatisfiable; this
+abbreviation does not introduce automatic contradiction checking\&.
+.PP
+Combining -exclusive with an explicit -allow is rejected in either order, including -allow {}:
+-exclusive and -allow conflict\&. Combining it with -forbid produces the ordinary normalized diagnostic
+-allow and -forbid conflict\&. Repeating -exclusive itself is harmless\&.
+.PP
+Detailed help describes both -exclusive and -allow {} as Allows no other elements\&.
 .SH RECIPROCAL
 .PP
 Swtich with name -reciprocal is presented both as \fIglobal switch\fP and \fIelement
