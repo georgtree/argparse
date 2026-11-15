@@ -2,8 +2,6 @@
 
 [![Tests: Linux, Windows UCRT64 and MSVC](https://img.shields.io/github/actions/workflow/status/georgtree/argparse/tests.yml?branch=main&label=Tests%3A%20Linux%2C%20Windows%20UCRT64%20and%20MSVC)](https://github.com/georgtree/argparse/actions/workflows/tests.yml)
 
-Tests cover **Linux · Windows UCRT64 · Windows MSVC**, with both C and Tcl implementations on Tcl 9.1.
-
 This is a fork of argparse project initially developed by Andy Goth <andrew.m.goth@gmail.com>.
 
 See [original repository](https://core.tcl-lang.org/tcllib/timeline?r=amg-argparse), and 
@@ -98,7 +96,7 @@ Tcllib are not bundled. Regenerate and commit the manual before packaging if its
 The manual build workflow uploads the full `.tar.gz` distribution for Linux and `.zip` distributions for UCRT64 and
 MSVC, inside the corresponding workflow artifacts. These archives can also be attached to a GitHub release.
 
-### GitHub Actions
+## GitHub Actions
 
 Every push runs the complete test suite with both the C and Tcl implementations on Tcl 9.1.0 in three configurations:
 Linux GCC, Windows MSYS2 UCRT64, and Windows MSVC (x64).
@@ -106,7 +104,7 @@ Linux GCC, Windows MSYS2 UCRT64, and Windows MSVC (x64).
 The **Build packages** workflow uses the same three configurations and uploads one package artifact per
 configuration. It runs only manually through **Actions → Build packages → Run workflow**.
 
-### Documentation
+## Documentation
 
 Documentation could be found [here](https://georgtree.github.io/argparse/).
 

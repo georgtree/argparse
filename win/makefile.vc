@@ -103,16 +103,16 @@ DIST_DIR = $(DIST_ROOT)\$(DIST_PACKAGE)
 
 dist: $(PROJECT)
 	@if exist "$(DIST_DIR)" rmdir /s /q "$(DIST_DIR)"
-	@mkdir "$(DIST_DIR)"
+	@cmd.exe /d /e:on /c mkdir "$(DIST_DIR)"
 	@$(CPY) "$(ROOT)\README.md" "$(DIST_DIR)\"
 	@$(CPY) "$(ROOT)\LICENSE" "$(DIST_DIR)\"
 	@$(CPY) "$(PRJLIB)" "$(DIST_DIR)\"
 	@for %f in ("$(ROOT)\*.tcl") do @if exist "%f" if /i not "%~nxf"=="pkgIndex.tcl" ($(CPY) "%f" "$(DIST_DIR)\" || exit /b 1)
 	@$(CPY) "$(OUT_DIR)\pkgIndex.tcl" "$(DIST_DIR)\"
-	@mkdir "$(DIST_DIR)\test"
+	@cmd.exe /d /e:on /c mkdir "$(DIST_DIR)\test"
 	@$(CPY) "$(TESTDIR)\all.tcl" "$(DIST_DIR)\test\"
 	@for %f in ("$(TESTDIR)\*.test") do @if exist "%f" ($(CPY) "%f" "$(DIST_DIR)\test\" || exit /b 1)
-	@mkdir "$(DIST_DIR)\docs"
+	@cmd.exe /d /e:on /c mkdir "$(DIST_DIR)\docs"
 	@for %f in ("$(ROOT)\docs\*.html" "$(ROOT)\docs\*.js" "$(ROOT)\docs\*.inv" "$(ROOT)\docs\*.n" "$(ROOT)\docs\.nojekyll") do @if exist "%f" ($(CPY) "%f" "$(DIST_DIR)\docs\" || exit /b 1)
 	@for %d in (_static assets images _images) do @if exist "$(ROOT)\docs\%d\" (xcopy /E /I /Y "$(ROOT)\docs\%d" "$(DIST_DIR)\docs\%d" >nul || exit /b 1)
 	tar.exe -czf "$(DIST_ROOT)\$(DIST_PACKAGE).tar.gz" -C "$(DIST_ROOT)" "$(DIST_PACKAGE)"
