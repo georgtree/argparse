@@ -15,3 +15,4 @@ configure~
 *.o
 *.dll
 /autom4te.cache
+/_ci/

@@ -60,6 +60,25 @@ packages' documentation are preserved.
 To install Tcl-only version, the sequence is the same, except the flag `--enable-tcl-only` provided to `./configure`
 script.
 
+### Windows MSVC build
+
+For a local MSVC build, use an **x64 Native Tools Command Prompt for VS 2022** with Tcl 9 installed, and run from
+`win/`:
+
+```bat
+nmake /f makefile.vc INSTALLDIR=C:\Tcl
+set TCLLIBPATH={C:/src/tcllib/modules}
+nmake /f makefile.vc INSTALLDIR=C:\Tcl test
+nmake /f makefile.vc INSTALLDIR=C:\Tcl install
+```
+
+The test target attempts both backends and fails if either fails. `TESTFLAGS` accepts the usual tcltest filters. The
+MSVC build uses C11 support (Visual Studio 2019 16.8 or newer). Use a Tcl installation built for the same architecture.
+
+`INSTALLDIR` names the installation root, for example `C:\tcltk\9.1-msvc`, not its `lib` subdirectory. Bundled build
+helpers do not replace Tcl headers or its MSVC stub library (`lib\tclstub.lib` for Tcl 9). Use an MSVC-built Tcl for
+this route; the UCRT64 workflow remains a separate MinGW build.
+
 ### Documentation
 
 Documentation could be found [here](https://georgtree.github.io/argparse/).

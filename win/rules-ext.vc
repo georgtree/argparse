@@ -28,15 +28,11 @@ macro to the name of the project makefile.
 !error The rules-ext.vc file is not intended for Tcl itself.
 !endif
 
-# We extract version numbers using the nmakehlp program. For now use
-# the local copy of nmakehlp. Once we locate Tcl, we will use that
-# one if it is newer.
-!if "$(MACHINE)" == "IX86" || "$(MACHINE)" == "$(NATIVE_ARCH)"
-!if [$(CC) -nologo -DNDEBUG "nmakehlp.c" -link -subsystem:console > nul]
-!endif
-!else
-!if [copy x86_64-w64-mingw32-nmakehlp.exe nmakehlp.exe >NUL]
-!endif
+# Bootstrap with the bundled helper, as in RBC's MSVC build. Tcl's build
+# support files are optional; the local rules below provide the fallback.
+# Keep compiler diagnostics visible and do not reuse a stale helper on failure.
+!if [cl -nologo -DNDEBUG "nmakehlp.c" -link -subsystem:console]
+!error Could not build the bundled nmakehlp.c. Run from win in a Visual Studio developer command prompt.
 !endif
 
 # First locate the Tcl directory that we are working with.

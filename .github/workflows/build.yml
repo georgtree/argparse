@@ -1,0 +1,62 @@
+name: Build packages
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  tea:
+    name: ${{ matrix.toolchain }} / Tcl ${{ matrix.tcl }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        tcl: ['9.0.4', '9.1.0']
+        toolchain: [linux-gcc, windows-ucrt64]
+        include:
+          - os: ubuntu-24.04
+            toolchain: linux-gcc
+          - os: windows-2022
+            toolchain: windows-ucrt64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-tea
+        with:
+          tcl: ${{ matrix.tcl }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: argparse-${{ matrix.toolchain }}-tcl${{ matrix.tcl }}
+          path: _ci/package/
+          if-no-files-found: error
+  msvc:
+    name: windows-msvc / Tcl ${{ matrix.tcl.version }}
+    runs-on: windows-2022
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        tcl:
+          - {version: '9.0.4', ref: core-9-0-4}
+          - {version: '9.1.0', ref: core-9-1-0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: tcltk/tcl
+          ref: ${{ matrix.tcl.ref }}
+          path: _ci/tcl
+      - uses: actions/checkout@v4
+        with:
+          repository: tcltk/tcllib
+          ref: tcllib-2-0
+          path: _ci/tcllib
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Build Tcl and argparse, then test both implementations
+        shell: pwsh
+        run: ./.github/scripts/build-msvc.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: argparse-windows-msvc-tcl${{ matrix.tcl.version }}
+          path: _ci/package/
+          if-no-files-found: error

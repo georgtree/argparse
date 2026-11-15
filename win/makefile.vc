@@ -22,6 +22,9 @@ PROJECT = argparse
 # Define TESTDIR because it is named "test" and not the standard "tests"
 TESTDIR  = $(ROOT)\test
 
+# C11 is needed for inline functions and compound literals.
+COMPILERFLAGS = $(COMPILERFLAGS) /std:c11
+DISABLE_TARGET_test = 1
 !include "rules-ext.vc"
 
 # Define the object files and resource file that make up the extension.
@@ -77,5 +80,14 @@ $(TMP_DIR)\myExtensionUuid.h: $(TMP_DIR)\manifest.uuid
 	@echo:>>$(TMP_DIR)\myExtensionUuid.h
 
 
+# Run the same suite in separate processes, attempting both even if C fails.
+test: $(PROJECT)
+	@call test-both.cmd "$(TCLSH)" "$(ROOT)" "$(PRJLIB)" "$(TESTFLAGS)"
+
+# argparse.tcl lives in the repository root rather than the usual library/.
+install: install-tcl-source
+install-tcl-source: default-install
+	@$(CPY) "$(ROOT)\argparse.tcl" "$(SCRIPT_INSTALL_DIR)"
+
 # Explicit dependency rules
-$(GENERICDIR)\argparse.c : $(GENERICDIR)\argparse.h
+$(TMP_DIR)\argparse.obj : $(GENERICDIR)\argparse.h
