@@ -77,6 +77,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#validation">Validation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#forbid">Forbid</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#allow">Allow</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#repeated-switch-arguments">Repeated switch arguments</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#exclusive-elements">Exclusive elements</a></li>
 </ul>
 </li>
@@ -667,31 +668,34 @@ increase an explicit positive level by one when preserving that earlier native b
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-allow</span> <span class="pre">nameList</span></code></p></td>
 <td><p>If element is present, other elements that is not in the <code class="docutils literal notranslate"><span class="pre">nameList</span></code> must not be present</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-exclusive</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-multiple</span></code></p></td>
+<td><p>Collect repeated argument-taking switch values into a list</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-exclusive</span></code></p></td>
 <td><p>No-argument abbreviation for <code class="docutils literal notranslate"><span class="pre">-allow</span> <span class="pre">{}</span></code>; no other elements may be present</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-imply</span> <span class="pre">argList</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-imply</span> <span class="pre">argList</span></code></p></td>
 <td><p>If element is present, extra switch arguments; requires <code class="docutils literal notranslate"><span class="pre">-switch</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-reciprocal</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-reciprocal</span></code></p></td>
 <td><p>This element’s <code class="docutils literal notranslate"><span class="pre">-require</span></code> is reciprocal; requires <code class="docutils literal notranslate"><span class="pre">-require</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-validate</span> <span class="pre">validNameOrDef</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-validate</span> <span class="pre">validNameOrDef</span></code></p></td>
 <td><p>Name of validation expression, or inline validation definition</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-errormsg</span> <span class="pre">message</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-errormsg</span> <span class="pre">message</span></code></p></td>
 <td><p>Custom error message that replaces the default one; requires <code class="docutils literal notranslate"><span class="pre">-validate</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-enum</span> <span class="pre">enumNameOrDef</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-enum</span> <span class="pre">enumNameOrDef</span></code></p></td>
 <td><p>Name of enumeration list, or inline enumeration definition</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-type</span> <span class="pre">typeName</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-type</span> <span class="pre">typeName</span></code></p></td>
 <td><p>Validate value according to type defined in <a class="reference external" href="https://www.tcl-lang.org/man/tcl9.0/TclCmd/index.html">string</a> command, requires <code class="docutils literal notranslate"><span class="pre">-argument</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-help</span> <span class="pre">description</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-help</span> <span class="pre">description</span></code></p></td>
 <td><p>Provide description to element that is displayed when help message is generated</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-hsuppress</span></code></p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-hsuppress</span></code></p></td>
 <td><p>Suppress help generation for certain element</p></td>
 </tr>
 </tbody>
@@ -945,6 +949,47 @@ while executing
 (procedure "sheduleEvent" line 2)
 </pre></div>
 </div>
+<section id="repeated-switch-arguments">
+<span id="r-argparse-repeated-switch-arguments"></span><span id="r-3a3aargparseqzrepeated20switch20arguments"></span><h3>Repeated switch arguments<a class="headerlink" href="#repeated-switch-arguments" title="Link to this heading"></a></h3>
+<p>Use the no-argument element option <code class="docutils literal notranslate"><span class="pre">-multiple</span></code> on an argument-taking switch to collect every occurrence
+into a list, in command-line order. Without it, repeated switches retain their existing last-value-wins
+behavior.</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">argparse</span><span class="w"> </span><span class="o">-</span>inline<span class="w"> </span><span class="k">{</span>
+<span class="w">    </span><span class="k">{</span><span class="nv">-a</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>multiple<span class="k">}</span>
+<span class="w">    </span><span class="nv">-b</span><span class="o">=</span>
+<span class="k">}</span><span class="w"> </span><span class="k">{</span><span class="nv">-a</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">-</span>b<span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="mi">3</span><span class="k">}</span>
+<span class="c"># Returns: a {1 3} b 2</span>
+</pre></div>
+</div>
+<p>One occurrence produces a one-element list. Each argument remains one element, including an empty string
+or a value that itself contains a list; values are never flattened:</p>
+<div class="highlight-tcl notranslate"><div class="highlight"><pre><span></span><span class="nv">argparse</span><span class="w"> </span><span class="o">-</span>inline<span class="w"> </span><span class="k">{{</span><span class="nv">-a</span><span class="o">=</span><span class="w"> </span><span class="o">-</span>multiple<span class="k">}}</span><span class="w"> </span><span class="k">{</span><span class="nv">-a</span><span class="w"> </span><span class="k">{</span><span class="nv">x</span><span class="w"> </span>y<span class="k">}</span><span class="w"> </span><span class="o">-</span>a<span class="w"> </span><span class="k">{}</span><span class="w"> </span><span class="o">-</span>a<span class="w"> </span>z<span class="k">}</span>
+<span class="c"># Returns: a {{x y} {} z}</span>
+</pre></div>
+</div>
+<p>Aliases, unambiguous prefixes, <code class="docutils literal notranslate"><span class="pre">-long</span></code>, and <code class="docutils literal notranslate"><span class="pre">-equalarg</span></code> all collect into the same canonical element.
+<code class="docutils literal notranslate"><span class="pre">-type</span></code>, <code class="docutils literal notranslate"><span class="pre">-enum</span></code>, and <code class="docutils literal notranslate"><span class="pre">-validate</span></code> apply separately to each supplied value; enumeration prefixes are
+expanded before collection. A missing argument on any occurrence is an error.</p>
+<p>Omission follows the ordinary rules: without <code class="docutils literal notranslate"><span class="pre">-default</span></code> there is no result key, and a caller variable
+is unset unless <code class="docutils literal notranslate"><span class="pre">-keep</span></code> applies. <code class="docutils literal notranslate"><span class="pre">-default</span></code> must be a valid Tcl list and represents the entire fallback
+list. For example, <code class="docutils literal notranslate"><span class="pre">{-a=</span> <span class="pre">-multiple</span> <span class="pre">-default</span> <span class="pre">{}}</span></code> supplies an empty list when omitted, while
+<code class="docutils literal notranslate"><span class="pre">{-a=</span> <span class="pre">-multiple</span> <span class="pre">-default</span> <span class="pre">{x</span> <span class="pre">y}}</span></code> supplies two default values. Explicit occurrences replace the whole
+default; it is never prepended. As with ordinary defaults, fallback values are not passed through type,
+enumeration, or expression validation. <code class="docutils literal notranslate"><span class="pre">-keep</span></code> does not append new values to an existing caller variable.</p>
+<p><code class="docutils literal notranslate"><span class="pre">-required</span></code> demands at least one occurrence. Constraints such as <code class="docutils literal notranslate"><span class="pre">-require</span></code>, <code class="docutils literal notranslate"><span class="pre">-allow</span></code>, <code class="docutils literal notranslate"><span class="pre">-forbid</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">-exclusive</span></code> still operate on element presence: repeating a switch does not introduce a new element,
+and default values do not count as explicit presence. Shared-key restrictions remain unchanged.</p>
+<p><code class="docutils literal notranslate"><span class="pre">-pass</span></code> preserves every occurrence using the normal pass-through rules. With <code class="docutils literal notranslate"><span class="pre">-normalize</span></code>, an omitted
+switch’s default list becomes repeated switch/value pairs; an empty default adds no pairs. For example,
+<code class="docutils literal notranslate"><span class="pre">{-a=</span> <span class="pre">-multiple</span> <span class="pre">-pass</span> <span class="pre">forwarded</span> <span class="pre">-default</span> <span class="pre">{x</span> <span class="pre">y}}</span></code> produces <code class="docutils literal notranslate"><span class="pre">{-a</span> <span class="pre">x</span> <span class="pre">-a</span> <span class="pre">y}</span></code> in <code class="docutils literal notranslate"><span class="pre">forwarded</span></code> when normalized.</p>
+<p><code class="docutils literal notranslate"><span class="pre">-multiple</span></code> requires an argument-taking switch (use <code class="docutils literal notranslate"><span class="pre">=</span></code> or <code class="docutils literal notranslate"><span class="pre">-argument</span></code>, or an option such as <code class="docutils literal notranslate"><span class="pre">-type</span></code>
+that already implies an argument). It does not itself imply <code class="docutils literal notranslate"><span class="pre">-argument</span></code>. It conflicts with <code class="docutils literal notranslate"><span class="pre">-parameter</span></code>,
+<code class="docutils literal notranslate"><span class="pre">-optional</span></code>, <code class="docutils literal notranslate"><span class="pre">-catchall</span></code>, <code class="docutils literal notranslate"><span class="pre">-upvar</span></code>, <code class="docutils literal notranslate"><span class="pre">-boolean</span></code>, and <code class="docutils literal notranslate"><span class="pre">-value</span></code>. Positional parameters, flags, optional
+switch arguments, and catchall switches therefore cannot use it.</p>
+<p>The generated synopsis shows <code class="docutils literal notranslate"><span class="pre">?-a</span> <span class="pre">value?</span> <span class="pre">...</span></code> for an optional repeatable switch and
+<code class="docutils literal notranslate"><span class="pre">-a</span> <span class="pre">value</span> <span class="pre">?-a</span> <span class="pre">value?</span> <span class="pre">...</span></code> for a required one. The ellipsis repeats the whole switch/value pair; it does
+not permit bare additional values. Repeated occurrences may be interleaved with other permitted switches.</p>
+</section>
 <section id="exclusive-elements">
 <span id="r-argparse-exclusive-elements"></span><span id="r-3a3aargparseqzexclusive20elements"></span><h3>Exclusive elements<a class="headerlink" href="#exclusive-elements" title="Link to this heading"></a></h3>
 <p>The no-argument element switch <code class="docutils literal notranslate"><span class="pre">-exclusive</span></code> abbreviates <code class="docutils literal notranslate"><span class="pre">-allow</span> <span class="pre">{}</span></code>. It can be used on a switch or a

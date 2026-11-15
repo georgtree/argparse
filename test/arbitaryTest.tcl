@@ -42,8 +42,9 @@ proc testTemplate {testName descr arguments definitionsStr inputStr refStr} {
 
 
 testTemplate typeTest-10 {} {} {
-{-a= -type double -catchall}
--b=
-{-c= -type dict}} {-b 2 -c {a n u k} -a 1 2 3} {a {1 2 3} b 2 c {a n u k}}
+{-a=}
+{-b= -pass result}
+{-c= -pass result}} {-b 2 -a 1}\
+        {a {1 2 3} b 2 c {a n u k}}
 
 

@@ -2057,7 +2057,7 @@ testTemplate onlySwitchNoArgsTest-1 {} {} {
 -b
 -c} {-a -c} {bad option "-defauldt": must be -alias, -argument, -boolean, -catchall, -default, -enum, -forbid, -ignore,\
 -imply, -keep, -key, -level, -optional, -parameter, -pass, -reciprocal, -require, -required, -standalone, -switch,\
--upvar, -validate, -value, -type, -allow, -help, -errormsg, -hsuppress, or -exclusive}
+-upvar, -validate, -value, -type, -allow, -help, -errormsg, -hsuppress, -exclusive, or -multiple}
 
 ### Check the constraints of elements with shared keys
 testTemplate helpTest-2 {} {} {
@@ -2701,5 +2701,174 @@ test exclusive-help {empty allow is described clearly, including a whitespace-on
     }
     set result
 } -result {1 1 1}
+
+### Repeated argument-taking switches
+testTemplate multipleTest-1 {interleaved values are collected in input order} {-inline} {
+{-a= -multiple}
+-b=} {-a 1 -b 2 -a 3} {a {1 3} b 2} {apply {{r} {dict get $r arguments}}}
+
+testTemplate multipleTest-2 {ordinary switches still use the last value} {-inline} {
+-a=} {-a 1 -a 3} {a 3} {apply {{r} {dict get $r arguments}}}
+
+testTemplate multipleTest-3 {single list-valued argument is not flattened} {} {
+{-a= -multiple}} {-a {one two}} {{{one two}} 1} {apply {{r} {list [dict get $r a] [llength [dict get $r a]]}}}
+
+testTemplate multipleTest-4 {empty and list-valued arguments remain separate} {} {
+{-a= -multiple}} {-a {} -a {x y} -a z} {a {{} {x y} z}}
+
+testTemplate multipleTest-5 {aliases and prefixes accumulate together} {} {
+{-alpha= -multiple -alias a}} {-a 1 -al 2 -alpha 3} {alpha {1 2 3}}
+
+testTemplate multipleTest-6 {long and equalarg syntax includes empty values} {-long -equalarg} {
+{-a= -multiple}} {--a=1 -a= --a 3} {a {1 {} 3}}
+
+testTemplate multipleTest-7 {omitted switch remains absent} {} {
+{-a= -multiple}} {} {}
+
+testTemplate multipleTest-8 {explicit empty default supplies an empty list} {} {
+{-a= -multiple -default {}}} {} {a {}}
+
+testTemplate multipleTest-9 {nonempty default is the complete result list} {} {
+{-a= -multiple -default {x {y z}}}} {} {a {x {y z}}}
+
+testTemplate multipleTest-10 {explicit values replace the default} {} {
+{-a= -multiple -default {x y}}} {-a z -a q} {a {z q}}
+
+testTemplate multipleTest-11 {required accepts repeated occurrences} {} {
+{-a= -multiple -required}} {-a 1 -a 2} {a {1 2}}
+
+testTemplate multipleTest-12 {required rejects omission} {} {
+{-a= -multiple -required}} {} {missing required switch: -a}
+
+testTemplate multipleTest-13 {a missing later argument is still an error} {} {
+{-a= -multiple}} {-a 1 -a} {-a requires an argument}
+
+testTemplate multipleTest-14 {each occurrence is type checked} {} {
+{-a= -multiple -type integer}} {-a 1 -a bad} {-a value "bad" is not of the type integer}
+
+testTemplate multipleTest-15 {enum prefixes are normalized per value} {} {
+{-a= -multiple -enum {red green}}} {-a r -a gr} {a {red green}}
+
+testTemplate multipleTest-16 {validation runs on later occurrences} {} {
+{-a= -multiple -validate {$arg > 0} -errormsg {must be positive}}} {-a 2 -a -1} {must be positive}
+
+testTemplate multipleTest-17 {require uses presence, not the number of values} {} {
+{-a= -multiple -require b}
+-b} {-a 1 -a 2 -b} {a {1 2} b {}}
+
+testTemplate multipleTest-18 {forbid still rejects another present switch} {} {
+{-a= -multiple -forbid b}
+-b} {-a 1 -a 2 -b} {-a conflicts with -b}
+
+testTemplate multipleTest-19 {exclusive allows repetitions of itself} {} {
+{-a= -multiple -exclusive}} {-a 1 -a 2} {a {1 2}}
+
+testTemplate multipleTest-20 {allow accepts the named companion} {} {
+{-a= -multiple -allow b}
+-b} {-a 1 -b -a 2} {a {1 2} b {}}
+
+testTemplate multipleTest-21 {explicit output key} {} {
+{-a= -multiple -key values}} {-a 1 -a 2} {values {1 2}}
+
+testTemplate multipleTest-22 {pass-through retains each occurrence} {} {
+{-a= -multiple -key values -pass forwarded}} {-a 1 -a 2} {{1 2} {-a 1 -a 2}}\
+        {apply {{r} {list [dict get $r values] [dict get $r forwarded]}}}
+
+testTemplate multipleTest-23 {normalized default emits repeated switches} {-normalize} {
+{-a= -multiple -key values -pass forwarded -default {x {y z}}}} {} {{x {y z}} {-a x -a {y z}}}\
+        {apply {{r} {list [dict get $r values] [dict get $r forwarded]}}}
+
+testTemplate multipleTest-24 {empty normalized default emits no switches} {-normalize} {
+{-a= -multiple -key values -pass forwarded -default {}}} {} {{} {}}\
+        {apply {{r} {list [dict get $r values] [dict get $r forwarded]}}}
+
+testTemplate multipleTest-25 {optional values are excluded} {} {
+{-a? -multiple}} {} {-multiple and -optional conflict}
+
+testTemplate multipleTest-26 {catchall is excluded} {} {
+{-a* -multiple}} {} {-multiple and -catchall conflict}
+
+testTemplate multipleTest-27 {upvar is excluded} {} {
+{-a^ -multiple}} {} {-multiple and -upvar conflict}
+
+testTemplate multipleTest-28 {booleans are excluded} {} {
+{-a -multiple -boolean}} {} {-multiple and -boolean conflict}
+
+testTemplate multipleTest-29 {fixed values are excluded} {} {
+{-a -multiple -value x}} {} {-multiple and -value conflict}
+
+testTemplate multipleTest-30 {positional parameters are excluded} {} {
+{a -multiple}} {} {-multiple and -parameter conflict}
+
+testTemplate multipleTest-31 {argument-free switches are excluded} {} {
+{-a -multiple}} {} {-multiple requires an argument-taking switch}
+
+testTemplate multipleTest-32 {optional repeat synopsis} {-help {} -helpret -synopsiscmd cmd} {
+{-a= -multiple}} {-help} {cmd ?-a value? ...} {apply {{r} {lindex [split $r \n] 0}}}
+
+testTemplate multipleTest-33 {required repeat synopsis} {-help {} -helpret -synopsiscmd cmd} {
+{-a= -multiple -required}} {-help} {cmd -a value ?-a value? ...} {apply {{r} {lindex [split $r \n] 0}}}
+
+testTemplate multipleTest-34 {help describes collection} {-help {} -helpret -synopsiscmd cmd} {
+{-a= -multiple}} {-help} 1 {apply {{r} {string match {*May be repeated; collects argument values into a list.*} $r}}}
+
+testTemplate multipleTest-35 {cached definitions do not accumulate across calls or failures} {-inline} {
+{-a= -multiple -type integer -default {7 8}}} {-a 1 -a 2} {{1 2} {7 8} 1 {3 4} {7 8}} {apply {{r} {
+    set definition {{-a= -multiple -type integer -default {7 8}}}
+    set first [dict get $r arguments a]
+    set fallback [argparse -inline $definition {}]
+    set failed [catch {argparse -inline $definition {-a 2 -a bad}}]
+    set next [argparse -inline $definition {-a 3 -a 4}]
+    list $first [dict get $fallback a] $failed [dict get $next a] [dict get [argparse -inline $definition {}] a]
+}}}
+
+testTemplate multipleTest-36 {malformed list default is rejected} {} {
+{-a= -multiple -default \{}} {} {-multiple default must be a list}
+
+testTemplate multipleTest-37 {keep preserves an omitted caller value} {} {} {} old {apply {{r} {
+    set a old
+    argparse -keep {{-a= -multiple}} {}
+    set a
+}}}
+
+testTemplate multipleTest-38 {repetition starts a fresh list even with keep} {} {} {} {1 2} {apply {{r} {
+    set a old
+    argparse -keep {{-a= -multiple}} {-a 1 -a 2}
+    set a
+}}}
+
+testTemplate multipleTest-39 {successful and failed parses release collected arguments} {} {} {} 1 {apply {{r} {
+    set definition {{-a= -multiple} {-n= -type integer}}
+    set value [string repeat x 10000]
+    foreach input [list [list -a $value -a $value] [list -a $value -n bad]] {
+        catch {argparse -inline $definition $input}
+    }
+    unset input
+    regexp {refcount of ([0-9]+)} [::tcl::unsupported::representation $value] -> before
+    for {set i 0} {$i < 50} {incr i} {
+        argparse -inline $definition [list -a $value -a $value]
+        catch {argparse -inline $definition [list -a $value -n bad]}
+    }
+    regexp {refcount of ([0-9]+)} [::tcl::unsupported::representation $value] -> after
+    expr {$before == $after}
+}}}
+
+testTemplate multipleTest-40 {normalization preserves explicit aliases and enum values} {-normalize} {
+{-alpha= -multiple -alias a -key values -pass forwarded -enum {red green}}} {-a r -alpha gr} {{red green}\
+        {-alpha red -alpha green}} {apply {{r} {list [dict get $r values] [dict get $r forwarded]}}}
+
+testTemplate multipleTest-41 {mixed mode preserves value order around parameters} {-mixed} {
+{-a= -multiple}
+{rest -catchall}} {-a 1 file -a 2} {{1 2} file} {apply {{r} {list [dict get $r a] [dict get $r rest]}}}
+
+testTemplate multipleTest-42 {implied occurrences enter the same collection} {} {
+{-a= -multiple}
+{-other -imply {-a 2}}} {-a 1 -other -a 3} {1 2 3} {apply {{r} {dict get $r a}}}
+
+testTemplate multipleTest-43 {type can imply the required argument mode} {} {
+{-a -multiple -type integer}} {-a 1 -a 2} {a {1 2}}
+
+testTemplate multipleTest-44 {global boolean does not change repeatable argument switches} {-boolean} {
+{-a= -multiple}} {-a 1 -a 2} {a {1 2}}
 
 cleanupTests

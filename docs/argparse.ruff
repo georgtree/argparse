@@ -552,6 +552,7 @@ namespace eval ::argparse {
         | `-require nameList`        | If element is present, other elements that must be present                                    |
         | `-forbid nameList`         | If element is present, other elements that must not be present                                |
         | `-allow nameList`          | If element is present, other elements that is not in the `nameList` must not be present       |
+        | `-multiple`                | Collect repeated argument-taking switch values into a list                               |
         | `-exclusive`               | No-argument abbreviation for `-allow {}`; no other elements may be present                  |
         | `-imply argList`           | If element is present, extra switch arguments; requires `-switch`                             |
         | `-reciprocal`              | This element's `-require` is reciprocal; requires `-require`                                  |
@@ -607,6 +608,8 @@ namespace eval ::argparse {
         │ -forbid nameList         │ If element is present, other elements that must not be present                            │
         ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
         │ -allow nameList          │ If element is present, other elements that is not in the nameList must not be present     │
+        ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+        │ -multiple                │ Collect repeated argument-taking switch values into a list                               │
         ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
         │ -exclusive               │ No-argument abbreviation for -allow {}; no other elements may be present                  │
         ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
@@ -927,6 +930,56 @@ namespace eval ::argparse {
         (procedure "sheduleEvent" line 2)
         ```
 
+
+        ### Repeated switch arguments
+
+        Use the no-argument element option `-multiple` on an argument-taking switch to collect every occurrence
+        into a list, in command-line order. Without it, repeated switches retain their existing last-value-wins
+        behavior.
+
+        ```tcl
+        argparse -inline {
+            {-a= -multiple}
+            -b=
+        } {-a 1 -b 2 -a 3}
+        # Returns: a {1 3} b 2
+        ```
+
+        One occurrence produces a one-element list. Each argument remains one element, including an empty string
+        or a value that itself contains a list; values are never flattened:
+
+        ```tcl
+        argparse -inline {{-a= -multiple}} {-a {x y} -a {} -a z}
+        # Returns: a {{x y} {} z}
+        ```
+
+        Aliases, unambiguous prefixes, `-long`, and `-equalarg` all collect into the same canonical element.
+        `-type`, `-enum`, and `-validate` apply separately to each supplied value; enumeration prefixes are
+        expanded before collection. A missing argument on any occurrence is an error.
+
+        Omission follows the ordinary rules: without `-default` there is no result key, and a caller variable
+        is unset unless `-keep` applies. `-default` must be a valid Tcl list and represents the entire fallback
+        list. For example, `{-a= -multiple -default {}}` supplies an empty list when omitted, while
+        `{-a= -multiple -default {x y}}` supplies two default values. Explicit occurrences replace the whole
+        default; it is never prepended. As with ordinary defaults, fallback values are not passed through type,
+        enumeration, or expression validation. `-keep` does not append new values to an existing caller variable.
+
+        `-required` demands at least one occurrence. Constraints such as `-require`, `-allow`, `-forbid`, and
+        `-exclusive` still operate on element presence: repeating a switch does not introduce a new element,
+        and default values do not count as explicit presence. Shared-key restrictions remain unchanged.
+
+        `-pass` preserves every occurrence using the normal pass-through rules. With `-normalize`, an omitted
+        switch's default list becomes repeated switch/value pairs; an empty default adds no pairs. For example,
+        `{-a= -multiple -pass forwarded -default {x y}}` produces `{-a x -a y}` in `forwarded` when normalized.
+
+        `-multiple` requires an argument-taking switch (use `=` or `-argument`, or an option such as `-type`
+        that already implies an argument). It does not itself imply `-argument`. It conflicts with `-parameter`,
+        `-optional`, `-catchall`, `-upvar`, `-boolean`, and `-value`. Positional parameters, flags, optional
+        switch arguments, and catchall switches therefore cannot use it.
+
+        The generated synopsis shows `?-a value? ...` for an optional repeatable switch and
+        `-a value ?-a value? ...` for a required one. The ellipsis repeats the whole switch/value pair; it does
+        not permit bare additional values. Repeated occurrences may be interleaved with other permitted switches.
 
         ### Exclusive elements
 

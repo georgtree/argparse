@@ -136,7 +136,7 @@ proc ::argparse {args} {
         set opt {}
         set defsSwitches {-alias -argument -boolean -catchall -default -enum -forbid -ignore -imply -keep -key -level\
                                   -optional -parameter -pass -reciprocal -require -required -standalone -switch -upvar\
-                                  -validate -value -type -allow -help -errormsg -hsuppress -exclusive}
+                                  -validate -value -type -allow -help -errormsg -hsuppress -exclusive -multiple}
         set defsSwitchesWArgs {alias default enum forbid imply key pass require validate value type allow help errormsg}
         for {set i 1} {$i<[llength $elem]} {incr i} {
             if {[set switch [regsub {^-} [tcl::prefix match $defsSwitches [lindex $elem $i]] {}]]\
@@ -211,6 +211,20 @@ proc ::argparse {args} {
                 dict set opt optional {}
             } else {
                 dict set opt required {}
+            }
+        }
+        ####  Repeated values are supported only for ordinary argument-taking switches.
+        if {[dict exists $opt multiple]} {
+            foreach other {parameter optional catchall upvar boolean value} {
+                if {[dict exists $opt $other]} {
+                    return -code error "-multiple and -$other conflict"
+                }
+            }
+            if {![dict exists $opt switch] || ![dict exists $opt argument]} {
+                return -code error {-multiple requires an argument-taking switch}
+            }
+            if {[dict exists $opt default] && [catch {llength [dict get $opt default]}]} {
+                return -code error {-multiple default must be a list}
             }
         }
         ####  Check requirements and conflicts.
@@ -484,6 +498,9 @@ proc ::argparse {args} {
                 if {[info exists constraints]} {
                     lappend combined {*}$constraints
                 }
+                if {[dict exists $opt multiple]} {
+                    lappend combined {May be repeated; collects argument values into a list.}
+                }
                 if {[dict exists $opt default] && [dict exists $opt argument]} {
                     lappend combined "Default value is [dict get $opt default]."
                 }
@@ -604,6 +621,12 @@ proc ::argparse {args} {
                         }
                         if {!$required} {
                             set token ?$token?
+                        }
+                        if {[dict exists $opt multiple]} {
+                            if {$required} {
+                                append token " ?-$name value?"
+                            }
+                            append token { ...}
                         }
                         lappend synopsisSwitches $token
                     } else {
@@ -831,6 +854,8 @@ proc ::argparse {args} {
                 if {[info exists key]} {
                     if {[dict exists $def $name optional]} {
                         dict set result $key [list {} $argv0]
+                    } elseif {[dict exists $def $name multiple]} {
+                        dict lappend result $key $argv0
                     } else {
                         dict set result $key $argv0
                     }
@@ -996,7 +1021,13 @@ proc ::argparse {args} {
         dict for {name opt} $def {
             if {[dict exists $opt switch] && [dict exists $opt pass] && [dict exists $opt argument] &&\
                         [dict exists $opt default] && [dict exists $omitted $name]} {
-                dict lappend result [dict get $opt pass] -$name [dict get $opt default]
+                if {[dict exists $opt multiple]} {
+                    foreach value [dict get $opt default] {
+                        dict lappend result [dict get $opt pass] -$name $value
+                    }
+                } else {
+                    dict lappend result [dict get $opt pass] -$name [dict get $opt default]
+                }
             }
         }
     }
