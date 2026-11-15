@@ -18,10 +18,11 @@ Push-Location win
 try {
     Invoke-Nmake "INSTALLDIR=$prefix"
     Invoke-Nmake "INSTALLDIR=$prefix" test
-    Invoke-Nmake "INSTALLDIR=$prefix" install
+    Invoke-Nmake "INSTALLDIR=$prefix" "DIST_ROOT=$root/_ci/dist" dist
 } finally { Pop-Location }
 
 $package = Join-Path $root '_ci/package'
 New-Item -ItemType Directory -Force $package | Out-Null
-Copy-Item "$prefix/lib/argparse*" $package -Recurse
-Copy-Item LICENSE $package
+Get-ChildItem "$root/_ci/dist/*.zip" | ForEach-Object {
+    Copy-Item $_.FullName (Join-Path $package ($_.BaseName + "-windows-msvc.zip"))
+}

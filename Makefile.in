@@ -305,70 +305,47 @@ COMPRESS_ZIP= zip -r $(PKG_DIR).zip $(PKG_DIR)
 DIST_ROOT = /tmp/dist
 DIST_DIR = $(DIST_ROOT)/$(PKG_DIR)
 
-ifeq ($(HAVE_TCL_ONLY),0)
-DIST_INSTALL_DATA = CPPROG='cp -p' $(INSTALL) -m 644
-DIST_INSTALL_SCRIPT = CPPROG='cp -p' $(INSTALL) -m 755
-endif
-
 dist-clean:
-	rm -rf $(DIST_DIR) $(DIST_ROOT)/$(PKG_DIR).tar.*;\
-	rm -rf $(DIST_DIR) $(DIST_ROOT)/$(PKG_DIR).zip
+	rm -rf "$(DIST_DIR)" "$(DIST_ROOT)/$(PKG_DIR).tar.gz" "$(DIST_ROOT)/$(PKG_DIR).zip"
 
-
+dist: all
+	rm -rf "$(DIST_DIR)"
+	$(INSTALL_DATA_DIR) "$(DIST_DIR)"
+	$(INSTALL_DATA) "$(srcdir)/README.md" "$(DIST_DIR)/"
+	$(INSTALL_DATA) "$(srcdir)/LICENSE" "$(DIST_DIR)/"
 ifeq ($(HAVE_TCL_ONLY),0)
-dist: dist-clean
-	mkdir -p $(DIST_DIR)
-	cp -p $(srcdir)/README.md $(DIST_DIR)/
-	cp -p $(srcdir)/LICENSE* $(DIST_DIR)/
-	cp -p $(srcdir)/$(PKG_LIB_FILE) $(DIST_DIR)/
-	@for i in $(srcdir)/*.tcl; do \
-	    if [ -f $$i ]; then \
-		cp -p $$i $(DIST_DIR)/ ; \
-	    fi; \
-	done;
-	@list='$(DIST_TEST_FILES)'; for p in $$list; do \
-	  if test -f "$(srcdir)/$$p"; then \
-	    d=`dirname "$$p"`; \
-	    $(INSTALL_DATA_DIR) "$(DIST_DIR)/$$d"; \
-	    echo " Copy $(srcdir)/$$p $(DIST_DIR)/$$p"; \
-	    $(INSTALL_DATA) "$(srcdir)/$$p" "$(DIST_DIR)/$$p"; \
+	$(INSTALL_LIBRARY) "$(PKG_LIB_FILE)" "$(DIST_DIR)/"
+endif
+	@set -e; for p in "$(srcdir)"/*.tcl; do \
+	  if test -f "$$p" && test "`basename "$$p"`" != pkgIndex.tcl; then \
+	    $(INSTALL_DATA) "$$p" "$(DIST_DIR)/"; \
 	  fi; \
 	done
-	@$(INSTALL_DATA_DIR) "$(DIST_DIR)/docs"
-	@echo "Copying html documentation to $(DIST_DIR)/docs"
-	@list='$(DOC_HTML_FILES) .nojekyll'; for p in $$list; do \
-	  if test -f "$(srcdir)/docs/$$p"; then \
-	    d=`dirname "$$p"`; \
-	    if test "x$$d" != "x."; then \
-	      $(INSTALL_DATA_DIR) "$(DIST_DIR)/docs/$$d"; \
-	    fi; \
-	    echo " Copy $(srcdir)/docs/$$p $(DIST_DIR)/docs/$$p"; \
-	    $(INSTALL_DATA) "$(srcdir)/docs/$$p" "$(DIST_DIR)/docs/$$p"; \
+	$(INSTALL_DATA) pkgIndex.tcl "$(DIST_DIR)/"
+	$(INSTALL_DATA_DIR) "$(DIST_DIR)/test"
+	$(INSTALL_DATA) "$(srcdir)/test/all.tcl" "$(DIST_DIR)/test/"
+	@set -e; for p in "$(srcdir)/test/"*.test; do \
+	  if test -f "$$p"; then \
+	    $(INSTALL_DATA) "$$p" "$(DIST_DIR)/test/"; \
+	  fi; \
+	done
+	$(INSTALL_DATA_DIR) "$(DIST_DIR)/docs"
+	@set -e; for p in "$(srcdir)/docs/"*.html "$(srcdir)/docs/"*.js \
+	    "$(srcdir)/docs/"*.inv "$(srcdir)/docs/"*.n "$(srcdir)/docs/.nojekyll"; do \
+	  if test -f "$$p"; then \
+	    $(INSTALL_DATA) "$$p" "$(DIST_DIR)/docs/"; \
 	  fi; \
 	done
 	@set -e; for directory in _static assets images _images; do \
 	  if test -d "$(srcdir)/docs/$$directory"; then \
-	    (cd "$(srcdir)/docs" && find "$$directory" -type f -print) | \
-	    while IFS= read -r file; do \
-	      $(INSTALL_DATA_DIR) "$(DIST_DIR)/docs/`dirname "$$file"`"; \
-	      $(INSTALL_DATA) "$(srcdir)/docs/$$file" "$(DIST_DIR)/docs/$$file"; \
-	    done; \
+	    cp -pR "$(srcdir)/docs/$$directory" "$(DIST_DIR)/docs/"; \
 	  fi; \
 	done
-	(cd $(DIST_ROOT); $(COMPRESS); $(COMPRESS_ZIP))
-else
-dist: dist-clean
-	mkdir -p $(DIST_DIR)
-	cp -p $(srcdir)/README.md $(DIST_DIR)/
-	cp -p $(srcdir)/LICENSE $(DIST_DIR)/
-	cp -p $(srcdir)/pkgIndex.tcl $(DIST_DIR)/
-	cp -p $(srcdir)/argparse.tcl $(DIST_DIR)/
-	mkdir -p $(DIST_DIR)/test
-	cp -p $(srcdir)/test/argparse.test $(DIST_DIR)/test
-	cp -p $(srcdir)/test/all.tcl $(DIST_DIR)/test
+	cd "$(DIST_ROOT)" && $(COMPRESS)
+	rm -f "$(DIST_ROOT)/$(PKG_DIR).zip"
+	cd "$(DIST_ROOT)" && $(COMPRESS_ZIP)
 
-	(cd $(DIST_ROOT); $(COMPRESS); $(COMPRESS_ZIP))
-endif
+.PHONY: dist dist-clean
 
 #========================================================================
 # Cleaning of building files

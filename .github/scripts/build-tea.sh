@@ -25,11 +25,14 @@ fi
 export TCLLIBPATH="{$modules}"
 make test TCLLIBPATH="$TCLLIBPATH"
 
-# Package only argparse, without bundling the Tcl runtime or Tcllib.
-make install-binaries
-cp -R "$prefix/lib/argparse"* "$root/_ci/package/"
-for package in "$root/_ci/package/argparse"*; do
-    cp "$root/argparse.tcl" "$package/"
-done
-cp "$root/LICENSE" "$root/_ci/package/"
-printf 'Tcl %s; %s\n' "$version" "${MSYSTEM:-Linux}" > "$root/_ci/package/build.txt"
+# Full distribution, including tests and the checked-in generated manual.
+make dist DIST_ROOT="$root/_ci/dist"
+if [[ $platform == win ]]; then
+    for archive in "$root/_ci/dist/"*.zip; do
+        cp "$archive" "$root/_ci/package/$(basename "$archive" .zip)-windows-ucrt64.zip"
+    done
+else
+    for archive in "$root/_ci/dist/"*.tar.gz; do
+        cp "$archive" "$root/_ci/package/$(basename "$archive" .tar.gz)-linux-gcc.tar.gz"
+    done
+fi

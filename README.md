@@ -1,6 +1,6 @@
 # argparse
 
-[![Tests: Linux, Windows UCRT64 and MSVC](https://github.com/georgtree/argparse/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/georgtree/argparse/actions/workflows/tests.yml)
+[![Tests: Linux, Windows UCRT64 and MSVC](https://img.shields.io/github/actions/workflow/status/georgtree/argparse/tests.yml?branch=main&label=Tests%3A%20Linux%2C%20Windows%20UCRT64%20and%20MSVC)](https://github.com/georgtree/argparse/actions/workflows/tests.yml)
 
 Tests cover **Linux · Windows UCRT64 · Windows MSVC**, with both C and Tcl implementations on Tcl 9.1.
 
@@ -83,6 +83,21 @@ MSVC build uses C11 support (Visual Studio 2019 16.8 or newer). Use a Tcl instal
 helpers do not replace Tcl headers or its MSVC stub library (`lib\tclstub.lib` for Tcl 9). Use an MSVC-built Tcl for
 this route; the UCRT64 workflow remains a separate MinGW build.
 
+### Distribution archives
+
+`make dist` creates `argparse<version>.tar.gz` and `argparse<version>.zip` under `/tmp/dist`. Override the destination
+with `make dist DIST_ROOT=/path/to/dist`.
+
+For MSVC, run `nmake /f makefile.vc INSTALLDIR=C:\Tcl dist` from `win/`.  Archives default to `$(OUT_DIR)\dist`; set
+`DIST_ROOT=C:\path\to\dist` to override.  This target uses Windows `tar.exe` to create both archive formats.
+
+All distributions include the active build's package index, Tcl source, README, license, complete test suite, and
+checked-in generated HTML and nroff manuals with their assets. Native builds also include the compiled library. Tcl and
+Tcllib are not bundled. Regenerate and commit the manual before packaging if its contents have changed.
+
+The manual build workflow uploads the full `.tar.gz` distribution for Linux and `.zip` distributions for UCRT64 and
+MSVC, inside the corresponding workflow artifacts. These archives can also be attached to a GitHub release.
+
 ### GitHub Actions
 
 Every push runs the complete test suite with both the C and Tcl implementations on Tcl 9.1.0 in three configurations:
@@ -102,3 +117,4 @@ Andy Goth <andrew.m.goth@gmail.com> - all code and most of documentation
 George Yashin <georgtree@gmail.com> - some documentation, test suite and new features, C implementation
 
 Ashok P. Nadkarni <apnmbx-wits@yahoo.com> - fix of C implementation and valuable advices about the code architecture
+

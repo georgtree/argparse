@@ -18,7 +18,7 @@ runs:
       with:
         msystem: UCRT64
         update: true
-        install: make mingw-w64-ucrt-x86_64-gcc
+        install: make zip tar mingw-w64-ucrt-x86_64-gcc
     - if: runner.os == 'Linux'
       shell: bash
       run: bash .github/scripts/build-tea.sh 9.1.0
