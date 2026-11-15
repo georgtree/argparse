@@ -1,7 +1,7 @@
 '\"
 '\" '\" Copyright (c) George Yashin
 '\"
-.TH "argparse" 3tcl 0\&.66 "argparse" "argparse package"
+.TH "argparse" 3tcl 0\&.70 "argparse" "argparse package"
 .SH NAME
 Introduction - argparse package
 .SH ARGPARSE
@@ -481,6 +481,8 @@ Comment is the \fIelement\fP started with # at the start of definition in the de
 ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
 │ -boolean                 │ Treat switches as having -boolean wherever possible                                       │
 ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ -transform commandPrefix │ Default value transformation for eligible elements                                        │
+├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
 │ -validate validDef       │ Define named validation expressions to be used by elements                                │
 ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
 │ -enum enumDef            │ Define named enumeration lists to be used by elements                                     │
@@ -576,6 +578,12 @@ increase an explicit positive level by one when preserving that earlier native b
 │ -imply argList           │ If element is present, extra switch arguments; requires -switch                           │
 ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
 │ -reciprocal              │ This element's -require is reciprocal; requires -require                                  │
+├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ -transform commandPrefix │ Transform accepted values before storing them                                             │
+├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ -action commandPrefix    │ Invoke a callback instead of assigning a caller variable                                  │
+├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
+│ -withname                │ Pass the canonical element name before the callback value                                 │
 ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
 │ -validate validNameOrDef │ Name of validation expression, or inline validation definition                            │
 ├──────────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────┤
@@ -907,6 +915,149 @@ while executing
 (procedure "sheduleEvent" line 2)
 .fi
 .RE
+.SS "VALUE TRANSFORMATIONS AND ACTIONS"
+.PP
+Use -transform commandPrefix to convert an accepted input value before it is stored\&. The prefix is a Tcl
+list: by default argparse appends the value as one final word and invokes that command in the caller's frame\&.
+It can name a procedure, a built-in command, an ensemble subcommand, or an apply lambda\&.
+.PP
+.RS 4n
+.nf
+argparse -inline {
+    {-colour= -enum {red green blue} -transform {string toupper}}
+    {-count= -type integer -validate {$arg > 0} -transform {apply {{value} {expr {$value * 2}}}}}
+} {-colour gr -count 3}
+# Returns: colour GREEN count 6
+.fi
+.RE
+.PP
+Enumeration expansion, -validate, and -type checks happen before the callback\&. The callback receives the
+accepted value; its return value is stored without further validation and may have a different type\&. An error
+in validation prevents the callback for that value from running\&.
+.PP
+A global -transform commandPrefix supplies the default transformation for argument-taking switches and
+positional parameters\&. An element's -transform overrides it; -transform {} explicitly disables it\&.
+Argument-free switches and -upvar elements do not inherit the global transformation\&.
+.PP
+.RS 4n
+.nf
+argparse -inline -transform {string trim} {
+    -title=
+    {-code= -transform {string toupper}}
+    {-literal= -transform {}}
+} {-title {  hello  } -code abc -literal {  unchanged  }}
+# Returns: title hello code ABC literal {  unchanged  }
+.fi
+.RE
+.PP
+Use the element option -action commandPrefix when the callback itself handles the value, for example
+by calling an object's configuration method\&. In ordinary mode argparse neither sets nor unsets that
+element's caller variable, including when the element is omitted or has a default\&. With -inline, the
+callback return value is included under the element's result key\&. -key changes that key as usual\&.
+An action overrides the global transformation\&. Explicit -action and -transform on the same element
+conflict; an action prefix must not be empty\&.
+.PP
+.RS 4n
+.nf
+oo::class create Settings {
+    variable settings
+    constructor {} {
+        set settings {}
+    }
+    method configure {key value} {
+        dict set settings $key $value
+        return $value
+    }
+    method parse {args} {
+        argparse {
+            {-colour= -enum {red green blue} -action {my configure colour}}
+        }
+        return $settings
+    }
+}
+set object [Settings new]
+$object parse -colour gr
+# Returns: colour green
+$object destroy
+Settings destroy
+.fi
+.RE
+.PP
+The prefix {my configure colour} invokes my configure colour green in the method that called
+argparse\&. Relative command names use that caller's namespace\&. A callback procedure or lambda has its
+normal local frame; it may use upvar 1 to access the argparse caller\&. Prefix arguments can be built
+dynamically with list, for example [list my configure $settingName]\&.
+.PP
+Add the no-argument element option -withname to append the canonical element name before the value\&.
+This allows several elements to use the same configuration method without repeating their names in the
+command prefixes:
+.PP
+.RS 4n
+.nf
+# Inside an object method:
+argparse {
+    {-colour= -alias c -enum {red green blue} -action {my configure} -withname}
+    {-width= -type integer -action {my configure} -withname}
+} {-c gr -width 4}
+# Invokes: my configure -colour green
+#          my configure -width 4
+.fi
+.RE
+.PP
+For switches the name includes one leading dash\&. Aliases, abbreviations, --colour, and equal-argument
+syntax all produce the same canonical name, such as -colour\&. Positional parameters receive their
+declared name without an added dash\&. Neither -key nor the global -template changes the callback name\&.
+Existing prefix words come first, followed by the name and then the value; each is a separate Tcl word\&.
+.PP
+-withname works with both -action and -transform, including an inherited global transformation:
+.PP
+.RS 4n
+.nf
+argparse -inline -transform list {
+    {-colour= -withname}
+    {file -withname}
+} {-colour green example\&.txt}
+# Returns: colour {-colour green} file {file example\&.txt}
+.fi
+.RE
+.PP
+It requires a nonempty effective callback\&. Using it without a callback, or together with an empty
+-transform {} opt-out, is an error\&. It is an element option, not a global option\&. Without -withname,
+callbacks continue to receive only the value\&. With repeated switches or catchalls, the same canonical
+name accompanies each value\&. Validation, defaults, pass-through, and error handling follow the same
+rules with or without -withname\&.
+.PP
+The following conventions apply:
+.TP
+\(bu
+Only supplied values invoke callbacks\&. Omitted elements and -default values do not; defaults are already final values\&. An optional switch supplied without a value also does not invoke its callback\&.
+.TP
+\(bu
+A callback runs for every occurrence, even without -multiple; the last result then wins\&. With -multiple, results are collected in occurrence order\&. A list-valued result remains one list element\&.
+.TP
+\(bu
+A catchall validates and type-checks its entire input list first, then invokes its callback once per value\&. An empty catchall invokes nothing\&. Results form an outer list, without flattening\&.
+.TP
+\(bu
+A supplied optional switch value retains the usual two-element presence wrapper, with the callback result in the second element\&.
+.TP
+\(bu
+-pass retains the existing pre-transformation values and syntax, including under -normalize\&. This avoids applying transformations twice when forwarded arguments are parsed again\&. A separate pass-through destination is still assigned for an action\&. Use distinct keys for an action and its pass-through destination; action keys are excluded from caller-variable assignment\&.
+.TP
+\(bu
+Explicit callbacks require a positional parameter or an argument-taking switch, and conflict with -upvar\&. They do not imply -argument; use -a= or -argument where needed\&.
+.TP
+\(bu
+Help generation never invokes callbacks\&. Callback commands are resolved when invoked, so definitions can refer to commands created later\&.
+.TP
+\(bu
+Callback errors retain their error code and stack trace with added element context\&. Non-OK completion codes such as a raw return, break, or continue are reported as errors\&. Normal returns from callback procedures and lambdas work as usual\&.
+.PP
+Callbacks run during parsing, not after all input and constraints have been checked\&. Switch callbacks
+run as switches are consumed; positional callbacks run when positional values are allocated, after
+switch processing\&. Earlier side effects are not rolled back if a later value, callback, or constraint
+fails\&. For configuration that must change only after the complete input is accepted, first parse with
+-inline without callbacks that modify state, then apply the resulting dictionary after argparse succeeds\&.
 .SS "REPEATED SWITCH ARGUMENTS"
 .PP
 Use the no-argument element option -multiple on an argument-taking switch to collect every occurrence

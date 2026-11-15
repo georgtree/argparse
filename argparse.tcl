@@ -7,7 +7,7 @@
 # See the file "LICENSE" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 package require Tcl 8.6-
-package provide argparse 0.66
+package provide argparse 0.70
 # argparse --
 # Parses an argument list according to a definition list.  The result may be
 # stored into caller variables or returned as a dict.
@@ -43,6 +43,34 @@ proc ::argparse {args} {
         }
         return $args
     }}}
+    ### Invoke value callbacks in the same caller frame used for variable assignment.
+    set callbackHelper {apply {{name opt args} {
+        set prefix {}
+        foreach option {transform action} {
+            if {[dict exists $opt $option]} {
+                set prefix [dict get $opt $option]
+            }
+        }
+        if {![llength $prefix]} {
+            return $args
+        }
+        if {[dict exists $opt withname]} {
+            lappend prefix $name
+        }
+        set values {}
+        foreach value $args {
+            set code [catch {uplevel 2 [list {*}$prefix $value]} value options]
+            if {$code == 1} {
+                dict append options -errorinfo "\n    (argparse callback for $name)"
+                return -options $options $value
+            } elseif {$code != 0} {
+                return -code error -errorcode {ARGPARSE CALLBACK CODE}\
+                        "callback for $name returned unexpected code $code"
+            }
+            lappend values $value
+        }
+        return $values
+    }}}
     ### Check aliases
     set aliasesChecker {apply {{aliases opt} {
         foreach alias [dict get $opt alias] {
@@ -57,7 +85,7 @@ proc ::argparse {args} {
     set enum {}
     set validate {}
     set globalSwitches {-boolean -enum -equalarg -exact -inline -keep -level -long -mixed -normalize -pass -reciprocal\
-                                -template -validate -help -helplevel -pfirst -helpret -synopsis -synopsiscmd}
+                                -template -validate -help -helplevel -pfirst -helpret -synopsis -synopsiscmd -transform}
     for {set i 0} {$i<[llength $args]} {incr i} {
         if {[catch {regsub {^-} [tcl::prefix match -message switch $globalSwitches [lindex $args $i]] {} switch}\
                      errorMsg]} {
@@ -97,7 +125,7 @@ proc ::argparse {args} {
                     lappend definition $elem
                 }
             }
-        } elseif {$switch ni {enum level pass template validate help helplevel synopsis synopsiscmd}} {
+        } elseif {$switch ni {enum level pass template validate help helplevel synopsis synopsiscmd transform}} {
             # Process switches with no arguments.
             set $switch {}
         } elseif {$i == [llength $args]-1} {
@@ -124,6 +152,9 @@ proc ::argparse {args} {
             return -code error "-$option requires -help"
         }
     }
+    if {[info exists transform] && [catch {llength $transform}]} {
+        return -code error {-transform must be a command prefix list}
+    }
     ### Parse element definition list.
     set def {}
     set aliases {}
@@ -136,8 +167,10 @@ proc ::argparse {args} {
         set opt {}
         set defsSwitches {-alias -argument -boolean -catchall -default -enum -forbid -ignore -imply -keep -key -level\
                                   -optional -parameter -pass -reciprocal -require -required -standalone -switch -upvar\
-                                  -validate -value -type -allow -help -errormsg -hsuppress -exclusive -multiple}
-        set defsSwitchesWArgs {alias default enum forbid imply key pass require validate value type allow help errormsg}
+                                  -validate -value -type -allow -help -errormsg -hsuppress -exclusive -multiple\
+                                  -transform -action -withname}
+        set defsSwitchesWArgs {alias default enum forbid imply key pass require validate value type allow help errormsg\
+                                   transform action}
         for {set i 1} {$i<[llength $elem]} {incr i} {
             if {[set switch [regsub {^-} [tcl::prefix match $defsSwitches [lindex $elem $i]] {}]]\
                         ni $defsSwitchesWArgs} {
@@ -226,6 +259,34 @@ proc ::argparse {args} {
             if {[dict exists $opt default] && [catch {llength [dict get $opt default]}]} {
                 return -code error {-multiple default must be a list}
             }
+        }
+        ####  Explicit callbacks override the global transformation, including an empty opt-out.
+        if {[dict exists $opt transform] && [dict exists $opt action]} {
+            return -code error {-transform and -action conflict}
+        }
+        foreach option {transform action} {
+            if {[dict exists $opt $option]} {
+                if {[dict exists $opt upvar]} {
+                    return -code error "-$option and -upvar conflict"
+                }
+                if {[dict exists $opt switch] && ![dict exists $opt argument]} {
+                    return -code error "-$option requires an argument-taking switch or parameter"
+                }
+                if {[catch {llength [dict get $opt $option]} length]} {
+                    return -code error "-$option must be a command prefix list"
+                }
+                if {($option eq {action}) && !$length} {
+                    return -code error {-action requires a nonempty command prefix}
+                }
+            }
+        }
+        if {[info exists transform] && ![dict exists $opt transform] && ![dict exists $opt action] &&\
+                    ![dict exists $opt upvar] && ([dict exists $opt parameter] || [dict exists $opt argument])} {
+            dict set opt transform $transform
+        }
+        if {[dict exists $opt withname] && ![dict exists $opt action] &&\
+                    (![dict exists $opt transform] || ![llength [dict get $opt transform]])} {
+            return -code error {-withname requires a nonempty -transform or -action callback}
         }
         ####  Check requirements and conflicts.
         foreach {switch other} {reciprocal require  level upvar  errormsg validate} {
@@ -497,6 +558,14 @@ proc ::argparse {args} {
                 }
                 if {[info exists constraints]} {
                     lappend combined {*}$constraints
+                }
+                if {[dict exists $opt action]} {
+                    lappend combined {Calls an action instead of assigning a caller variable.}
+                } elseif {[dict exists $opt transform] && [llength [dict get $opt transform]]} {
+                    lappend combined {Transforms each value after validation.}
+                }
+                if {[dict exists $opt withname]} {
+                    lappend combined {Passes the canonical element name before the value to the callback.}
                 }
                 if {[dict exists $opt multiple]} {
                     lappend combined {May be repeated; collects argument values into a list.}
@@ -817,8 +886,9 @@ proc ::argparse {args} {
                 # The switch is catchall, so store all remaining arguments.
                 set argv [{*}$validateHelper $normal [dict get $def $name] {*}$argv]
                 set argv [{*}$typeChecker $normal [dict get $def $name] {*}$argv]
+                set callbackValues [{*}$callbackHelper $normal [dict get $def $name] {*}$argv]
                 if {[info exists key]} {
-                    dict set result $key $argv
+                    dict set result $key $callbackValues
                 }
                 if {[info exists pass]} {
                     if {[info exists normalize]} {
@@ -851,13 +921,14 @@ proc ::argparse {args} {
                 # The switch was given the expected argument.
                 set argv0 [lindex [{*}$validateHelper $normal [dict get $def $name] [lindex $argv 0]] 0]
                 set argv0 [lindex [{*}$typeChecker $normal [dict get $def $name] $argv0] 0]
+                set callbackValue [lindex [{*}$callbackHelper $normal [dict get $def $name] $argv0] 0]
                 if {[info exists key]} {
                     if {[dict exists $def $name optional]} {
-                        dict set result $key [list {} $argv0]
+                        dict set result $key [list {} $callbackValue]
                     } elseif {[dict exists $def $name multiple]} {
-                        dict lappend result $key $argv0
+                        dict lappend result $key $callbackValue
                     } else {
-                        dict set result $key $argv0
+                        dict set result $key $callbackValue
                     }
                 }
                 if {[info exists pass]} {
@@ -1061,6 +1132,13 @@ proc ::argparse {args} {
                 }
                 incr i $step
             }
+            if {$name ne {}} {
+                if {[dict exists $opt catchall]} {
+                    set val [{*}$callbackHelper $name $opt {*}$val]
+                } else {
+                    set val [lindex [{*}$callbackHelper $name $opt $val] 0]
+                }
+            }
             if {[dict exists $opt key]} {
                 dict set result [dict get $opt key] $val
             }
@@ -1088,6 +1166,12 @@ proc ::argparse {args} {
             dict set result [dict get $opt pass] {}
         }
     }
+    set actionKeys {}
+    dict for {name opt} $def {
+        if {[dict exists $opt action] && [dict exists $opt key]} {
+            dict set actionKeys [dict get $opt key] {}
+        }
+    }
     if {[info exists inline]} {
         ####  Return result dict.
         return $result
@@ -1096,13 +1180,17 @@ proc ::argparse {args} {
         if {![info exists keep]} {
             dict for {name val} $omitted {
                 set opt [dict get $def $name]
-                if {![dict exists $opt keep] && [dict exists $opt key] && ![dict exists $result [dict get $opt key]]} {
+                if {![dict exists $opt action] && ![dict exists $opt keep] && [dict exists $opt key] &&\
+                            ![dict exists $result [dict get $opt key]]} {
                     uplevel 1 [list ::unset -nocomplain [dict get $opt key]]
                 }
             }
         }
         ####  Process results.
         dict for {key val} $result {
+            if {[dict exists $actionKeys $key]} {
+                continue
+            }
             if {[dict exists $upvars $key]} {
                 # If this element uses -upvar, link to the named variable.
                 uplevel 1 [list ::upvar [dict get $def [dict get $upvars $key] level] $val $key]

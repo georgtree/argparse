@@ -2057,7 +2057,7 @@ testTemplate onlySwitchNoArgsTest-1 {} {} {
 -b
 -c} {-a -c} {bad option "-defauldt": must be -alias, -argument, -boolean, -catchall, -default, -enum, -forbid, -ignore,\
 -imply, -keep, -key, -level, -optional, -parameter, -pass, -reciprocal, -require, -required, -standalone, -switch,\
--upvar, -validate, -value, -type, -allow, -help, -errormsg, -hsuppress, -exclusive, or -multiple}
+-upvar, -validate, -value, -type, -allow, -help, -errormsg, -hsuppress, -exclusive, -multiple, -transform, -action, or -withname}
 
 ### Check the constraints of elements with shared keys
 testTemplate helpTest-2 {} {} {
@@ -2870,5 +2870,408 @@ testTemplate multipleTest-43 {type can imply the required argument mode} {} {
 
 testTemplate multipleTest-44 {global boolean does not change repeatable argument switches} {-boolean} {
 {-a= -multiple}} {-a 1 -a 2} {a {1 2}}
+
+### Value transformations and actions
+
+testTemplate callbackTest-1 {command prefix appends a single value} {} {
+{-a= -transform {string toupper}}} {-a hello} {a HELLO}
+
+testTemplate callbackTest-2 {lambda result is not revalidated} {} {
+{-a= -type integer -transform {apply {{v} {list number $v}}}}} {-a 7} {a {number 7}}
+
+testTemplate callbackTest-3 {enum expansion precedes transformation} {} {
+{-a= -enum {red green} -transform {string toupper}}} {-a gr} {a GREEN}
+
+testTemplate callbackTest-4 {multiple preserves nested callback results} {} {
+{-a= -multiple -transform {list item}}} {-a {x y} -a z} {a {{item {x y}} {item z}}}
+
+testTemplate callbackTest-5 {catchall switch transforms each value} {} {
+{-a -catchall -transform {list item}}} {-a x y} {a {{item x} {item y}}}
+
+testTemplate callbackTest-6 {catchall parameter transforms each value} {} {
+{rest -catchall -transform {string toupper}}} {x y} {rest {X Y}}
+
+testTemplate callbackTest-7 {required positional value} {} {
+{value -transform {string toupper}}} {abc} {value ABC}
+
+testTemplate callbackTest-8 {optional switch keeps its presence wrapper} {} {
+{-a -optional -transform {string toupper}}} {-a abc} {a {{} ABC}}
+
+testTemplate callbackTest-9 {missing optional value does not invoke callback} {} {
+{-a -optional -transform nonexistent}} {-a} {a {}}
+
+testTemplate callbackTest-10 {defaults are final values} {} {
+{-a= -default abc -transform nonexistent}} {} {a abc}
+
+testTemplate callbackTest-11 {multiple default is not transformed} {} {
+{-a= -multiple -default {x y} -transform nonexistent}} {} {a {x y}}
+
+testTemplate callbackTest-12 {empty catchall does not invoke callback} {} {
+{-a -catchall -transform nonexistent}} {-a} {a {}}
+
+testTemplate callbackTest-13 {global default, override, opt-out and flag} {-transform {string toupper}} {
+-a=
+{-b= -transform {string tolower}}
+{-c= -transform {}}
+-flag} {-a red -b BLUE -c Green -flag} {a RED flag {} b blue c Green}
+
+testTemplate callbackTest-14 {action overrides global transformation} {-inline -transform nonexistent} {
+{-a= -action {string toupper}}} {-a red} {arguments {a RED}}
+
+testTemplate callbackTest-15 {transform and action conflict} {} {
+{-a= -transform {} -action list}} {} {-transform and -action conflict}
+
+testTemplate callbackTest-16 {empty action rejected} {} {
+{-a= -action {}}} {} {-action requires a nonempty command prefix}
+
+testTemplate callbackTest-17 {flags reject callbacks} {} {
+{-a -transform list}} {} {-transform requires an argument-taking switch or parameter}
+
+testTemplate callbackTest-18 {upvar rejects callbacks} {} {
+{-a -upvar -action list}} {} {-action and -upvar conflict}
+
+testTemplate callbackTest-19 {malformed element prefix rejected} {} {
+{-a= -transform \{}} {} {-transform must be a command prefix list}
+
+testTemplate callbackTest-20 {malformed global prefix rejected} {-transform \{} {} {}\
+        {-transform must be a command prefix list}
+
+testTemplate callbackTest-21 {normalized pass keeps validated value} {-normalize} {
+{-alpha= -key value -pass forwarded -enum {red green} -transform {string toupper}}} {-al gr}\
+    {GREEN {-alpha green}} {apply {{r} {list [dict get $r value] [dict get $r forwarded]}}}
+
+testTemplate callbackTest-22 {raw pass keeps existing pre-transform representation} {} {
+{-a= -key value -pass forwarded -transform {string toupper}}} {-a red}\
+        {RED {-a red}} {apply {{r} {list [dict get $r value] [dict get $r forwarded]}}}
+
+testTemplate callbackTest-23 {parameter pass keeps original value} {} {
+{v -key value -pass forwarded -transform {string toupper}}} {red}\
+        {RED red} {apply {{r} {list [dict get $r value] [dict get $r forwarded]}}}
+
+testTemplate callbackTest-24 {action never sets or unsets its variable} {} {} {} {old old 0} {apply {{r} {
+    set a old
+    argparse {{-a= -action {string toupper}}} {-a red}
+    set first $a
+    argparse {{-a= -action {string toupper}}} {}
+    set second $a
+    unset a
+    argparse {{-a= -action {string toupper}}} {-a blue}
+    list $first $second [info exists a]
+}}}
+
+testTemplate callbackTest-25 {action default does not assign or execute} {} {} {} {old {a red}} {apply {{r} {
+    set a old
+    set def {{-a= -default red -action nonexistent}}
+    argparse $def {}
+    list $a [argparse -inline $def {}]
+}}}
+
+testTemplate callbackTest-26 {TclOO action calls private configure method in caller frame} {} {} {}\
+        {old {colour RED} {colour BLUE} {a {saved BLUE}}} {apply {{r} {
+    oo::class create CallbackTestClass {
+        variable settings
+        constructor {} {set settings {}}
+        method configure {key value} {
+            dict set settings $key $value
+            return [list saved $value]
+        }
+        method parse {args} {
+            set a old
+            argparse {{-a= -action {my configure colour}}}
+            list $a $settings
+        }
+        method inline {args} {
+            set result [argparse -inline {{-a= -action {my configure colour}}}]
+            list $settings $result
+        }
+    }
+    set obj [CallbackTestClass new]
+    try {
+        concat [$obj parse -a RED] [$obj inline -a BLUE]
+    } finally {
+        $obj destroy
+        CallbackTestClass destroy
+    }
+}}}
+
+testTemplate callbackTest-27 {relative command resolves in caller namespace} {} {} {} {a X} {apply {{r} {
+    namespace eval ::callbackTestNS {
+        proc convert {v} {string toupper $v}
+        proc parse {} {argparse -inline {{-a= -transform convert}} {-a x}}
+    }
+    try {::callbackTestNS::parse} finally {namespace delete ::callbackTestNS}
+}}}
+
+testTemplate callbackTest-28 {callback can access caller locals} {} {} {} {seen x x} {apply {{r} {
+    set seen {}
+    argparse {{-a= -action {lappend seen}}} {-a x}
+    set first $seen
+    argparse {{-a= -transform {set seen}}} {-a x}
+    list seen $first $a
+}}}
+
+testTemplate callbackTest-29 {invalid input never reaches callback} {} {} {} {1 1 {}} {apply {{r} {
+    set seen {}
+    set a [catch {argparse {{-a= -type integer -action {lappend seen}}} {-a bad}}]
+    set b [catch {argparse {{-a= -validate {$arg > 0} -action {lappend seen}}} {-a -1}}]
+    list $a $b $seen
+}}}
+
+testTemplate callbackTest-30 {previous action effects persist after a later failure} {} {} {} {1 one} {apply {{r} {
+    set seen {}
+    set failed [catch {argparse {{-a= -action {lappend seen}} {-b= -type integer}} {-a one -b bad}}]
+    list $failed $seen
+}}}
+
+testTemplate callbackTest-31 {error options and element context preserved} {} {} {} {1 boom {TEST CALLBACK} 1}\
+        {apply {{r} {
+            set code [catch {argparse {{-a= -transform\
+                                                {apply {{v} {return -code error -errorcode {TEST CALLBACK} boom}}}}}\
+                                     {-a x}} message options]
+            list $code $message [dict get $options -errorcode] [string match {*argparse callback for -a*}\
+                                                                        [dict get $options -errorinfo]]
+}}}
+
+testTemplate callbackTest-32 {raw return cannot escape parsing} {} {
+{-a= -transform return}} {-a x} {callback for -a returned unexpected code 2}
+
+testTemplate callbackTest-33 {break completion rejected} {} {
+{-a= -transform {return -code break -level 0}}} {-a x} {callback for -a returned unexpected code 3}
+
+testTemplate callbackTest-34 {continue completion rejected} {} {
+{-a= -transform {return -code continue -level 0}}} {-a x} {callback for -a returned unexpected code 4}
+
+testTemplate callbackTest-35 {argument is one word, never evaluated as script} {} {
+{-a= -transform {list literal}}} {-a {hello; [error injected]}} {a {literal {hello; [error injected]}}}
+
+testTemplate callbackTest-36 {multiple action inline collects return values} {-inline} {
+{-a= -multiple -action {list saved}}} {-a x -a y} {arguments {a {{saved x} {saved y}}}}
+
+testTemplate callbackTest-37 {action pass destination is still assigned} {} {} {} {old {-a x} x} {apply {{r} {
+    set a old
+    set seen {}
+    argparse {{-a= -key a -pass forwarded -action {lappend seen}}} {-a x}
+    list $a $forwarded $seen
+}}}
+
+testTemplate callbackTest-38 {cache separates global prefixes} {} {} {} {X x X} {apply {{r} {
+    set def {-a=}
+    list [dict get [argparse -inline -transform {string toupper} $def {-a x}] a] \
+         [dict get [argparse -inline -transform {string tolower} $def {-a X}] a] \
+         [dict get [argparse -inline -transform {string toupper} $def {-a x}] a]
+}}}
+
+testTemplate callbackTest-39 {nested parser does not disturb outer callback state} {} {} {} {{inner x} {inner y}}\
+        {apply {{r} {
+    set def {{-a= -multiple -transform {apply {{v} {
+        argparse -inline {{inner -transform {string tolower}}} [list $v]
+    }}}}}
+    dict get [argparse -inline $def {-a X -a Y}] a
+}}}
+
+testTemplate callbackTest-40 {successful and failed callbacks release input references} {} {} {} 1 {apply {{r} {
+    set value [string repeat x 10000]
+    set defs [list {{-a= -transform list}} {{-a= -action list}} {{-a= -transform {apply {{v} {error failure}}}}}]
+    foreach def $defs {catch {argparse -inline $def [list -a $value]}}
+    regexp {refcount of ([0-9]+)} [::tcl::unsupported::representation $value] -> before
+    for {set i 0} {$i < 50} {incr i} {
+        foreach def $defs {catch {argparse -inline $def [list -a $value]}}
+    }
+    regexp {refcount of ([0-9]+)} [::tcl::unsupported::representation $value] -> after
+    expr {$before == $after}
+}}}
+
+testTemplate callbackTest-41 {help does not execute callbacks} {-help {} -helpret} {
+{-a= -action nonexistent}} {-help} 1 {apply {{r} {string match {*Calls an action*} $r}}}
+
+testTemplate callbackTest-42 {help describes transformations} {-help {} -helpret} {
+{-a= -transform {string toupper}}} {-help} 1 {apply {{r} {string match {*Transforms each value*} $r}}}
+
+testTemplate callbackTest-43 {empty global prefix is an identity operation} {-transform {}} {-a=} {-a red} {a red}
+
+testTemplate callbackTest-44 {type and validation both precede transformation} {} {
+{-a= -type integer -validate {$arg > 0} -transform {list accepted}}} {-a 3} {a {accepted 3}}
+
+testTemplate callbackTest-45 {global transformation skips upvar elements} {} {} {} {new X} {apply {{r} {
+    set target old
+    apply {{} {
+        argparse -transform {string toupper} {{-a -upvar} -b=} {-a target -b x}
+        set a new
+        set ::callbackTestValue $b
+    }}
+    set result [list $target $::callbackTestValue]
+    unset ::callbackTestValue
+    return $result
+}}}
+
+testTemplate callbackTest-46 {pass-only element still invokes action} {} {} {} {x {-a x}} {apply {{r} {
+    set seen {}
+    argparse {{-a= -pass forwarded -action {lappend seen}}} {-a x}
+    list $seen $forwarded
+}}}
+
+testTemplate callbackTest-47 {empty transform has no help annotation} {-help {} -helpret} {
+{-a= -transform {}}} {-help} 0 {apply {{r} {string match {*Transforms each value*} $r}}}
+
+testTemplate callbackTest-48 {catchall pass retains input list} {-normalize} {
+{-a -catchall -key values -pass forwarded -transform {string toupper}}} {-a x y} \
+    {{X Y} {-a x y}} {apply {{r} {list [dict get $r values] [dict get $r forwarded]}}}
+
+testTemplate callbackTest-49 {catchall validates all members before invoking callbacks} {} {} {} {1 {}} {apply {{r} {
+    set seen {}
+    set code [catch {argparse {{-a -catchall -type integer -action {lappend seen}}} {-a 1 bad}}]
+    list $code $seen
+}}}
+
+testTemplate callbackTest-50 {parameter catchall action returns a list of results} {-inline} {
+{rest -catchall -action {list saved}}} {x y} {arguments {rest {{saved x} {saved y}}}}
+
+testTemplate callbackTest-51 {repeated switch without multiple invokes every occurrence} {} {} {} {y {x y}}\
+        {apply {{r} {
+    set seen {}
+    argparse {{-a= -transform {apply {{v} {upvar 1 seen seen; lappend seen $v; return $v}}}}} {-a x -a y}
+    list $a $seen
+}}}
+
+testTemplate callbackTest-52 {global applies to positional and catchall values} {-transform {string toupper}} {
+first
+{rest -catchall}} {a b c} {first A rest {B C}}
+
+testTemplate callbackTest-53 {explicit occurrence replaces fallback} {} {
+{-a= -multiple -default {fallback} -transform {string toupper}}} {-a x} {a X}
+
+testTemplate callbackTest-54 {constraints still fail after an action has run} {} {} {} {1 x} {apply {{r} {
+    set seen {}
+    set code [catch {argparse {{-a= -require b -action {lappend seen}} -b} {-a x}}]
+    list $code $seen
+}}}
+
+testTemplate callbackTest-55 {custom validation error prevents callback} {} {
+{-a= -validate {$arg > 0} -errormsg positive -transform nonexistent}} {-a -1} positive
+
+testTemplate callbackTest-56 {aliases long syntax and equal arguments} {-long -equalarg} {
+{-alpha= -alias a -multiple -transform {string toupper}}} {--a=red -alpha=green} {alpha {RED GREEN}}
+
+testTemplate callbackTest-57 {same cached definition supports recursive callbacks} {} {} {} {3 3} {apply {{r} {
+    proc ::callbackTestRecursive {v} {
+        if {$v == 0} {return 0}
+        expr {1 + [dict get [argparse -inline {
+            {-a= -transform ::callbackTestRecursive}
+        } [list -a [expr {$v - 1}]]] a]}
+    }
+    try {
+        list [::callbackTestRecursive 3] [::callbackTestRecursive 3]
+    } finally {
+        rename ::callbackTestRecursive {}
+    }
+}}}
+
+testTemplate callbackTest-58 {empty callback results are retained} {} {
+{-a= -multiple -transform {apply {{v} {return {}}}}}} {-a x -a y} {a {{} {}}}
+
+testTemplate callbackTest-59 {inline action respects key override} {-inline} {
+{-a= -key setting -action {string toupper}}} {-a red} {arguments {setting RED}}
+
+testTemplate callbackTest-60 {missing callback command propagates its error} {} {} {}\
+        {1 {TCL LOOKUP COMMAND nonexistent}} {apply {{r} {
+    set code [catch {argparse {{-a= -transform nonexistent}} {-a x}} message options]
+    list $code [dict get $options -errorcode]
+}}}
+
+### Callbacks with canonical element names
+testTemplate withnameTest-1 {transform receives canonical name then value} {} {
+{-colour= -withname -transform list}} {-colour green} {colour {-colour green}}
+
+testTemplate withnameTest-2 {alias and key override do not change callback name} {-inline} {
+{-colour= -alias c -key setting -withname -action list}} {-c green} {arguments {setting {-colour green}}}
+
+testTemplate withnameTest-3 {prefix long and equal syntax use single-dash canonical name} {-long -equalarg} {
+{-colour= -multiple -withname -transform list}} {--col=green -colour=blue} {colour {{-colour green} {-colour blue}}}
+
+testTemplate withnameTest-4 {positional parameter has no leading dash} {} {
+{file -withname -transform list}} {hello.txt} {file {file hello.txt}}
+
+testTemplate withnameTest-5 {switch catchall supplies name for every value} {} {
+{-files -catchall -withname -transform list}} {-files a b} {files {{-files a} {-files b}}}
+
+testTemplate withnameTest-6 {parameter catchall supplies name for every value} {} {
+{files -catchall -withname -transform list}} {a b} {files {{files a} {files b}}}
+
+testTemplate withnameTest-7 {global transform accepts element withname} {-transform list} {
+{-a= -withname}
+-b=} {-a x -b y} {a {-a x} b y}
+
+testTemplate withnameTest-8 {optional argument wrapper is preserved} {} {
+{-a -optional -withname -transform list}} {-a x} {a {{} {-a x}}}
+
+testTemplate withnameTest-9 {missing optional value does not call callback} {} {
+{-a -optional -withname -action nonexistent}} {-a} {}
+
+testTemplate withnameTest-10 {default bypasses named callback} {-inline} {
+{-a= -default fallback -withname -action nonexistent}} {} {arguments {a fallback}}
+
+testTemplate withnameTest-11 {withname requires callback} {} {
+{-a= -withname}} {} {-withname requires a nonempty -transform or -action callback}
+
+testTemplate withnameTest-12 {empty transform is not a named callback} {} {
+{-a= -withname -transform {}}} {} {-withname requires a nonempty -transform or -action callback}
+
+testTemplate withnameTest-13 {global opt-out cannot use withname} {-transform list} {
+{-a= -withname -transform {}}} {} {-withname requires a nonempty -transform or -action callback}
+
+testTemplate withnameTest-14 {validation precedes named action} {-inline} {
+{-colour= -enum {red green} -withname -action list}} {-colour gr} {arguments {colour {-colour green}}}
+
+testTemplate withnameTest-15 {prefix arguments precede name and value} {} {
+{-a= -withname -transform {list saved}}} {-a {x y}} {a {saved -a {x y}}}
+
+testTemplate withnameTest-16 {normalized pass ignores transformed output} {-normalize} {
+{-colour= -alias c -key setting -pass forwarded -withname -transform list}} {-c green}\
+        {{-colour green} {-colour green}} {apply {{r} {list [dict get $r setting] [dict get $r forwarded]}}}
+
+testTemplate withnameTest-17 {TclOO configure receives canonical names and values} {} {} {}\
+    {old {-colour green -width 4} {width {-width 5}}} {apply {{r} {
+    oo::class create WithnameTestClass {
+        variable settings
+        constructor {} {set settings {}}
+        method configure {name value} {
+            dict set settings $name $value
+            list $name $value
+        }
+        method parse {args} {
+            set colour old
+            argparse {
+                {-colour= -alias c -enum {red green} -action {my configure} -withname}
+                {-width= -type integer -action {my configure} -withname}
+            }
+            list $colour $settings
+        }
+        method inline {args} {
+            argparse -inline {{-width= -action {my configure} -withname}}
+        }
+    }
+    set obj [WithnameTestClass new]
+    try {
+        concat [$obj parse -c gr -width 4] [list [$obj inline -width 5]]
+    } finally {
+        $obj destroy
+        WithnameTestClass destroy
+    }
+}}}
+
+testTemplate withnameTest-18 {help describes the extra callback argument} {-help {} -helpret} {
+{-a= -withname -transform list}} {-help} 1 {apply {{r} {string match {*canonical*element*name*} $r}}}
+
+testTemplate withnameTest-19 {callback errors retain canonical name context} {} {} {} {1 {TEST NAMED} 1} {apply {{r} {
+    set code [catch {argparse {{-alpha= -alias a -withname -action {apply {{name value} {
+        return -code error -errorcode {TEST NAMED} "$name: $value"
+    }}}}} {-a bad}} message options]
+    list $code [dict get $options -errorcode] \
+        [string match {*argparse callback for -alpha*} [dict get $options -errorinfo]]
+}}}
+
+testTemplate withnameTest-20 {key templates do not change callback name or evaluate the value} {-template result_%s} {
+{-alpha= -withname -transform list}} {-alpha {a; [error injected]}}\
+        {-alpha {a; [error injected]}} {apply {{r} {lindex [dict values $r] 0}}}
 
 cleanupTests

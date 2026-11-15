@@ -102,6 +102,9 @@ typedef struct {
     Tcl_Obj *elswitch_allow;
     Tcl_Obj *elswitch_exclusive;
     Tcl_Obj *elswitch_multiple;
+    Tcl_Obj *elswitch_transform;
+    Tcl_Obj *elswitch_action;
+    Tcl_Obj *elswitch_withname;
     Tcl_Obj *elswitch_help;
     Tcl_Obj *elswitch_errormsg;
     Tcl_Obj *elswitch_hsuppress; // cashed element switches objects
@@ -129,12 +132,13 @@ enum GlobalSwitchId {
     GLOBAL_SWITCH_HELPRET,
     GLOBAL_SWITCH_SYNOPSIS,
     GLOBAL_SWITCH_SYNOPSISCMD,
+    GLOBAL_SWITCH_TRANSFORM,
     GLOBAL_SWITCH_COUNT // total number of global switches
 };
-static const char *globalSwitches[] = {"-boolean",  "-enum",        "-equalarg", "-exact",     "-inline", "-keep",
-                                       "-level",    "-long",        "-mixed",    "-normalize", "-pass",   "-reciprocal",
-                                       "-template", "-validate",    "-help",     "-helplevel", "-pfirst", "-helpret",
-                                       "-synopsis", "-synopsiscmd", NULL};
+static const char *globalSwitches[] = {
+    "-boolean", "-enum",      "-equalarg", "-exact",       "-inline",    "-keep",     "-level", "-long",
+    "-mixed",   "-normalize", "-pass",     "-reciprocal",  "-template",  "-validate", "-help",  "-helplevel",
+    "-pfirst",  "-helpret",   "-synopsis", "-synopsiscmd", "-transform", NULL};
 typedef struct {
     bitmask_t globalSwitches;             // bitmask of which global switch are present
     Tcl_Obj *values[GLOBAL_SWITCH_COUNT]; // arguments for value-carrying global switches
@@ -143,7 +147,7 @@ typedef struct {
 #define GLOBAL_SWITCH_TAKES_ARG_MASK                                                                                   \
     (BIT(GLOBAL_SWITCH_ENUM) | BIT(GLOBAL_SWITCH_LEVEL) | BIT(GLOBAL_SWITCH_PASS) | BIT(GLOBAL_SWITCH_TEMPLATE) |      \
      BIT(GLOBAL_SWITCH_VALIDATE) | BIT(GLOBAL_SWITCH_HELP) | BIT(GLOBAL_SWITCH_HELPLEVEL) |                            \
-     BIT(GLOBAL_SWITCH_SYNOPSIS) | BIT(GLOBAL_SWITCH_SYNOPSISCMD))
+     BIT(GLOBAL_SWITCH_SYNOPSIS) | BIT(GLOBAL_SWITCH_SYNOPSISCMD) | BIT(GLOBAL_SWITCH_TRANSFORM))
 #define HAS_GLOBAL_SWITCH(pctx, id) ((((bitmask_t)((pctx)->globalSwitches)) & BITMASK_OF(id)) != (bitmask_t)0u)
 #define GLOBAL_SWITCH_ARG(ctx, globalSwitchId) ((ctx)->values[globalSwitchId])
 
