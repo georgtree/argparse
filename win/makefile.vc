@@ -122,7 +122,7 @@ dist-stage: $(PROJECT)
 	@for %d in (_static assets images _images) do @if exist "$(ROOT)\docs\%d\" (xcopy /E /I /Y "$(ROOT)\docs\%d" "$(DIST_DOC)\%d" >nul || exit /b 1)
 
 dist: dist-stage
-	"$(SystemRoot)\System32\tar.exe" -czf "$(DIST_ROOT)\$(DIST_PACKAGE).tar.gz" -C "$(DIST_DIR)" .
+	cmd.exe /d /s /c ""%SystemRoot%\System32\tar.exe" -czf "$(DIST_ROOT)\$(DIST_PACKAGE).tar.gz" -C "$(DIST_DIR)" ."
 
 dist-zip: dist
-	"$(SystemRoot)\System32\tar.exe" -a -cf "$(DIST_ROOT)\$(DIST_PACKAGE).zip" -C "$(DIST_DIR)" .
+	cmd.exe /d /s /c ""%SystemRoot%\System32\tar.exe" -a -cf "$(DIST_ROOT)\$(DIST_PACKAGE).zip" -C "$(DIST_DIR)" ."
