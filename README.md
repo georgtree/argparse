@@ -1,5 +1,9 @@
 # argparse
 
+[![Tests: Linux, Windows UCRT64 and MSVC](https://github.com/georgtree/argparse/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/georgtree/argparse/actions/workflows/tests.yml)
+
+Tests cover **Linux · Windows UCRT64 · Windows MSVC**, with both C and Tcl implementations on Tcl 9.1.
+
 This is a fork of argparse project initially developed by Andy Goth <andrew.m.goth@gmail.com>.
 
 See [original repository](https://core.tcl-lang.org/tcllib/timeline?r=amg-argparse), and 
@@ -78,6 +82,14 @@ MSVC build uses C11 support (Visual Studio 2019 16.8 or newer). Use a Tcl instal
 `INSTALLDIR` names the installation root, for example `C:\tcltk\9.1-msvc`, not its `lib` subdirectory. Bundled build
 helpers do not replace Tcl headers or its MSVC stub library (`lib\tclstub.lib` for Tcl 9). Use an MSVC-built Tcl for
 this route; the UCRT64 workflow remains a separate MinGW build.
+
+### GitHub Actions
+
+Every push runs the complete test suite with both the C and Tcl implementations on Tcl 9.1.0 in three configurations:
+Linux GCC, Windows MSYS2 UCRT64, and Windows MSVC (x64).
+
+The **Build packages** workflow uses the same three configurations and uploads one package artifact per
+configuration. It runs only manually through **Actions → Build packages → Run workflow**.
 
 ### Documentation
 

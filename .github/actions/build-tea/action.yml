@@ -1,16 +1,12 @@
 name: Build and test with TEA
-description: Build a selected Tcl release and test both argparse implementations
-inputs:
-  tcl:
-    description: Tcl release (9.0.4 or 9.1.0)
-    required: true
+description: Build Tcl 9.1.0 and test both argparse implementations
 runs:
   using: composite
   steps:
     - uses: actions/checkout@v4
       with:
         repository: tcltk/tcl
-        ref: core-${{ inputs.tcl == '9.0.4' && '9-0-4' || '9-1-0' }}
+        ref: core-9-1-0
         path: _ci/tcl
     - uses: actions/checkout@v4
       with:
@@ -25,7 +21,7 @@ runs:
         install: make mingw-w64-ucrt-x86_64-gcc
     - if: runner.os == 'Linux'
       shell: bash
-      run: bash .github/scripts/build-tea.sh '${{ inputs.tcl }}'
+      run: bash .github/scripts/build-tea.sh 9.1.0
     - if: runner.os == 'Windows'
       shell: msys2 {0}
-      run: bash .github/scripts/build-tea.sh '${{ inputs.tcl }}'
+      run: bash .github/scripts/build-tea.sh 9.1.0

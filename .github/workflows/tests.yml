@@ -3,17 +3,40 @@ on: push
 permissions:
   contents: read
 jobs:
-  test:
-    name: ${{ matrix.os }} / Tcl ${{ matrix.tcl }} / C and Tcl
+  tea:
+    name: ${{ matrix.toolchain }} / Tcl 9.1.0 / C and Tcl
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, windows-2022]
-        tcl: ['9.0.4', '9.1.0']
+        include:
+          - os: ubuntu-24.04
+            toolchain: linux-gcc
+          - os: windows-2022
+            toolchain: windows-ucrt64
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/build-tea
+  msvc:
+    name: windows-msvc / Tcl 9.1.0 / C and Tcl
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          tcl: ${{ matrix.tcl }}
+          repository: tcltk/tcl
+          ref: core-9-1-0
+          path: _ci/tcl
+      - uses: actions/checkout@v4
+        with:
+          repository: tcltk/tcllib
+          ref: tcllib-2-0
+          path: _ci/tcllib
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Build Tcl and argparse, then test both implementations
+        shell: pwsh
+        run: ./.github/scripts/build-msvc.ps1

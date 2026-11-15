@@ -4,13 +4,12 @@ permissions:
   contents: read
 jobs:
   tea:
-    name: ${{ matrix.toolchain }} / Tcl ${{ matrix.tcl }}
+    name: ${{ matrix.toolchain }} / Tcl 9.1.0
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        tcl: ['9.0.4', '9.1.0']
         toolchain: [linux-gcc, windows-ucrt64]
         include:
           - os: ubuntu-24.04
@@ -20,29 +19,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/build-tea
-        with:
-          tcl: ${{ matrix.tcl }}
       - uses: actions/upload-artifact@v4
         with:
-          name: argparse-${{ matrix.toolchain }}-tcl${{ matrix.tcl }}
+          name: argparse-${{ matrix.toolchain }}-tcl9.1.0
           path: _ci/package/
           if-no-files-found: error
   msvc:
-    name: windows-msvc / Tcl ${{ matrix.tcl.version }}
+    name: windows-msvc / Tcl 9.1.0
     runs-on: windows-2022
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        tcl:
-          - {version: '9.0.4', ref: core-9-0-4}
-          - {version: '9.1.0', ref: core-9-1-0}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with:
           repository: tcltk/tcl
-          ref: ${{ matrix.tcl.ref }}
+          ref: core-9-1-0
           path: _ci/tcl
       - uses: actions/checkout@v4
         with:
@@ -57,6 +48,6 @@ jobs:
         run: ./.github/scripts/build-msvc.ps1
       - uses: actions/upload-artifact@v4
         with:
-          name: argparse-windows-msvc-tcl${{ matrix.tcl.version }}
+          name: argparse-windows-msvc-tcl9.1.0
           path: _ci/package/
           if-no-files-found: error
