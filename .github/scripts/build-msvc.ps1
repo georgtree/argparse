@@ -18,7 +18,7 @@ Push-Location win
 try {
     Invoke-Nmake "INSTALLDIR=$prefix"
     Invoke-Nmake "INSTALLDIR=$prefix" test
-    Invoke-Nmake "INSTALLDIR=$prefix" "DIST_ROOT=$root/_ci/dist" dist
+    Invoke-Nmake "INSTALLDIR=$prefix" "DIST_ROOT=$root\_ci\dist" dist-zip
 } finally { Pop-Location }
 
 $package = Join-Path $root '_ci/package'

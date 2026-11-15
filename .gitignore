@@ -16,3 +16,5 @@ configure~
 *.dll
 /autom4te.cache
 /_ci/
+/dist
+/win/Release*

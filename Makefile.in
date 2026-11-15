@@ -256,16 +256,16 @@ install-binaries: binaries install-lib-binaries install-bin-binaries
 else
 install: all install-libraries install-doc
 install-libraries:
-	@mkdir -p $(DESTDIR)$(pkglibdir)
+	@$(INSTALL_DATA_DIR) "$(DESTDIR)$(pkglibdir)"
 	@list='$(PKG_TCL_SOURCES)'; for p in $$list; do \
-	  if test -f $(srcdir)/$$p; then \
+	  if test -f "$(srcdir)/$$p"; then \
 	    destp=`basename $$p`; \
 	    echo " Install $$destp $(DESTDIR)$(pkglibdir)/$$destp"; \
-	    $(INSTALL_DATA) $(srcdir)/$$p $(DESTDIR)$(pkglibdir)/$$destp; \
+	    $(INSTALL_DATA) "$(srcdir)/$$p" "$(DESTDIR)$(pkglibdir)/$$destp"; \
 	  fi; \
 	done
 	@echo " Install pkgIndex.tcl $(DESTDIR)$(pkglibdir)"; \
-	$(INSTALL_DATA) pkgIndex.tcl $(DESTDIR)$(pkglibdir);
+	$(INSTALL_DATA) pkgIndex.tcl "$(DESTDIR)$(pkglibdir)";
 endif
 
 install-doc:
@@ -300,52 +300,63 @@ install-doc:
 #========================================================================
 # Distribution creation
 #========================================================================
-COMPRESS = tar zcvf $(PKG_DIR).tar.gz $(PKG_DIR)
-COMPRESS_ZIP= zip -r $(PKG_DIR).zip $(PKG_DIR)
-DIST_ROOT = /tmp/dist
-DIST_DIR = $(DIST_ROOT)/$(PKG_DIR)
+DIST_ROOT = $(top_builddir)/dist
+DIST_NAME = $(PKG_DIR)
+DIST_DIR = $(DIST_ROOT)/$(DIST_NAME)
 
 dist-clean:
-	rm -rf "$(DIST_DIR)" "$(DIST_ROOT)/$(PKG_DIR).tar.gz" "$(DIST_ROOT)/$(PKG_DIR).zip"
-
-dist: all
 	rm -rf "$(DIST_DIR)"
-	$(INSTALL_DATA_DIR) "$(DIST_DIR)"
-	$(INSTALL_DATA) "$(srcdir)/README.md" "$(DIST_DIR)/"
-	$(INSTALL_DATA) "$(srcdir)/LICENSE" "$(DIST_DIR)/"
-ifeq ($(HAVE_TCL_ONLY),0)
-	$(INSTALL_LIBRARY) "$(PKG_LIB_FILE)" "$(DIST_DIR)/"
-endif
-	@set -e; for p in "$(srcdir)"/*.tcl; do \
-	  if test -f "$$p" && test "`basename "$$p"`" != pkgIndex.tcl; then \
-	    $(INSTALL_DATA) "$$p" "$(DIST_DIR)/"; \
-	  fi; \
-	done
-	$(INSTALL_DATA) pkgIndex.tcl "$(DIST_DIR)/"
-	$(INSTALL_DATA_DIR) "$(DIST_DIR)/test"
-	$(INSTALL_DATA) "$(srcdir)/test/all.tcl" "$(DIST_DIR)/test/"
-	@set -e; for p in "$(srcdir)/test/"*.test; do \
-	  if test -f "$$p"; then \
-	    $(INSTALL_DATA) "$$p" "$(DIST_DIR)/test/"; \
-	  fi; \
-	done
-	$(INSTALL_DATA_DIR) "$(DIST_DIR)/docs"
-	@set -e; for p in "$(srcdir)/docs/"*.html "$(srcdir)/docs/"*.js \
-	    "$(srcdir)/docs/"*.inv "$(srcdir)/docs/"*.n "$(srcdir)/docs/.nojekyll"; do \
-	  if test -f "$$p"; then \
-	    $(INSTALL_DATA) "$$p" "$(DIST_DIR)/docs/"; \
-	  fi; \
-	done
-	@set -e; for directory in _static assets images _images; do \
-	  if test -d "$(srcdir)/docs/$$directory"; then \
-	    cp -pR "$(srcdir)/docs/$$directory" "$(DIST_DIR)/docs/"; \
-	  fi; \
-	done
-	cd "$(DIST_ROOT)" && $(COMPRESS)
-	rm -f "$(DIST_ROOT)/$(PKG_DIR).zip"
-	cd "$(DIST_ROOT)" && $(COMPRESS_ZIP)
+	rm -f "$(DIST_ROOT)/$(DIST_NAME).tar.gz" "$(DIST_ROOT)/$(DIST_NAME).zip"
 
-.PHONY: dist dist-clean
+# Do not make dist-clean a parallel prerequisite: staging must finish before
+# archiving, and cleanup must not race with the installer.
+dist: all
+	@set -eu; \
+	  case '$(DIST_NAME)' in ''|.|..|*/*|*\\*) echo 'dist: DIST_NAME must be a directory name' >&2; exit 1 ;; esac; \
+	  root=`mkdir -p "$(DIST_ROOT)" && cd "$(DIST_ROOT)" && pwd`; \
+	  stage="$$root/$(DIST_NAME)"; \
+	  prefix='$(prefix)'; prefix=$${prefix%/}; \
+	  relative() { \
+	    case "$$1" in \
+	      "$$prefix"/*) printf '%s\n' "$${1#"$$prefix"}" ;; \
+	      *) echo "dist: install directory '$$1' is outside prefix '$$prefix'" >&2; return 1 ;; \
+	    esac; \
+	  }; \
+	  set --; \
+	  for entry in 'bindir=$(bindir)' 'libdir=$(libdir)' 'includedir=$(includedir)' \
+	      'datadir=$(datadir)' 'mandir=$(mandir)' 'pkglibdir=$(pkglibdir)' \
+	      'pkgdatadir=$(pkgdatadir)' 'pkgincludedir=$(pkgincludedir)'; do \
+	    key=$${entry%%=*}; value=$${entry#*=}; \
+	    value=`relative "$$value"`; \
+	    set -- "$$@" "$$key=$$stage$$value"; \
+	  done; \
+	  doc='$(DOC_INSTALL_DIR)'; dest='$(DESTDIR)'; doc=$${doc#"$$dest"}; \
+	  doc=`relative "$$doc"`; \
+	  rm -rf "$$stage"; mkdir -p "$$stage"; \
+	  rm -f "$$root/$(DIST_NAME).tar.gz" "$$root/$(DIST_NAME).zip"; \
+	  $(MAKE) install DESTDIR= "$$@" "DOC_INSTALL_DIR=$$stage$$doc"; \
+	  package=`relative '$(pkglibdir)'`; package="$$stage$$package"; \
+	  data=`relative '$(pkgdatadir)'`; data="$$stage$$data"; \
+	  $(INSTALL_DATA_DIR) "$$package/test" "$$data"; \
+	  $(INSTALL_DATA) "$(srcdir)/README.md" "$(srcdir)/LICENSE" "$$data/"; \
+	  for file in "$(srcdir)"/*.tcl; do \
+	    if test -f "$$file" && test "`basename "$$file"`" != pkgIndex.tcl; then \
+	      $(INSTALL_DATA) "$$file" "$$package/"; \
+	    fi; \
+	  done; \
+	  $(INSTALL_DATA) "$(srcdir)/test/all.tcl" "$$package/test/"; \
+	  for file in "$(srcdir)/test/"*.test; do \
+	    test ! -f "$$file" || $(INSTALL_DATA) "$$file" "$$package/test/"; \
+	  done; \
+	  tar -czf "$$root/$(DIST_NAME).tar.gz" -C "$$stage" .; \
+	  echo "Installation archive: $$root/$(DIST_NAME).tar.gz"
+
+# ZIP is convenient for Windows Explorer. The payload is identical to dist.
+dist-zip: dist
+	@set -e; root=`cd "$(DIST_ROOT)" && pwd`; \
+	  cd "$$root/$(DIST_NAME)" && zip -qr "$$root/$(DIST_NAME).zip" .
+
+.PHONY: dist dist-zip dist-clean
 
 #========================================================================
 # Cleaning of building files

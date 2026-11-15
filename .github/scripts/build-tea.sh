@@ -26,12 +26,13 @@ export TCLLIBPATH="{$modules}"
 make test TCLLIBPATH="$TCLLIBPATH"
 
 # Full distribution, including tests and the checked-in generated manual.
-make dist DIST_ROOT="$root/_ci/dist"
 if [[ $platform == win ]]; then
+    make dist-zip DIST_ROOT="$root/_ci/dist"
     for archive in "$root/_ci/dist/"*.zip; do
         cp "$archive" "$root/_ci/package/$(basename "$archive" .zip)-windows-ucrt64.zip"
     done
 else
+    make dist DIST_ROOT="$root/_ci/dist"
     for archive in "$root/_ci/dist/"*.tar.gz; do
         cp "$archive" "$root/_ci/package/$(basename "$archive" .tar.gz)-linux-gcc.tar.gz"
     done
