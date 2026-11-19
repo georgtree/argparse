@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-version=$1
 root=$(pwd)
 prefix="$root/_ci/runtime"
 platform=unix
@@ -9,10 +8,14 @@ if [[ ${MSYSTEM:-} == UCRT64 ]]; then
     platform=win
 fi
 mkdir -p _ci/tcl-build _ci/argparse-build _ci/package
-cd _ci/tcl-build
-"$root/_ci/tcl/$platform/configure" --prefix="$prefix"
-make -j2
-make install
+if [[ ${RUNTIME_CACHE_HIT:-false} == true ]]; then
+    echo "Using cached Tcl runtime"
+else
+    cd _ci/tcl-build
+    "$root/_ci/tcl/$platform/configure" --prefix="$prefix"
+    make -j2
+    make install
+fi
 cd "$root/_ci/argparse-build"
 "$root/configure" --with-tcl="$prefix/lib" --prefix="$prefix" --exec-prefix="$prefix"
 make -j2
@@ -24,6 +27,8 @@ if [[ $platform == win ]]; then
 fi
 export TCLLIBPATH="{$modules}"
 make test TCLLIBPATH="$TCLLIBPATH"
+
+[[ ${MAKE_DIST:-false} == true ]] || exit 0
 
 # Full distribution, including tests and the checked-in generated manual.
 if [[ $platform == win ]]; then

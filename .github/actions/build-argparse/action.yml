@@ -1,0 +1,54 @@
+name: Build and test argparse
+description: Test the C and Tcl implementations with Tcl 9.1.0
+inputs:
+  toolchain:
+    description: linux-gcc, windows-ucrt64, or windows-msvc
+    required: true
+  make-dist:
+    description: Create a distribution archive after tests pass
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        repository: tcltk/tcl
+        ref: core-9-1-0
+        path: _ci/tcl
+    - uses: actions/checkout@v4
+      with:
+        repository: tcltk/tcllib
+        ref: tcllib-2-0
+        path: _ci/tcllib
+    - if: inputs.toolchain == 'windows-ucrt64'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: UCRT64
+        update: true
+        install: make zip tar git mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-python
+    - if: inputs.toolchain == 'windows-msvc'
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+    - name: Identify Tcl cache inputs
+      id: key
+      shell: ${{ inputs.toolchain == 'windows-ucrt64' && 'msys2 {0}' || 'bash' }}
+      run: python .github/scripts/tcl-cache-key.py '${{ inputs.toolchain }}'
+    - name: Restore Tcl runtime
+      id: runtime
+      uses: actions/cache@v4
+      with:
+        path: _ci/runtime
+        key: ${{ steps.key.outputs.runtime }}
+    - if: inputs.toolchain != 'windows-msvc'
+      shell: ${{ inputs.toolchain == 'windows-ucrt64' && 'msys2 {0}' || 'bash' }}
+      env:
+        RUNTIME_CACHE_HIT: ${{ steps.runtime.outputs.cache-hit }}
+        MAKE_DIST: ${{ inputs.make-dist }}
+      run: bash .github/scripts/build-tea.sh
+    - if: inputs.toolchain == 'windows-msvc'
+      shell: pwsh
+      env:
+        RUNTIME_CACHE_HIT: ${{ steps.runtime.outputs.cache-hit }}
+        MAKE_DIST: ${{ inputs.make-dist }}
+      run: ./.github/scripts/build-msvc.ps1

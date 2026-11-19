@@ -2,52 +2,51 @@ name: Build packages
 on: workflow_dispatch
 permissions:
   contents: read
+concurrency:
+  group: argparse-rolling-latest
+  cancel-in-progress: false
 jobs:
-  tea:
-    name: ${{ matrix.toolchain }} / Tcl 9.1.0
+  build:
+    name: ${{ matrix.toolchain }} / Tcl 9.1.0 / C and Tcl
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        toolchain: [linux-gcc, windows-ucrt64]
         include:
           - os: ubuntu-24.04
             toolchain: linux-gcc
           - os: windows-2022
             toolchain: windows-ucrt64
+          - os: windows-2022
+            toolchain: windows-msvc
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/build-tea
+      - uses: ./.github/actions/build-argparse
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          make-dist: 'true'
       - uses: actions/upload-artifact@v4
         with:
           name: argparse-${{ matrix.toolchain }}-tcl9.1.0
           path: _ci/package/
           if-no-files-found: error
-  msvc:
-    name: windows-msvc / Tcl 9.1.0
-    runs-on: windows-2022
-    timeout-minutes: 30
+  release:
+    name: Publish latest
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
         with:
-          repository: tcltk/tcl
-          ref: core-9-1-0
-          path: _ci/tcl
-      - uses: actions/checkout@v4
+          ref: ${{ github.sha }}
+      - uses: actions/download-artifact@v4
         with:
-          repository: tcltk/tcllib
-          ref: tcllib-2-0
-          path: _ci/tcllib
-      - uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-      - name: Build Tcl and argparse, then test both implementations
-        shell: pwsh
-        run: ./.github/scripts/build-msvc.ps1
-      - uses: actions/upload-artifact@v4
-        with:
-          name: argparse-windows-msvc-tcl9.1.0
-          path: _ci/package/
-          if-no-files-found: error
+          pattern: argparse-*-tcl9.1.0
+          path: _ci/release
+          merge-multiple: true
+      - name: Update rolling release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/publish-release.py _ci/release

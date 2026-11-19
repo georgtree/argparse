@@ -7,17 +7,22 @@ function Invoke-Nmake {
     & nmake /nologo /f makefile.vc @args
     if ($LASTEXITCODE -ne 0) { throw "nmake failed with exit code $LASTEXITCODE" }
 }
-Push-Location _ci/tcl/win
-try {
-    Invoke-Nmake "INSTALLDIR=$prefix" release
-    Invoke-Nmake "INSTALLDIR=$prefix" install
-} finally { Pop-Location }
+if ($env:RUNTIME_CACHE_HIT -eq 'true') {
+    Write-Host "Using cached Tcl runtime"
+} else {
+    Push-Location _ci/tcl/win
+    try {
+        Invoke-Nmake "INSTALLDIR=$prefix" release
+        Invoke-Nmake "INSTALLDIR=$prefix" install
+    } finally { Pop-Location }
+}
 
 $env:TCLLIBPATH = '{' + (Join-Path $root '_ci/tcllib/modules').Replace('\', '/') + '}'
 Push-Location win
 try {
     Invoke-Nmake "INSTALLDIR=$prefix"
     Invoke-Nmake "INSTALLDIR=$prefix" test
+    if ($env:MAKE_DIST -ne 'true') { return }
     Invoke-Nmake "INSTALLDIR=$prefix" "DIST_ROOT=$root\_ci\dist" dist-zip
 } finally { Pop-Location }
 
